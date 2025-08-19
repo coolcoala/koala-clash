@@ -340,7 +340,7 @@ pub fn create_window(is_show: bool) -> bool {
     .fullscreen(false)
     .inner_size(DEFAULT_WIDTH as f64, DEFAULT_HEIGHT as f64)
     .min_inner_size(1000.0, 800.0)
-    .visible(true) // 立即显示窗口，避免用户等待
+    .visible(false) // 避免 GTK 提示重复显示导致的 thaw 错误，创建后再显式 show
     .initialization_script(
         r#"
         console.log('[Tauri] 窗口初始化脚本开始执行');
