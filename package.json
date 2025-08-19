@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "cross-env RUST_BACKTRACE=1 tauri dev -f verge-dev",
     "dev:diff": "cross-env RUST_BACKTRACE=1 tauri dev -f verge-dev",
+    "dev:vfny": "rm -rf dist && cross-env RUST_BACKTRACE=1 bun tauri dev",
     "build": "cross-env NODE_OPTIONS='--max-old-space-size=4096' tauri build",
     "build:fast": "cross-env NODE_OPTIONS='--max-old-space-size=4096' tauri build -- --profile fast-release",
     "tauri": "tauri",
