@@ -606,10 +606,12 @@ pub async fn resolve_scheme(param: String) -> Result<()> {
                         Err(e1) => {
                             logging!(warn, Type::Network, true, "Direct import failed, retry via local proxy: {}", e1);
 
-                            let mut opt = PrfOption::default();
-                            opt.with_proxy = Some(false);
-                            opt.self_proxy = Some(true);
-                            opt.timeout_seconds = Some(15);
+                            let opt = PrfOption {
+                                with_proxy: Some(false),
+                                self_proxy: Some(true),
+                                timeout_seconds: Some(15),
+                                ..Default::default()
+                            };
                             PrfItem::from_url(url.as_ref(), name_cloned, None, Some(opt)).await
                         }
                     };

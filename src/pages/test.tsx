@@ -109,16 +109,16 @@ const TestPage = () => {
       const newList = testList.map((x) =>
         x.uid === uid ? { ...x, ...patch } : x,
       );
-      mutateVerge({ ...verge, test_list: newList }, false).then(_ => {});
+      mutateVerge({ ...verge, test_list: newList }, false).then((_) => {});
     } else {
-      mutateVerge().then(_ => {});
+      mutateVerge().then((_) => {});
     }
   };
 
   const onDeleteTestListItem = (uid: string) => {
     const newList = testList.filter((x) => x.uid !== uid);
-    patchVerge({ test_list: newList }).then(_ => {});
-    mutateVerge({ ...verge, test_list: newList }, false).then(_ => {});
+    patchVerge({ test_list: newList }).then((_) => {});
+    mutateVerge({ ...verge, test_list: newList }, false).then((_) => {});
   };
 
   const onDragEnd = async (event: DragEndEvent) => {
@@ -135,7 +135,7 @@ const TestPage = () => {
 
   useEffect(() => {
     if (verge && !verge.test_list) {
-      patchVerge({ test_list: testList }).then(_ => {});
+      patchVerge({ test_list: testList }).then((_) => {});
     }
   }, [verge, patchVerge, testList]);
 
