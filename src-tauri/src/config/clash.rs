@@ -20,12 +20,7 @@ impl IClashTemp {
                         map.insert(key.clone(), template.0.get(key).unwrap().clone());
                     }
                 });
-                // 确保 secret 字段存在且不为空
-                if let Some(Value::String(s)) = map.get_mut("secret") {
-                    if s.is_empty() {
-                        *s = "set-your-secret".to_string();
-                    }
-                }
+                // Allow empty secret - user may want to disable authentication
                 Self(Self::guard(map))
             }
             Err(err) => {
@@ -87,7 +82,13 @@ impl IClashTemp {
         let mixed_port = Self::guard_mixed_port(&config);
         let socks_port = Self::guard_socks_port(&config);
         let port = Self::guard_port(&config);
-        let ctrl = Self::guard_server_ctrl(&config);
+        
+        // Only set external-controller if it doesn't exist or is invalid
+        // Don't overwrite valid user-configured values
+        if !config.contains_key("external-controller") {
+            config.insert("external-controller".into(), "127.0.0.1:9097".into());
+        }
+        
         #[cfg(not(target_os = "windows"))]
         config.insert("redir-port".into(), redir_port.into());
         #[cfg(target_os = "linux")]
@@ -95,7 +96,6 @@ impl IClashTemp {
         config.insert("mixed-port".into(), mixed_port.into());
         config.insert("socks-port".into(), socks_port.into());
         config.insert("port".into(), port.into());
-        config.insert("external-controller".into(), ctrl.into());
 
         // 强制覆盖 external-controller-cors 字段，允许本地和 tauri 前端
         let mut cors_map = Mapping::new();
