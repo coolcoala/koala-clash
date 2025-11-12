@@ -466,7 +466,7 @@ pub fn create_window(is_show: bool) -> bool {
     .decorations(true)
     .fullscreen(false)
     .inner_size(DEFAULT_WIDTH as f64, DEFAULT_HEIGHT as f64)
-    .min_inner_size(1000.0, 800.0)
+    .min_inner_size(1000.0, 700.0)
     .visible(true) // 立即显示窗口，避免用户等待
     .initialization_script(
         r#"
