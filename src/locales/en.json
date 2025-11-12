@@ -685,5 +685,8 @@
   "Update Interval (mins)": "Update Interval (mins)",
   "Profile Name": "Profile Name",
   "Profile Description": "Profile Description",
-  "Constructor": "Group constructor"
+  "Constructor": "Group constructor",
+  "Leave blank to use the URL above": "Leave blank to use the URL above",
+  "No profiles available": "No profiles available",
+  "Configuration saved successfully": "Configuration saved successfully"
 }
