@@ -103,8 +103,8 @@ async function getLatestAlphaVersion() {
 
 /* ======= clash meta stable ======= */
 const META_VERSION_URL =
-  "https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt";
-const META_URL_PREFIX = `https://github.com/MetaCubeX/mihomo/releases/download`;
+  "https://github.com/vffuunnyy/mihomo/releases/download/Prerelease-xhttp-release/version.txt";
+const META_URL_PREFIX = `https://github.com/vffuunnyy/mihomo/releases/download`;
 let META_VERSION;
 
 const META_MAP = {
