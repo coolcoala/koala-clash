@@ -31,8 +31,8 @@
     "beforeDevCommand": "pnpm run web:dev",
     "devUrl": "http://localhost:3000/"
   },
-  "productName": "Koala Clash",
-  "identifier": "io.github.koala-clash",
+  "productName": "Taptishka",
+  "identifier": "com.taptishka.myproxyclient",
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERCQjQ1QjQ0QUJDQTU1RTkKUldUcFZjcXJSRnUwMjdXSERoZVQ1R0hHRDMrT3VkSmpvbDJmb01sN3ZpYWhVYnEwaWpYUWU4YU0K",
