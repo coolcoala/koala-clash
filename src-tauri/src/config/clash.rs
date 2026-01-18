@@ -82,13 +82,13 @@ impl IClashTemp {
         let mixed_port = Self::guard_mixed_port(&config);
         let socks_port = Self::guard_socks_port(&config);
         let port = Self::guard_port(&config);
-        
+
         // Only set external-controller if it doesn't exist or is invalid
         // Don't overwrite valid user-configured values
         if !config.contains_key("external-controller") {
             config.insert("external-controller".into(), "127.0.0.1:9097".into());
         }
-        
+
         #[cfg(not(target_os = "windows"))]
         config.insert("redir-port".into(), redir_port.into());
         #[cfg(target_os = "linux")]

@@ -276,7 +276,12 @@ impl IVerge {
 
         // 修正后保存配置
         if needs_fix {
-            logging!(info, Type::Config, true, "Saving fixed configuration file...");
+            logging!(
+                info,
+                Type::Config,
+                true,
+                "Saving fixed configuration file..."
+            );
             help::save_yaml(&config_path, &config, Some("# Koala Clash Config"))?;
             logging!(
                 info,

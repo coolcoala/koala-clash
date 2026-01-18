@@ -120,12 +120,20 @@ export const AppDataProvider = ({
               console.log("[AppDataProvider] Refresh frontend proxy data");
               await refreshProxy();
 
-              console.log("[AppDataProvider] Proxy data refreshed for profile switch");
+              console.log(
+                "[AppDataProvider] Proxy data refreshed for profile switch",
+              );
             } catch (error) {
-              console.error("[AppDataProvider] Force refresh proxy cache failed:", error);
+              console.error(
+                "[AppDataProvider] Force refresh proxy cache failed:",
+                error,
+              );
 
               refreshProxy().catch((e) =>
-                console.warn("[AppDataProvider] Normal refresh also failed:", e),
+                console.warn(
+                  "[AppDataProvider] Normal refresh also failed:",
+                  e,
+                ),
               );
             }
           }, 0);
@@ -141,7 +149,9 @@ export const AppDataProvider = ({
 
             setTimeout(async () => {
               try {
-                console.log("[AppDataProvider] Clash refresh - force refresh proxy cache");
+                console.log(
+                  "[AppDataProvider] Clash refresh - force refresh proxy cache",
+                );
 
                 // 添加超时保护
                 const refreshPromise = Promise.race([
@@ -162,7 +172,10 @@ export const AppDataProvider = ({
                   error,
                 );
                 refreshProxy().catch((e) =>
-                  console.warn("[AppDataProvider] Clash refresh normal refresh also failed:", e),
+                  console.warn(
+                    "[AppDataProvider] Clash refresh normal refresh also failed:",
+                    e,
+                  ),
                 );
               }
             }, 0);
@@ -181,7 +194,10 @@ export const AppDataProvider = ({
           );
         };
       } catch (error) {
-        console.error("[AppDataProvider] Failed to set up event listeners:", error);
+        console.error(
+          "[AppDataProvider] Failed to set up event listeners:",
+          error,
+        );
         return () => {};
       }
     };
@@ -357,7 +373,9 @@ export const AppDataProvider = ({
       });
 
       return () => {
-        console.log(`[Connections][${AppDataProvider.name}] Cleaning up WebSocket connection`);
+        console.log(
+          `[Connections][${AppDataProvider.name}] Cleaning up WebSocket connection`,
+        );
         socket.close();
       };
     },
@@ -428,7 +446,9 @@ export const AppDataProvider = ({
       });
 
       return () => {
-        console.log(`[Traffic][${AppDataProvider.name}] Cleaning up WebSocket connection`);
+        console.log(
+          `[Traffic][${AppDataProvider.name}] Cleaning up WebSocket connection`,
+        );
         socket.close();
       };
     },
@@ -494,7 +514,9 @@ export const AppDataProvider = ({
       });
 
       return () => {
-        console.log(`[Memory][${AppDataProvider.name}] Cleaning up WebSocket connection`);
+        console.log(
+          `[Memory][${AppDataProvider.name}] Cleaning up WebSocket connection`,
+        );
         socket.close();
       };
     },

@@ -6,8 +6,8 @@ on:
   # workflow_dispatch:
   push:
     # 应当限制在 main 分支上触发发布。
-#    branches:
-#      - main
+    #    branches:
+    #      - main
     # 应当限制 v*.*.* 的 tag 触发发布。
     tags:
       - "v*.*.*"
@@ -103,7 +103,7 @@ jobs:
           <a href="https://github.com/coolcoala/clash-verge-rev-lite/releases/download/v${{ env.VERSION }}/Koala.Clash.armhfp.rpm"><img src="https://img.shields.io/badge/armhfp-default?style=flat&logo=fedora&label=RPM"> </a>
 
           #### Package availability for many distributions
-          
+
           <a href="https://aur.archlinux.org/packages/koala-clash-bin"><img src="https://img.shields.io/aur/version/koala-clash-bin"></a>
 
           ### Windows (Win7 is no longer supported)
@@ -215,7 +215,7 @@ jobs:
             $newName = $file.Name -replace "_${{steps.build.outputs.appVersion}}_", "_" 
             Rename-Item $file.FullName $newName
           }
-          
+
           # Rename .exe.sig files
           $sigFiles = Get-ChildItem ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe.sig"
           foreach ($file in $sigFiles) {
@@ -252,12 +252,12 @@ jobs:
         shell: bash
         run: |
           MACOS_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/macos"
-          
+
           if [ ! -d "$MACOS_DIR" ]; then
               echo "macOS bundle directory not found, skipping"
               exit 0
           fi
-          
+
           # Determine architecture suffix
           if [ "${{ matrix.target }}" == "aarch64-apple-darwin" ]; then
               ARCH_SUFFIX="_aarch64"
@@ -267,7 +267,7 @@ jobs:
               echo "Unknown target: ${{ matrix.target }}"
               exit 1
           fi
-          
+
           # Rename .app.tar.gz files
           find "$MACOS_DIR" -type f -name "*.app.tar.gz" ! -name "*.app.tar.gz.sig" -print0 | while IFS= read -r -d '' old_path; do
               dir_path=$(dirname "$old_path")
@@ -279,7 +279,7 @@ jobs:
                   mv "$old_path" "$new_path"
               fi
           done
-          
+
           # Rename .app.tar.gz.sig files
           find "$MACOS_DIR" -type f -name "*.app.tar.gz.sig" -print0 | while IFS= read -r -d '' old_path; do
               dir_path=$(dirname "$old_path")

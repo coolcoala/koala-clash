@@ -86,7 +86,9 @@ export const initGlobalLogService = (
   console.log(`[GlobalLog] Connecting to log service: ${wsUrl}`);
 
   if (!server) {
-    console.warn("[GlobalLog] Server URL is empty, cannot establish connection");
+    console.warn(
+      "[GlobalLog] Server URL is empty, cannot establish connection",
+    );
     return;
   }
 

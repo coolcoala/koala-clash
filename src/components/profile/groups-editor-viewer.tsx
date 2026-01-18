@@ -560,7 +560,9 @@ export const GroupsEditorViewer = (props: Props) => {
             <Form {...form}>
               <form className="h-full flex gap-4">
                 <div className="w-1/2 flex flex-col border rounded-md p-4">
-                  <h3 className="text-lg font-medium mb-4">{t("Constructor")}</h3>
+                  <h3 className="text-lg font-medium mb-4">
+                    {t("Constructor")}
+                  </h3>
                   <Separator className="mb-4" />
                   <div className="space-y-3 overflow-y-auto p-1 -mr-3 ">
                     <FormField

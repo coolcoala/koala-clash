@@ -102,13 +102,23 @@ pub fn set_lightweight_mode(value: bool) {
 
 pub fn enable_auto_light_weight_mode() {
     Timer::global().init().unwrap();
-    logging!(info, Type::Lightweight, true, "Enable auto lightweight mode");
+    logging!(
+        info,
+        Type::Lightweight,
+        true,
+        "Enable auto lightweight mode"
+    );
     setup_window_close_listener();
     setup_webview_focus_listener();
 }
 
 pub fn disable_auto_light_weight_mode() {
-    logging!(info, Type::Lightweight, true, "Disable auto lightweight mode");
+    logging!(
+        info,
+        Type::Lightweight,
+        true,
+        "Disable auto lightweight mode"
+    );
     let _ = cancel_light_weight_timer();
     cancel_window_close_listener();
 }
@@ -162,7 +172,12 @@ pub fn exit_lightweight_mode() {
 
     // 确保当前确实处于轻量模式才执行退出操作
     if !is_in_lightweight_mode() {
-        logging!(info, Type::Lightweight, true, "Not in lightweight mode; skip exit");
+        logging!(
+            info,
+            Type::Lightweight,
+            true,
+            "Not in lightweight mode; skip exit"
+        );
         return;
     }
 
@@ -218,7 +233,12 @@ fn setup_webview_focus_listener() -> u32 {
 fn cancel_window_close_listener() {
     if let Some(window) = handle::Handle::global().get_window() {
         window.unlisten(setup_window_close_listener());
-        logging!(info, Type::Lightweight, true, "Removed window close listener");
+        logging!(
+            info,
+            Type::Lightweight,
+            true,
+            "Removed window close listener"
+        );
     }
 }
 
@@ -243,7 +263,12 @@ fn setup_light_weight_timer() -> Result<()> {
         .set_maximum_parallel_runnable_num(1)
         .set_frequency_once_by_minutes(once_by_minutes)
         .spawn_async_routine(move || async move {
-            logging!(info, Type::Timer, true, "Timer expired; entering lightweight mode");
+            logging!(
+                info,
+                Type::Timer,
+                true,
+                "Timer expired; entering lightweight mode"
+            );
             entry_lightweight_mode();
         })
         .context("failed to create timer task")?;

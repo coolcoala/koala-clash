@@ -2,8 +2,8 @@
 use crate::AppHandleManager;
 use crate::{
     config::{Config, IVerge, PrfItem},
-    core::*,
     core::handle::Handle,
+    core::*,
     logging, logging_error,
     module::lightweight::{self, auto_lightweight_mode_init},
     process::AsyncHandler,
@@ -78,13 +78,23 @@ fn get_early_deep_link() -> &'static Mutex<Option<String>> {
 /// Capture deep link from process arguments as early as possible (cold start on macOS)
 pub fn capture_early_deep_link_from_args() {
     let args: Vec<String> = std::env::args().collect();
-    if let Some(url) = args.iter().find(|a| a.starts_with("clash://") || a.starts_with("koala-clash://")).cloned() {
+    if let Some(url) = args
+        .iter()
+        .find(|a| a.starts_with("clash://") || a.starts_with("koala-clash://"))
+        .cloned()
+    {
         println!("[DeepLink][argv] {}", url);
         logging!(info, Type::Setup, true, "argv captured deep link: {}", url);
         *get_early_deep_link().lock() = Some(url);
     } else {
         println!("[DeepLink][argv] none: {:?}", args);
-        logging!(info, Type::Setup, true, "no deep link found in argv at startup: {:?}", args);
+        logging!(
+            info,
+            Type::Setup,
+            true,
+            "no deep link found in argv at startup: {:?}",
+            args
+        );
     }
 }
 
@@ -145,7 +155,12 @@ pub fn reset_ui_ready() {
         let mut stage = state.stage.write();
         *stage = UiReadyStage::NotStarted;
     }
-    logging!(info, Type::Window, true, "UI readiness state has been reset");
+    logging!(
+        info,
+        Type::Window,
+        true,
+        "UI readiness state has been reset"
+    );
 }
 
 /// Schedule robust deep-link handling to avoid races with lightweight mode and window creation
@@ -168,7 +183,8 @@ pub fn schedule_handle_deep_link(url: String) {
             let now = Instant::now();
             let mut last = LAST_DEEP_LINK.get_or_init(|| Mutex::new(None)).lock();
             if let Some((prev_url, prev_time)) = last.as_ref() {
-                if *prev_url == dedup_key && now.duration_since(*prev_time) < Duration::from_secs(5) {
+                if *prev_url == dedup_key && now.duration_since(*prev_time) < Duration::from_secs(5)
+                {
                     log::warn!(target: "app", "Skip duplicate deep link within 5s: {}", dedup_key);
                     return;
                 }
@@ -180,7 +196,15 @@ pub fn schedule_handle_deep_link(url: String) {
             if Handle::global().app_handle().is_some() {
                 break;
             }
-            if i % 10 == 0 { logging!(info, Type::Setup, true, "waiting for app handle... ({}ms)", i as u64 * 20); }
+            if i % 10 == 0 {
+                logging!(
+                    info,
+                    Type::Setup,
+                    true,
+                    "waiting for app handle... ({}ms)",
+                    i as u64 * 20
+                );
+            }
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
 
@@ -212,7 +236,13 @@ pub fn schedule_handle_deep_link(url: String) {
         }
 
         // Process deep link (add profile regardless of UI state)
-        logging!(info, Type::Setup, true, "processing deep link: {}", dedup_key);
+        logging!(
+            info,
+            Type::Setup,
+            true,
+            "processing deep link: {}",
+            dedup_key
+        );
         if let Err(e) = resolve_scheme(url.clone()).await {
             log::error!(target: "app", "Deep link handling failed: {e}");
         }
@@ -244,12 +274,23 @@ pub async fn find_unused_port() -> Result<u16> {
 /// 异步方式处理启动后的额外任务
 pub async fn resolve_setup_async(app_handle: &AppHandle) {
     let start_time = std::time::Instant::now();
-    logging!(info, Type::Setup, true, "Starting asynchronous setup tasks...");
+    logging!(
+        info,
+        Type::Setup,
+        true,
+        "Starting asynchronous setup tasks..."
+    );
 
     if VERSION.get().is_none() {
         let version = app_handle.package_info().version.to_string();
         VERSION.get_or_init(|| {
-            logging!(info, Type::Setup, true, "Initializing version information: {}", version);
+            logging!(
+                info,
+                Type::Setup,
+                true,
+                "Initializing version information: {}",
+                version
+            );
             version.clone()
         });
     }
@@ -272,12 +313,28 @@ pub async fn resolve_setup_async(app_handle: &AppHandle) {
     logging_error!(Type::Config, true, Config::init_config().await);
 
     // 启动时清理冗余的 Profile 文件
-    logging!(info, Type::Setup, true, "Cleaning redundant profile files...");
+    logging!(
+        info,
+        Type::Setup,
+        true,
+        "Cleaning redundant profile files..."
+    );
     let profiles = Config::profiles();
     if let Err(e) = profiles.latest().auto_cleanup() {
-        logging!(warn, Type::Setup, true, "Failed to clean profile files at startup: {}", e);
+        logging!(
+            warn,
+            Type::Setup,
+            true,
+            "Failed to clean profile files at startup: {}",
+            e
+        );
     } else {
-        logging!(info, Type::Setup, true, "Startup profile files cleanup completed");
+        logging!(
+            info,
+            Type::Setup,
+            true,
+            "Startup profile files cleanup completed"
+        );
     }
 
     logging!(trace, Type::Core, true, "Starting core manager...");
@@ -294,7 +351,13 @@ pub async fn resolve_setup_async(app_handle: &AppHandle) {
         if result.is_ok() {
             logging!(info, Type::Tray, true, "System tray created successfully");
         } else if let Err(e) = result {
-            logging!(error, Type::Tray, true, "Failed to create system tray: {}", e);
+            logging!(
+                error,
+                Type::Tray,
+                true,
+                "Failed to create system tray: {}",
+                e
+            );
         }
     } else {
         logging!(
@@ -392,7 +455,12 @@ pub fn create_window(is_show: bool) -> bool {
     );
 
     if !is_show {
-        logging!(info, Type::Window, true, "Silent start: do not create window");
+        logging!(
+            info,
+            Type::Window,
+            true,
+            "Silent start: do not create window"
+        );
         lightweight::set_lightweight_mode(true);
         handle::Handle::notify_startup_completed();
         return false;
@@ -400,10 +468,20 @@ pub fn create_window(is_show: bool) -> bool {
 
     if let Some(app_handle) = handle::Handle::global().app_handle() {
         if let Some(window) = app_handle.get_webview_window("main") {
-            logging!(info, Type::Window, true, "Main window already exists; will try to show it");
+            logging!(
+                info,
+                Type::Window,
+                true,
+                "Main window already exists; will try to show it"
+            );
             if is_show {
                 if window.is_minimized().unwrap_or(false) {
-                    logging!(info, Type::Window, true, "Window is minimized; unminimizing");
+                    logging!(
+                        info,
+                        Type::Window,
+                        true,
+                        "Window is minimized; unminimizing"
+                    );
                     let _ = window.unminimize();
                 }
                 let show_result = window.show();
@@ -453,7 +531,12 @@ pub fn create_window(is_show: bool) -> bool {
     // ScopeGuard 确保创建状态重置，防止 webview 卡死
     let _guard = scopeguard::guard(creating, |mut creating_guard| {
         *creating_guard = (false, Instant::now());
-        logging!(debug, Type::Window, true, "[ScopeGuard] Window creation state reset");
+        logging!(
+            debug,
+            Type::Window,
+            true,
+            "[ScopeGuard] Window creation state reset"
+        );
     });
 
     match tauri::WebviewWindowBuilder::new(
@@ -536,7 +619,12 @@ pub fn create_window(is_show: bool) -> bool {
     .build()
     {
         Ok(newly_created_window) => {
-            logging!(debug, Type::Window, true, "Main window instance created successfully");
+            logging!(
+                debug,
+                Type::Window,
+                true,
+                "Main window instance created successfully"
+            );
 
             update_ui_ready_stage(UiReadyStage::NotStarted);
 
@@ -650,7 +738,13 @@ pub fn create_window(is_show: bool) -> bool {
             true
         }
         Err(e) => {
-            logging!(error, Type::Window, true, "Failed to build main window: {}", e);
+            logging!(
+                error,
+                Type::Window,
+                true,
+                "Failed to build main window: {}",
+                e
+            );
             false
         }
     }

@@ -208,7 +208,10 @@ export const ProfileViewer = forwardRef<ProfileViewerRef, Props>(
 
     const handleSaveAdvanced = useLockFn(
       handleSubmit(async (formData) => {
-        const form = { ...formData, url: formData.url || importUrl } as Partial<IProfileItem>;
+        const form = {
+          ...formData,
+          url: formData.url || importUrl,
+        } as Partial<IProfileItem>;
 
         setLoading(true);
         try {
@@ -219,19 +222,28 @@ export const ProfileViewer = forwardRef<ProfileViewerRef, Props>(
           // Clean option fields: only send what user actually set
           let option = form.option ? { ...form.option } : undefined;
           if (option) {
-            if ((option as any).update_interval != null && (option as any).update_interval !== "") {
+            if (
+              (option as any).update_interval != null &&
+              (option as any).update_interval !== ""
+            ) {
               // ensure number
-              (option as any).update_interval = +((option as any).update_interval as any);
+              (option as any).update_interval = +((option as any)
+                .update_interval as any);
             } else {
               delete (option as any).update_interval;
             }
-            if (typeof option.user_agent === "string" && option.user_agent.trim() === "") {
+            if (
+              typeof option.user_agent === "string" &&
+              option.user_agent.trim() === ""
+            ) {
               delete (option as any).user_agent;
             }
           }
 
-          const providedName = (form as any).name && String((form as any).name).trim();
-          const providedDesc = (form as any).desc && String((form as any).desc).trim();
+          const providedName =
+            (form as any).name && String((form as any).name).trim();
+          const providedDesc =
+            (form as any).desc && String((form as any).desc).trim();
 
           const item: Partial<IProfileItem> = {
             ...form,

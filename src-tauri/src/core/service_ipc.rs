@@ -190,7 +190,10 @@ pub async fn send_ipc_request(
                 "Failed to connect to service named pipe: {}",
                 error
             );
-            return Err(anyhow::anyhow!("Unable to connect to service named pipe: {}", error));
+            return Err(anyhow::anyhow!(
+                "Unable to connect to service named pipe: {}",
+                error
+            ));
         }
 
         let mut pipe = unsafe { File::from_raw_handle(handle as RawHandle) };
@@ -325,7 +328,13 @@ pub async fn send_ipc_request(
     let request = match create_signed_request(command, payload) {
         Ok(req) => req,
         Err(e) => {
-            logging!(error, Type::Service, true, "Failed to create signed request: {}", e);
+            logging!(
+                error,
+                Type::Service,
+                true,
+                "Failed to create signed request: {}",
+                e
+            );
             return Err(e);
         }
     };
@@ -350,7 +359,10 @@ pub async fn send_ipc_request(
                 "Failed to connect to Unix socket: {}",
                 e
             );
-            return Err(anyhow::anyhow!("Unable to connect to service Unix socket: {}", e));
+            return Err(anyhow::anyhow!(
+                "Unable to connect to service Unix socket: {}",
+                e
+            ));
         }
     };
 
@@ -358,18 +370,36 @@ pub async fn send_ipc_request(
     let len_bytes = (request_bytes.len() as u32).to_be_bytes();
 
     if let Err(e) = std::io::Write::write_all(&mut stream, &len_bytes) {
-        logging!(error, Type::Service, true, "Failed to write request length: {}", e);
+        logging!(
+            error,
+            Type::Service,
+            true,
+            "Failed to write request length: {}",
+            e
+        );
         return Err(anyhow::anyhow!("Failed to write request length: {}", e));
     }
 
     if let Err(e) = std::io::Write::write_all(&mut stream, request_bytes) {
-        logging!(error, Type::Service, true, "Failed to write request body: {}", e);
+        logging!(
+            error,
+            Type::Service,
+            true,
+            "Failed to write request body: {}",
+            e
+        );
         return Err(anyhow::anyhow!("Failed to write request body: {}", e));
     }
 
     let mut response_len_bytes = [0u8; 4];
     if let Err(e) = std::io::Read::read_exact(&mut stream, &mut response_len_bytes) {
-        logging!(error, Type::Service, true, "Failed to read response length: {}", e);
+        logging!(
+            error,
+            Type::Service,
+            true,
+            "Failed to read response length: {}",
+            e
+        );
         return Err(anyhow::anyhow!("Failed to read response length: {}", e));
     }
 
@@ -377,7 +407,13 @@ pub async fn send_ipc_request(
 
     let mut response_bytes = vec![0u8; response_len];
     if let Err(e) = std::io::Read::read_exact(&mut stream, &mut response_bytes) {
-        logging!(error, Type::Service, true, "Failed to read response body: {}", e);
+        logging!(
+            error,
+            Type::Service,
+            true,
+            "Failed to read response body: {}",
+            e
+        );
         return Err(anyhow::anyhow!("Failed to read response body: {}", e));
     }
 
@@ -398,7 +434,12 @@ pub async fn send_ipc_request(
     match verify_response_signature(&response) {
         Ok(valid) => {
             if !valid {
-                logging!(error, Type::Service, true, "Service response signature verification failed");
+                logging!(
+                    error,
+                    Type::Service,
+                    true,
+                    "Service response signature verification failed"
+                );
                 bail!("Service response signature verification failed");
             }
         }

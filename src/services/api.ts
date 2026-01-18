@@ -299,7 +299,10 @@ export const getGroupProxyDelays = async (
     );
     return result as any as Record<string, number>;
   } catch (error) {
-    console.error(`[API] Get proxy group delay failed, group: ${groupName}`, error);
+    console.error(
+      `[API] Get proxy group delay failed, group: ${groupName}`,
+      error,
+    );
     throw error;
   }
 };
@@ -508,7 +511,9 @@ export const getIpInfo = async (): Promise<IpInfo> => {
           if (timeoutId) clearTimeout(timeoutId);
 
           if (response.data && response.data.ip) {
-            console.log(`IP detection succeeded, using service: ${service.url}`);
+            console.log(
+              `IP detection succeeded, using service: ${service.url}`,
+            );
             return service.mapping(response.data);
           } else {
             throw new Error(`Invalid response format from ${service.url}`);

@@ -81,7 +81,12 @@ impl NetworkManager {
                 let mut no_proxy_guard = NETWORK_MANAGER.no_proxy_client.lock().unwrap();
                 *no_proxy_guard = Some(no_proxy_client);
 
-                logging!(info, Type::Network, true, "Network manager initialization completed");
+                logging!(
+                    info,
+                    Type::Network,
+                    true,
+                    "Network manager initialization completed"
+                );
             });
         });
     }
@@ -410,7 +415,13 @@ impl NetworkManager {
         let watchdog = tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(timeout_duration)).await;
             let _ = cancel_tx.send(());
-            logging!(warn, Type::Network, true, "Request canceled due to timeout: {}", url_clone);
+            logging!(
+                warn,
+                Type::Network,
+                true,
+                "Request canceled due to timeout: {}",
+                url_clone
+            );
         });
 
         let result = tokio::select! {

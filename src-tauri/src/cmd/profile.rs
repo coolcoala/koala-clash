@@ -55,14 +55,30 @@ pub async fn get_profiles() -> CmdResult<IProfiles> {
 
     match latest_result {
         Ok(Ok(profiles)) => {
-            logging!(info, Type::Cmd, false, "Quickly fetched profiles list successfully");
+            logging!(
+                info,
+                Type::Cmd,
+                false,
+                "Quickly fetched profiles list successfully"
+            );
             return Ok(profiles);
         }
         Ok(Err(join_err)) => {
-            logging!(warn, Type::Cmd, true, "Quick profile list fetch task failed: {}", join_err);
+            logging!(
+                warn,
+                Type::Cmd,
+                true,
+                "Quick profile list fetch task failed: {}",
+                join_err
+            );
         }
         Err(_) => {
-            logging!(warn, Type::Cmd, true, "Quick profile list fetch timeout (500ms)");
+            logging!(
+                warn,
+                Type::Cmd,
+                true,
+                "Quick profile list fetch timeout (500ms)"
+            );
         }
     }
 
@@ -82,7 +98,12 @@ pub async fn get_profiles() -> CmdResult<IProfiles> {
 
     match data_result {
         Ok(Ok(profiles)) => {
-            logging!(info, Type::Cmd, false, "Fetched draft profile list successfully");
+            logging!(
+                info,
+                Type::Cmd,
+                false,
+                "Fetched draft profile list successfully"
+            );
             return Ok(profiles);
         }
         Ok(Err(join_err)) => {
@@ -95,7 +116,12 @@ pub async fn get_profiles() -> CmdResult<IProfiles> {
             );
         }
         Err(_) => {
-            logging!(error, Type::Cmd, true, "Draft profile list fetch timeout (2s)");
+            logging!(
+                error,
+                Type::Cmd,
+                true,
+                "Draft profile list fetch timeout (2s)"
+            );
         }
     }
 
@@ -109,11 +135,22 @@ pub async fn get_profiles() -> CmdResult<IProfiles> {
 
     match tokio::task::spawn_blocking(IProfiles::new).await {
         Ok(profiles) => {
-            logging!(info, Type::Cmd, true, "Fallback profiles created successfully");
+            logging!(
+                info,
+                Type::Cmd,
+                true,
+                "Fallback profiles created successfully"
+            );
             Ok(profiles)
         }
         Err(err) => {
-            logging!(error, Type::Cmd, true, "Fallback profiles creation failed: {}", err);
+            logging!(
+                error,
+                Type::Cmd,
+                true,
+                "Fallback profiles creation failed: {}",
+                err
+            );
             // 返回空配置避免崩溃
             Ok(IProfiles {
                 current: None,
@@ -317,12 +354,24 @@ pub async fn patch_profiles_config(profiles: IProfiles) -> CmdResult<bool> {
 
     // 保存当前配置，以便在验证失败时恢复
     let current_profile = Config::profiles().latest().current.clone();
-    logging!(info, Type::Cmd, true, "Current profile: {:?}", current_profile);
+    logging!(
+        info,
+        Type::Cmd,
+        true,
+        "Current profile: {:?}",
+        current_profile
+    );
 
     // 如果要切换配置，先检查目标配置文件是否有语法错误
     if let Some(new_profile) = profiles.current.as_ref() {
         if current_profile.as_ref() != Some(new_profile) {
-            logging!(info, Type::Cmd, true, "Switching to new profile: {}", new_profile);
+            logging!(
+                info,
+                Type::Cmd,
+                true,
+                "Switching to new profile: {}",
+                new_profile
+            );
 
             // 获取目标配置文件路径
             let config_file_result = {
@@ -338,7 +387,13 @@ pub async fn patch_profiles_config(profiles: IProfiles) -> CmdResult<bool> {
                         }
                     }
                     Err(e) => {
-                        logging!(error, Type::Cmd, true, "Failed to get target profile info: {}", e);
+                        logging!(
+                            error,
+                            Type::Cmd,
+                            true,
+                            "Failed to get target profile info: {}",
+                            e
+                        );
                         None
                     }
                 }
@@ -377,7 +432,12 @@ pub async fn patch_profiles_config(profiles: IProfiles) -> CmdResult<bool> {
 
                         match yaml_parse_result {
                             Ok(Ok(_)) => {
-                                logging!(info, Type::Cmd, true, "Target profile file syntax is correct");
+                                logging!(
+                                    info,
+                                    Type::Cmd,
+                                    true,
+                                    "Target profile file syntax is correct"
+                                );
                             }
                             Ok(Err(err)) => {
                                 let error_msg = format!(" {err}");
@@ -564,7 +624,13 @@ pub async fn patch_profiles_config(profiles: IProfiles) -> CmdResult<bool> {
             Ok(true)
         }
         Ok(Ok((false, error_msg))) => {
-            logging!(warn, Type::Cmd, true, "Profile validation failed: {}", error_msg);
+            logging!(
+                warn,
+                Type::Cmd,
+                true,
+                "Profile validation failed: {}",
+                error_msg
+            );
             Config::profiles().discard();
             // 如果验证失败，恢复到之前的配置
             if let Some(prev_profile) = current_profile {
@@ -589,7 +655,12 @@ pub async fn patch_profiles_config(profiles: IProfiles) -> CmdResult<bool> {
                     }
                 });
 
-                logging!(info, Type::Cmd, true, "Successfully restored previous profile");
+                logging!(
+                    info,
+                    Type::Cmd,
+                    true,
+                    "Successfully restored previous profile"
+                );
             }
 
             // 发送验证错误通知
@@ -660,7 +731,13 @@ pub async fn patch_profiles_config_by_profile_index(
     _app_handle: tauri::AppHandle,
     profile_index: String,
 ) -> CmdResult<bool> {
-    logging!(info, Type::Cmd, true, "Switching profile to: {}", profile_index);
+    logging!(
+        info,
+        Type::Cmd,
+        true,
+        "Switching profile to: {}",
+        profile_index
+    );
 
     let profiles = IProfiles {
         current: Some(profile_index),
@@ -689,7 +766,11 @@ pub fn patch_profile(index: String, profile: PrfItem) -> CmdResult {
     if update_interval_changed {
         let index_clone = index.clone();
         crate::process::AsyncHandler::spawn(move || async move {
-            logging!(info, Type::Timer, "Timer update interval changed; refreshing timers...");
+            logging!(
+                info,
+                Type::Timer,
+                "Timer update interval changed; refreshing timers..."
+            );
             if let Err(e) = crate::core::Timer::global().refresh() {
                 logging!(error, Type::Timer, "Failed to refresh timers: {}", e);
             } else {

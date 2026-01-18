@@ -127,7 +127,12 @@ impl WindowManager {
             finish_window_operation();
         });
 
-        logging!(info, Type::Window, true, "Starting smart show for main window");
+        logging!(
+            info,
+            Type::Window,
+            true,
+            "Starting smart show for main window"
+        );
         logging!(
             debug,
             Type::Window,
@@ -140,7 +145,12 @@ impl WindowManager {
 
         match current_state {
             WindowState::NotExist => {
-                logging!(info, Type::Window, true, "Main window not found; creating new window");
+                logging!(
+                    info,
+                    Type::Window,
+                    true,
+                    "Main window not found; creating new window"
+                );
                 if Self::create_new_window() {
                     logging!(info, Type::Window, true, "Window created successfully");
                     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -151,7 +161,12 @@ impl WindowManager {
                 }
             }
             WindowState::VisibleFocused => {
-                logging!(info, Type::Window, true, "Window already visible and focused; no action needed");
+                logging!(
+                    info,
+                    Type::Window,
+                    true,
+                    "Window already visible and focused; no action needed"
+                );
                 WindowOperationResult::NoAction
             }
             WindowState::VisibleUnfocused | WindowState::Minimized | WindowState::Hidden => {
@@ -199,7 +214,12 @@ impl WindowManager {
         match current_state {
             WindowState::NotExist => {
                 // 窗口不存在，创建新窗口
-                logging!(info, Type::Window, true, "Main window not found; will create new window");
+                logging!(
+                    info,
+                    Type::Window,
+                    true,
+                    "Main window not found; will create new window"
+                );
                 // 由于已经有防抖保护，直接调用内部方法
                 if Self::create_new_window() {
                     WindowOperationResult::Created
@@ -262,7 +282,13 @@ impl WindowManager {
         if window.is_minimized().unwrap_or(false) {
             logging!(info, Type::Window, true, "Window minimized; unminimizing");
             if let Err(e) = window.unminimize() {
-                logging!(warn, Type::Window, true, "Failed to unminimize window: {}", e);
+                logging!(
+                    warn,
+                    Type::Window,
+                    true,
+                    "Failed to unminimize window: {}",
+                    e
+                );
                 operations_successful = false;
             }
         }
@@ -275,14 +301,25 @@ impl WindowManager {
 
         // 3. 设置焦点
         if let Err(e) = window.set_focus() {
-            logging!(warn, Type::Window, true, "Failed to set window focus: {}", e);
+            logging!(
+                warn,
+                Type::Window,
+                true,
+                "Failed to set window focus: {}",
+                e
+            );
             operations_successful = false;
         }
 
         // 4. 平台特定的激活策略
         #[cfg(target_os = "macos")]
         {
-            logging!(info, Type::Window, true, "Applying macOS-specific activation policy");
+            logging!(
+                info,
+                Type::Window,
+                true,
+                "Applying macOS-specific activation policy"
+            );
             AppHandleManager::global().set_activation_policy_regular();
         }
 
@@ -314,7 +351,12 @@ impl WindowManager {
             logging!(info, Type::Window, true, "Window activation successful");
             WindowOperationResult::Shown
         } else {
-            logging!(warn, Type::Window, true, "Window activation partially failed");
+            logging!(
+                warn,
+                Type::Window,
+                true,
+                "Window activation partially failed"
+            );
             WindowOperationResult::Failed
         }
     }
@@ -335,7 +377,12 @@ impl WindowManager {
                 }
             },
             None => {
-                logging!(info, Type::Window, true, "Window does not exist; nothing to hide");
+                logging!(
+                    info,
+                    Type::Window,
+                    true,
+                    "Window does not exist; nothing to hide"
+                );
                 WindowOperationResult::NoAction
             }
         }

@@ -1,4 +1,5 @@
 ## v0.2.8
+
 - fixed issue with error 0xc00000142 when shutting down the computer
 - dark mode issue fixed
 - improved HWID definition
@@ -8,6 +9,7 @@
 - allowed to set an empty password on an external controller
 
 ## v0.2.7
+
 - fixed bug in proxy groups menu
 - added message about global mode enabled on main screen
 - fixed minor bugs

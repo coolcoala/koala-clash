@@ -43,7 +43,13 @@ pub fn handle_script_validation_notice(result: &(bool, String), file_type: &str)
 /// 验证指定脚本文件
 #[tauri::command]
 pub async fn validate_script_file(file_path: String) -> CmdResult<bool> {
-    logging!(info, Type::Config, true, "Validating script file: {}", file_path);
+    logging!(
+        info,
+        Type::Config,
+        true,
+        "Validating script file: {}",
+        file_path
+    );
 
     match CoreManager::global()
         .validate_config_file(&file_path, None)

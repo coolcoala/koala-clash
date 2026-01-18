@@ -403,9 +403,13 @@ pub fn init_scheme() -> Result<()> {
 
     // Try to re-register the app bundle with LaunchServices to ensure URL schemes are active
     if let Ok(exe) = current_exe() {
-        if let (Some(_parent1), Some(_parent2), Some(app_bundle)) =
-            (exe.parent(), exe.parent().and_then(|p| p.parent()), exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()))
-        {
+        if let (Some(_parent1), Some(_parent2), Some(app_bundle)) = (
+            exe.parent(),
+            exe.parent().and_then(|p| p.parent()),
+            exe.parent()
+                .and_then(|p| p.parent())
+                .and_then(|p| p.parent()),
+        ) {
             let app_bundle_path = app_bundle.to_string_lossy().into_owned();
             let lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
             let output = Command::new(lsregister)

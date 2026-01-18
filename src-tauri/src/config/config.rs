@@ -69,9 +69,20 @@ impl Config {
         }
         // 生成运行时配置
         if let Err(err) = Self::generate().await {
-            logging!(error, Type::Config, true, "Failed to generate runtime config: {}", err);
+            logging!(
+                error,
+                Type::Config,
+                true,
+                "Failed to generate runtime config: {}",
+                err
+            );
         } else {
-            logging!(info, Type::Config, true, "Runtime config generated successfully");
+            logging!(
+                info,
+                Type::Config,
+                true,
+                "Runtime config generated successfully"
+            );
         }
 
         // 生成运行时配置文件并验证
@@ -101,7 +112,13 @@ impl Config {
                     }
                 }
                 Err(err) => {
-                    logging!(warn, Type::Config, true, "Validation process execution failed: {}", err);
+                    logging!(
+                        warn,
+                        Type::Config,
+                        true,
+                        "Validation process execution failed: {}",
+                        err
+                    );
                     CoreManager::global()
                         .use_default_config("config_validate::process_terminated", "")
                         .await?;
@@ -109,7 +126,12 @@ impl Config {
                 }
             }
         } else {
-            logging!(warn, Type::Config, true, "Failed to generate config file; using default config");
+            logging!(
+                warn,
+                Type::Config,
+                true,
+                "Failed to generate config file; using default config"
+            );
             CoreManager::global()
                 .use_default_config("config_validate::error", "")
                 .await?;
