@@ -688,5 +688,6 @@
   "Constructor": "Конструктор групп",
   "Leave blank to use the URL above": "Оставьте поле пустым, чтобы использовать URL-адрес выше",
   "No profiles available": "Нет доступных профилей",
-  "Configuration saved successfully": "Конфигурация успешно сохранена"
+  "Configuration saved successfully": "Конфигурация успешно сохранена",
+  "Connection Details": "Сведения о подключении"
 }
