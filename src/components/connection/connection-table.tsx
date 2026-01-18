@@ -5,9 +5,11 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
   Header,
   ColumnSizingState,
+  SortingState,
 } from "@tanstack/react-table";
 
 import {
@@ -23,6 +25,7 @@ import { truncateStr } from "@/utils/truncate-str";
 import parseTraffic from "@/utils/parse-traffic";
 import { t } from "i18next";
 import { cn } from "@root/lib/utils";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 dayjs.extend(relativeTime);
 
@@ -142,6 +145,19 @@ export const ConnectionTable = (props: Props) => {
     }
   });
 
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    try {
+      const saved = localStorage.getItem("connection-table-sorting");
+      return saved ? JSON.parse(saved) : [{ id: "time", desc: true }];
+    } catch {
+      return [{ id: "time", desc: true }];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("connection-table-sorting", JSON.stringify(sorting));
+  }, [sorting]);
+
   useEffect(() => {
     localStorage.setItem(
       "connection-table-widths",
@@ -178,21 +194,50 @@ export const ConnectionTable = (props: Props) => {
     });
   }, [connections]);
 
+  const SortableHeader = ({
+    column,
+    label,
+  }: {
+    column: any;
+    label: string;
+  }) => {
+    const sorted = column.getIsSorted();
+    return (
+      <div
+        className="flex items-center gap-1 cursor-pointer select-none hover:text-foreground"
+        onClick={() => column.toggleSorting()}
+      >
+        <span>{label}</span>
+        {sorted === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : sorted === "desc" ? (
+          <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-50" />
+        )}
+      </div>
+    );
+  };
+
   const columns = useMemo<ColumnDef<ConnectionRow>[]>(
     () => [
       {
         accessorKey: "host",
-        header: () => t("Host"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Host")} />
+        ),
         size: columnSizing?.host || 220,
-        minSize: 180,
-        maxSize: 400,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "download",
-        header: () => t("Downloaded"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Downloaded")} />
+        ),
         size: columnSizing?.download || 88,
-        minSize: 80,
-        maxSize: 150,
+        minSize: 60,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <div className="text-right font-mono text-sm">
             {parseTraffic(getValue<number>()).join(" ")}
@@ -201,10 +246,12 @@ export const ConnectionTable = (props: Props) => {
       },
       {
         accessorKey: "upload",
-        header: () => t("Uploaded"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Uploaded")} />
+        ),
         size: columnSizing?.upload || 88,
-        minSize: 80,
-        maxSize: 150,
+        minSize: 60,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <div className="text-right font-mono text-sm">
             {parseTraffic(getValue<number>()).join(" ")}
@@ -213,10 +260,12 @@ export const ConnectionTable = (props: Props) => {
       },
       {
         accessorKey: "dlSpeed",
-        header: () => t("DL Speed"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("DL Speed")} />
+        ),
         size: columnSizing?.dlSpeed || 88,
-        minSize: 80,
-        maxSize: 150,
+        minSize: 60,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <div className="text-right font-mono text-sm">
             {parseTraffic(getValue<number>()).join(" ")}/s
@@ -225,10 +274,12 @@ export const ConnectionTable = (props: Props) => {
       },
       {
         accessorKey: "ulSpeed",
-        header: () => t("UL Speed"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("UL Speed")} />
+        ),
         size: columnSizing?.ulSpeed || 88,
-        minSize: 80,
-        maxSize: 150,
+        minSize: 60,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <div className="text-right font-mono text-sm">
             {parseTraffic(getValue<number>()).join(" ")}/s
@@ -237,31 +288,44 @@ export const ConnectionTable = (props: Props) => {
       },
       {
         accessorKey: "chains",
-        header: () => t("Chains"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Chains")} />
+        ),
         size: columnSizing?.chains || 340,
-        minSize: 180,
-        maxSize: 500,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "rule",
-        header: () => t("Rule"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Rule")} />
+        ),
         size: columnSizing?.rule || 280,
-        minSize: 180,
-        maxSize: 400,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "process",
-        header: () => t("Process"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Process")} />
+        ),
         size: columnSizing?.process || 220,
-        minSize: 180,
-        maxSize: 350,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "time",
-        header: () => t("Time"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Time")} />
+        ),
         size: columnSizing?.time || 120,
-        minSize: 100,
-        maxSize: 180,
+        minSize: 60,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          const timeA = new Date(rowA.original.time).getTime();
+          const timeB = new Date(rowB.original.time).getTime();
+          return timeA - timeB;
+        },
         cell: ({ getValue }) => (
           <div className="text-right font-mono text-sm">
             {dayjs(getValue<string>()).fromNow()}
@@ -270,24 +334,30 @@ export const ConnectionTable = (props: Props) => {
       },
       {
         accessorKey: "source",
-        header: () => t("Source"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Source")} />
+        ),
         size: columnSizing?.source || 200,
-        minSize: 130,
-        maxSize: 300,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "remoteDestination",
-        header: () => t("Destination"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Destination")} />
+        ),
         size: columnSizing?.remoteDestination || 200,
-        minSize: 130,
-        maxSize: 300,
+        minSize: 80,
+        enableSorting: true,
       },
       {
         accessorKey: "type",
-        header: () => t("Type"),
+        header: ({ column }) => (
+          <SortableHeader column={column} label={t("Type")} />
+        ),
         size: columnSizing?.type || 160,
-        minSize: 100,
-        maxSize: 220,
+        minSize: 60,
+        enableSorting: true,
       },
     ],
     [columnSizing],
@@ -296,11 +366,14 @@ export const ConnectionTable = (props: Props) => {
   const table = useReactTable({
     data: connRows,
     columns,
-    state: { columnSizing },
+    state: { columnSizing, sorting },
     onColumnSizingChange: setColumnSizing,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     columnResizeMode: "onChange",
     enableColumnResizing: true,
+    enableSorting: true,
   });
 
   const totalTableWidth = useMemo(() => {
@@ -340,7 +413,6 @@ export const ConnectionTable = (props: Props) => {
                   style={{
                     width: header.getSize(),
                     minWidth: header.column.columnDef.minSize,
-                    maxWidth: header.column.columnDef.maxSize,
                   }}
                 >
                   <div className="flex items-center justify-between h-full">
@@ -375,7 +447,6 @@ export const ConnectionTable = (props: Props) => {
                   style={{
                     width: cell.column.getSize(),
                     minWidth: cell.column.columnDef.minSize,
-                    maxWidth: cell.column.columnDef.maxSize,
                   }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

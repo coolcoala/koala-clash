@@ -38,7 +38,7 @@ export const ConnectionDetail = forwardRef<ConnectionDetailRef>(
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
           side="right"
-          className="w-full max-w-[520px] max-h-[100vh] sm:max-h-[calc(100vh-2rem)] overflow-y-auto p-0 flex flex-col"
+          className="w-full max-w-[520px] overflow-y-auto p-0 flex flex-col"
         >
           <SheetHeader className="p-6 pb-4">
             <SheetTitle>{t("Connection Details")}</SheetTitle>
