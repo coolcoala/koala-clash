@@ -15,17 +15,14 @@ import {
   ProfileViewerRef,
 } from "@/components/profile/profile-viewer";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronsUpDown,
-  Check,
   PlusCircle,
   Wrench,
   AlertTriangle,
@@ -40,16 +37,10 @@ import {
 import { useVerge } from "@/hooks/use-verge";
 import { useSystemState } from "@/hooks/use-system-state";
 import { useServiceInstaller } from "@/hooks/useServiceInstaller";
-import { Switch } from "@/components/ui/switch";
 import { ProxySelectors } from "@/components/home/proxy-selectors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { closeAllConnections } from "@/services/api";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { updateProfile } from "@/services/cmds";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import parseTraffic from "@/utils/parse-traffic";
@@ -94,7 +85,6 @@ const MinimalHomePage: React.FC = () => {
   const { profiles, patchProfiles, activateSelected, mutateProfiles } =
     useProfiles();
   const viewerRef = useRef<ProfileViewerRef>(null);
-  const [uidToActivate, setUidToActivate] = useState<string | null>(null);
   const { connections } = useAppData();
 
   const profileItems = useMemo(() => {
@@ -272,203 +262,180 @@ const MinimalHomePage: React.FC = () => {
   } as const;
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      {/* Background map */}
       <div className="absolute inset-0 opacity-20 pointer-events-none z-0 [transform:translateZ(0)]">
         <img src={map} alt="World map" className="w-full h-full object-cover" />
       </div>
 
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full pointer-events-none z-0"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(34,197,94,0.3) 0%, transparent 70%)",
-          filter: "blur(100px)",
-        }}
-        animate={{
-          opacity: uiProxyEnabled ? 1 : 0,
-          scale: uiProxyEnabled ? 1 : 0.92,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 120,
-          damping: 25,
-          mass: 1,
-        }}
-      />
+      {/* Green glow when connected */}
+      {/*<motion.div*/}
+      {/*  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full pointer-events-none z-0"*/}
+      {/*  style={{*/}
+      {/*    background:*/}
+      {/*      "radial-gradient(circle, rgba(34,197,94,0.3) 0%, transparent 70%)",*/}
+      {/*    filter: "blur(100px)",*/}
+      {/*  }}*/}
+      {/*  animate={{*/}
+      {/*    opacity: uiProxyEnabled ? 1 : 0,*/}
+      {/*    scale: uiProxyEnabled ? 1 : 0.92,*/}
+      {/*  }}*/}
+      {/*  transition={{*/}
+      {/*    type: "spring",*/}
+      {/*    stiffness: 120,*/}
+      {/*    damping: 25,*/}
+      {/*    mass: 1,*/}
+      {/*  }}*/}
+      {/*/>*/}
 
-      <header className="flex-shrink-0 p-5 grid grid-cols-3 items-center z-10">
-        <div className="flex justify-start">
-          <SidebarTrigger />
-        </div>
-        <div className="justify-self-center flex flex-col items-center gap-2">
-          <div className="relative flex items-center justify-center">
-            {profileItems.length > 0 ? (
-              <>
-                <div className="absolute right-full mr-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => viewerRef.current?.create()}
-                          className={cn(
-                            "backdrop-blur-sm bg-white/80 border-gray-300/60",
-                            "dark:bg-white/5 dark:border-white/15",
-                            "hover:bg-white/90 hover:border-gray-400/70",
-                            "dark:hover:bg-white/10 dark:hover:border-white/20",
-                            "transition-all duration-200",
-                          )}
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("Add Profile")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full max-w-[250px] sm:max-w-xs",
-                        "backdrop-blur-sm bg-white/80 border-gray-300/60",
-                        "dark:bg-white/5 dark:border-white/15",
-                        "hover:bg-white/90 hover:border-gray-400/70",
-                        "dark:hover:bg-white/10 dark:hover:border-white/20",
-                        "transition-all duration-200",
-                      )}
-                    >
-                      <span className="truncate">{currentProfileName}</span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                    <DropdownMenuLabel>{t("Profiles")}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {profileItems.map((p) => (
-                      <DropdownMenuItem
-                        key={p.uid}
-                        onSelect={() => handleProfileChange(p.uid)}
-                      >
-                        <span className="flex-1 truncate">{p.name}</span>
-                        {profiles?.current === p.uid && (
-                          <Check className="ml-4 h-4 w-4" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {currentProfile?.type === "remote" && (
-                  <div className="absolute left-full ml-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleUpdateProfile}
-                            disabled={isUpdating}
-                            className={cn(
-                              "flex-shrink-0",
-                              "backdrop-blur-sm bg-white/70 border border-gray-300/50",
-                              "dark:bg-white/5 dark:border-white/10",
-                              "hover:bg-white/85 hover:border-gray-400/60",
-                              "dark:hover:bg-white/10 dark:hover:border-white/15",
-                              "transition-all duration-200",
-                            )}
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-5 w-5" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t("Update Profile")}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="absolute right-full mr-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => viewerRef.current?.create()}
-                          className={cn(
-                            "backdrop-blur-sm bg-white/80 border-gray-300/60",
-                            "dark:bg-white/5 dark:border-white/15",
-                            "hover:bg-white/90 hover:border-gray-400/70",
-                            "dark:hover:bg-white/10 dark:hover:border-white/20",
-                            "transition-all duration-200",
-                          )}
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("Add Profile")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Button
-                  variant="outline"
-                  disabled
-                  className={cn(
-                    "max-w-[250px] sm:max-w-xs opacity-50 cursor-not-allowed",
-                    "backdrop-blur-sm bg-white/50 border-gray-300/40",
-                    "dark:bg-white/3 dark:border-white/10",
-                  )}
-                >
-                  <span className="truncate">{t("No profiles available")}</span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-30" />
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex justify-end"></div>
+      {/* Minimal header with sidebar trigger */}
+      <header className="flex-shrink-0 p-4 z-10">
+        <SidebarTrigger />
       </header>
 
-      <main className="flex-1 overflow-y-auto flex items-center justify-center">
-        <div className="relative flex flex-col items-center gap-8 py-10 w-full max-w-4xl px-4">
-          {currentProfile?.announce && (
-            <div className="absolute -top-15 w-full flex justify-center text-center max-w-lg">
-              {currentProfile.announce_url ? (
+      {/* Main two-column layout */}
+      <main className="flex-1 overflow-hidden flex justify-center z-10">
+        {/* Left Panel - Profile Controls */}
+        <div className="flex-1 max-w-xl flex flex-col items-center justify-center p-4 gap-4">
+          <div className={cn(
+            "flex flex-col gap-4 p-4 rounded-xl w-full max-w-xs",
+            "backdrop-blur-sm bg-white/60 border border-gray-200/60",
+            "dark:bg-white/5 dark:border-white/10",
+          )}>
+            {/* Announce */}
+            {currentProfile?.announce && (
+              <div className="text-center pb-3 border-b border-gray-200/60 dark:border-white/10">
+                {currentProfile.announce_url ? (
+                  <a
+                    href={currentProfile.announce_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:underline hover:opacity-80 transition-all whitespace-pre-wrap"
+                    title={currentProfile.announce_url.replace(/\\n/g, "\n")}
+                  >
+                    <span>{currentProfile.announce.replace(/\\n/g, "\n")}</span>
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium text-foreground whitespace-pre-wrap">
+                    {currentProfile.announce}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Profile Selector */}
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground font-medium">
+                {t("Profile")}
+              </label>
+              <Select
+                value={profiles?.current || ""}
+                onValueChange={handleProfileChange}
+                disabled={profileItems.length === 0}
+              >
+                <SelectTrigger className="w-full bg-white/50 dark:bg-white/5">
+                  <SelectValue placeholder={t("No profiles available")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {profileItems.map((p) => (
+                    <SelectItem key={p.uid} value={p.uid}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              {/* Support Button */}
+              {currentProfile?.support_url && (
                 <a
-                  href={currentProfile.announce_url}
+                  href={currentProfile.support_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-base font-semibold text-foreground hover:underline hover:opacity-80 transition-all whitespace-pre-wrap"
-                  title={currentProfile.announce_url.replace(/\\n/g, "\n")}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg",
+                    "border border-input bg-white/50 dark:bg-white/5",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "transition-colors cursor-pointer",
+                  )}
                 >
-                  <span>{currentProfile.announce.replace(/\\n/g, "\n")}</span>
-                  <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                  {currentProfile.support_url.includes("t.me") ||
+                  currentProfile.support_url.includes("telegram") ||
+                  currentProfile.support_url.startsWith("tg://") ? (
+                    <Send className="h-4 w-4" />
+                  ) : (
+                    <Globe className="h-4 w-4" />
+                  )}
+                  <span className="text-xs font-medium">{t("Support")}</span>
                 </a>
-              ) : (
-                <p className="text-base font-semibold text-foreground whitespace-pre-wrap">
-                  {currentProfile.announce}
-                </p>
+              )}
+
+              {/* Add Profile Button */}
+              <button
+                onClick={() => viewerRef.current?.create()}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg",
+                  "border border-input bg-white/50 dark:bg-white/5",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "transition-colors cursor-pointer",
+                )}
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span className="text-xs font-medium">{t("Add")}</span>
+              </button>
+
+              {/* Update Profile Button (only for remote profiles) */}
+              {currentProfile?.type === "remote" && (
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={isUpdating}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg",
+                    "border border-input bg-white/50 dark:bg-white/5",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "transition-colors cursor-pointer",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                  )}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="text-xs font-medium">{t("Update")}</span>
+                </button>
               )}
             </div>
-          )}
+          </div>
 
-          <div className="relative text-center">
+          {/* No profiles alert */}
+          {profileItems.length === 0 && (
+            <Alert className="max-w-xs flex flex-col items-center gap-2 text-center">
+              <PlusCircle className="h-4 w-4" />
+              <AlertTitle>{t("Get Started")}</AlertTitle>
+              <AlertDescription className="whitespace-pre-wrap">
+                {t("You don't have any profiles yet. Add your first one to begin.")}
+              </AlertDescription>
+              <Button
+                className="mt-2"
+                onClick={() => viewerRef.current?.create()}
+              >
+                {t("Add Profile")}
+              </Button>
+            </Alert>
+          )}
+        </div>
+
+        {/* Right Panel - Connection Controls */}
+        <div className="flex-1 max-w-xl flex flex-col items-center justify-center p-4 gap-6">
+          {/* Status Text */}
+          <div className="text-center">
             <motion.h1
               className={cn(
-                "text-4xl mb-2 font-semibold",
+                "text-3xl sm:text-4xl font-semibold",
                 statusInfo.isAnimating && "animate-pulse",
               )}
               animate={{ color: statusInfo.color }}
@@ -476,45 +443,10 @@ const MinimalHomePage: React.FC = () => {
             >
               {statusInfo.text}
             </motion.h1>
-
-            <AnimatePresence mode="wait">
-              {uiProxyEnabled && (
-                <motion.div
-                  key="traffic-stats"
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-52 flex justify-center items-center text-sm text-muted-foreground gap-6"
-                  variants={statsContainerVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  style={{ willChange: "opacity, transform, filter" }}
-                >
-                  <motion.div
-                    className="flex items-center gap-1"
-                    variants={statItemVariants}
-                    style={{ willChange: "opacity, transform, filter" }}
-                  >
-                    <ArrowDown className="h-4 w-4 text-green-500" />
-                    <motion.span layout>
-                      {parseTraffic(connections.downloadTotal)}
-                    </motion.span>
-                  </motion.div>
-
-                  <motion.div
-                    className="flex items-center gap-1"
-                    variants={statItemVariants}
-                    style={{ willChange: "opacity, transform, filter" }}
-                  >
-                    <ArrowUp className="h-4 w-4 text-sky-500" />
-                    <motion.span layout>
-                      {parseTraffic(connections.uploadTotal)}
-                    </motion.span>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
-          <div className="relative -translate-y-6">
+          {/* Power Button with Traffic Stats */}
+          <div className="relative flex flex-col items-center">
             <PowerButton
               loading={isToggling}
               checked={uiProxyEnabled}
@@ -522,10 +454,50 @@ const MinimalHomePage: React.FC = () => {
               disabled={showTunAlert || isToggling || profileItems.length === 0}
               aria-label={t("Toggle Proxy")}
             />
+
+            {/* Traffic Stats - Fixed place below button */}
+            <div className="mt-6 h-8 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                {uiProxyEnabled && (
+                  <motion.div
+                    key="traffic-stats"
+                    className="flex justify-center items-center text-sm text-muted-foreground gap-6 whitespace-nowrap"
+                    variants={statsContainerVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    style={{ willChange: "opacity, transform, filter" }}
+                  >
+                    <motion.div
+                      className="flex items-center gap-1"
+                      variants={statItemVariants}
+                      style={{ willChange: "opacity, transform, filter" }}
+                    >
+                      <ArrowDown className="h-4 w-4 text-green-500" />
+                      <motion.span layout>
+                        {parseTraffic(connections.downloadTotal)}
+                      </motion.span>
+                    </motion.div>
+
+                    <motion.div
+                      className="flex items-center gap-1"
+                      variants={statItemVariants}
+                      style={{ willChange: "opacity, transform, filter" }}
+                    >
+                      <ArrowUp className="h-4 w-4 text-sky-500" />
+                      <motion.span layout>
+                        {parseTraffic(connections.uploadTotal)}
+                      </motion.span>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
+          {/* TUN Alert */}
           {showTunAlert && (
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-xs">
               <Alert
                 className="flex flex-col items-center gap-2 text-center"
                 variant="destructive"
@@ -549,60 +521,18 @@ const MinimalHomePage: React.FC = () => {
             </div>
           )}
 
-          <div className="w-full max-w-sm mt-4 flex justify-center">
-            {profileItems.length > 0 ? (
+          {/* Proxy Selectors */}
+          {profileItems.length > 0 && (
+            <div className={cn(
+              "w-full max-w-xs p-4 rounded-xl",
+              "backdrop-blur-sm bg-white/60 border border-gray-200/60",
+              "dark:bg-white/5 dark:border-white/10",
+            )}>
               <ProxySelectors />
-            ) : (
-              <Alert className="flex flex-col items-center gap-2 text-center">
-                <PlusCircle className="h-4 w-4" />
-                <AlertTitle>{t("Get Started")}</AlertTitle>
-                <AlertDescription className="whitespace-pre-wrap">
-                  {t(
-                    "You don't have any profiles yet. Add your first one to begin.",
-                  )}
-                </AlertDescription>
-                <Button
-                  className="mt-2"
-                  onClick={() => viewerRef.current?.create()}
-                >
-                  {t("Add Profile")}
-                </Button>
-              </Alert>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </main>
-
-      <footer className="flex justify-center p-4 flex-shrink-0">
-        {currentProfile?.support_url && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("Support")}:</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <a
-                    href={currentProfile.support_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="transition-colors hover:text-primary"
-                  >
-                    {currentProfile.support_url.includes("t.me") ||
-                    currentProfile.support_url.includes("telegram") ||
-                    currentProfile.support_url.startsWith("tg://") ? (
-                      <Send className="h-5 w-5" />
-                    ) : (
-                      <Globe className="h-5 w-5" />
-                    )}
-                  </a>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{currentProfile.support_url}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
-      </footer>
 
       <ProfileViewer ref={viewerRef} onChange={() => mutateProfiles()} />
     </div>
