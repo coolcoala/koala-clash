@@ -1,3 +1,7 @@
+## v0.2.10
+
+- fixed homepage
+
 ## v0.2.9
 
 - fixed issue with hwid limit
