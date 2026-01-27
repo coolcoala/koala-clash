@@ -1,6 +1,6 @@
 {
   "name": "koala-clash",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "license": "GPL-3.0-only",
   "scripts": {
     "dev": "cross-env RUST_BACKTRACE=1 tauri dev -f verge-dev",

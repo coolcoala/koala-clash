@@ -1,6 +1,6 @@
 [package]
 name = "koala-clash"
-version = "0.2.9"
+version = "0.2.10"
 description = "koala clash"
 authors = ["zzzgydi", "wonfen", "MystiPanda", "coolcoala"]
 license = "GPL-3.0-only"
