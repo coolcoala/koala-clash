@@ -93,7 +93,7 @@ jobs:
       - name: Keep product name lowercase on Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sed -i "s/productName: Koala Clash/productName: koala-clash/" electron-builder.yml
+          sed -i "s/productName: Koala.Clash/productName: koala.clash/" electron-builder.yml
 
       - name: Install Build Tools
         if: matrix.os == 'ubuntu-latest' && matrix.format == 'pacman'
@@ -124,7 +124,7 @@ jobs:
           CSC_NAME: ${{ matrix.os == 'macos-latest' && secrets.APPLE_SIGNING_IDENTITY || '' }}
           APPLE_API_KEY_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_API_KEY || '' }}
           APPLE_API_ISSUER: ${{ matrix.os == 'macos-latest' && secrets.APPLE_API_ISSUER || '' }}
-          APPLE_API_KEY_PATH: ${{ matrix.os == 'macos-latest' && format('~/.appstoreconnect/private_keys/AuthKey_{0}.p8', secrets.APPLE_API_KEY) || '' }}
+          APPLE_API_KEY: ${{ matrix.os == 'macos-latest' && format('~/.appstoreconnect/private_keys/AuthKey_{0}.p8', secrets.APPLE_API_KEY) || '' }}
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
@@ -159,9 +159,9 @@ jobs:
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.format && '-' || '' }}${{ matrix.format || '' }}
           path: |
-            dist/koala-clash*
-            !dist/koala-clash.app.plist
-            !dist/koala-clash*blockmap*
+            dist/Koala*
+            !dist/*.plist
+            !dist/*blockmap*
             latest.yml
             changelog.md
 

@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=Koala-Clash
-Exec=koala-clash %U
+Name=Koala Clash
+Exec=koala.clash %U
 Terminal=false
 Type=Application
 Icon=koala-clash
-StartupWMClass=koala-clash
-MimeType=x-scheme-handler/clash;x-scheme-handler/mihomo;x-scheme-handler/koala-clash;
-Comment=koala-clash
+StartupWMClass=koala.clash
+MimeType=x-scheme-handler/clash;x-scheme-handler/mihomo;x-scheme-handler/koala.clash;
+Comment=koala.clash
 Categories=Utility;

@@ -2,13 +2,13 @@ pkgname=koala-clash-electron-git
 _pkgname=${pkgname%-electron-git}
 pkgver=r737.e4a7e67
 pkgrel=1
-pkgdesc="A geeked Mihomo client with features to improved users' experience."
+pkgdesc="A geeked Mihomo client with features that improve the user experience."
 arch=('x86_64' 'aarch64')
 url="https://github.com/coolcoala/koala-clash"
 license=('GPL3')
 conflicts=("sparkle-git" "sparkle" "sparkle-bin" "sparkle-electron" "sparkle-electron-bin" "sparkle-electron-git" "$_pkgname" "$_pkgname-git" "$_pkgname-electron" "$_pkgname-electron-bin" "$_pkgname-bin")
 depends=('electron' 'gtk3' 'libnotify' 'nss' 'libxss' 'libxtst' 'xdg-utils' 'at-spi2-core' 'util-linux-libs' 'libsecret')
-optdepends=('libappindicator-gtk3: Allow koala-clash to extend a menu via Ayatana indicators in Unity, KDE or Systray (GTK+ 3 library).')
+optdepends=('libappindicator-gtk3: Allow Koala.Clash to extend a menu via Ayatana indicators in Unity, KDE or Systray (GTK+ 3 library).')
 makedepends=('nodejs' 'pnpm' 'libxcrypt-compat' 'asar')
 install=$_pkgname.install
 source=(
@@ -33,7 +33,7 @@ pkgver() {
 
 prepare(){
     cd $srcdir/${_pkgname}
-    sed -i "s/productName: Koala-Clash/productName: koala-clash/" electron-builder.yml
+    sed -i "s/productName: Koala.Clash/productName: koala.clash/" electron-builder.yml
     pnpm install
 }
 
@@ -43,15 +43,15 @@ build(){
 }
 
 package() {
-    asar extract $srcdir/${_pkgname}/dist/linux-unpacked/resources/app.asar ${pkgdir}/opt/koala-clash
-    cp -r $srcdir/${_pkgname}/extra/sidecar ${pkgdir}/opt/koala-clash/resources/
-    cp -r $srcdir/${_pkgname}/extra/files ${pkgdir}/opt/koala-clash/resources/
-    chmod +x ${pkgdir}/opt/koala-clash/resources/files/koala-clash-service
-    chmod +sx ${pkgdir}/opt/koala-clash/resources/sidecar/mihomo
-    chmod +sx ${pkgdir}/opt/koala-clash/resources/sidecar/mihomo-alpha
+    asar extract $srcdir/${_pkgname}/dist/linux-unpacked/resources/app.asar ${pkgdir}/opt/koala.clash
+    cp -r $srcdir/${_pkgname}/extra/sidecar ${pkgdir}/opt/koala.clash/resources/
+    cp -r $srcdir/${_pkgname}/extra/files ${pkgdir}/opt/koala.clash/resources/
+    chmod +x ${pkgdir}/opt/koala.clash/resources/files/koala.clash-service
+    chmod +sx ${pkgdir}/opt/koala.clash/resources/sidecar/mihomo
+    chmod +sx ${pkgdir}/opt/koala.clash/resources/sidecar/mihomo-alpha
     install -Dm755 "${_pkgname}.sh" "${pkgdir}/usr/bin/${_pkgname}"
     install -Dm644 "${_pkgname}.desktop" "${pkgdir}/usr/share/applications/${_pkgname}.desktop"
-    install -Dm644 "${pkgdir}/opt/koala-clash/resources/icon.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/${_pkgname}.png"
+    install -Dm644 "${pkgdir}/opt/koala.clash/resources/icon.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/${_pkgname}.png"
 
     chown -R root:root ${pkgdir}
 }

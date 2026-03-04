@@ -9,6 +9,6 @@ _blue="${_bold}$(tput setaf 4)"
 _yellow="${_bold}$(tput setaf 3)"
 
 post_install() {
-    note "Custom flags should be put directly in: ~/.config/koala-clash-flags.conf"
-    note "The launcher is called: 'koala-clash'"
+    note "Custom flags should be put directly in: ~/.config/koala.clash-flags.conf"
+    note "The launcher is called: 'koala.clash'"
 }

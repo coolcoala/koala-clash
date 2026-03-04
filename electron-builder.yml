@@ -28,9 +28,9 @@ win:
   target:
     - nsis
     - 7z
-  artifactName: ${name}-windows-${version}-${arch}-portable.${ext}
+  artifactName: ${productName}_${arch}-portable.${ext}
 nsis:
-  artifactName: ${name}-windows-${version}-${arch}-setup.${ext}
+  artifactName: ${productName}_${arch}-setup.${ext}
   uninstallDisplayName: ${productName}
   allowToChangeInstallationDirectory: true
   oneClick: false
@@ -43,13 +43,13 @@ mac:
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  notarize: true
+  notarize: false
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  artifactName: ${name}-macos-${version}-${arch}.${ext}
+  artifactName: ${productName}_${arch}.${ext}
 pkg:
   allowAnywhere: false
   allowCurrentUserHome: false
@@ -59,21 +59,21 @@ pkg:
 linux:
   desktop:
     entry:
-      Name: Koala-Clash
+      Name: Koala Clash
       MimeType: 'x-scheme-handler/clash;x-scheme-handler/mihomo;x-scheme-handler/koala-clash'
   target:
     - deb
     - rpm
     - pacman
-  maintainer: xishang0128
+  maintainer: coolcoala
   category: Utility
-  artifactName: ${name}-linux-${version}-${arch}.${ext}
+  artifactName: ${productName}_${arch}.${ext}
 deb:
   afterInstall: 'build/linux/postinst'
 rpm:
   afterInstall: 'build/linux/postinst'
 pacman:
   afterInstall: 'build/linux/postinst'
-  artifactName: ${name}-linux-${version}-${arch}.pkg.tar.xz
+  artifactName: ${productName}_${arch}.pkg.tar.xz
 npmRebuild: true
 publish: []

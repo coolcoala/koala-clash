@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Must match productName in electron-builder.yml (lowercase for Linux)
-APP_NAME="koala-clash"
+APP_NAME="Koala.Clash"
 DISPLAY_NAME="Koala Clash"
 
-# Clean up old "sparkle" installation
-if [ -L '/usr/bin/sparkle' ]; then
+# Clean up old "koala.clash" installation
+if [ -L '/usr/bin/koala.clash' ]; then
     if type update-alternatives 2>/dev/null >&1; then
-        update-alternatives --remove 'sparkle' '/opt/sparkle/sparkle' 2>/dev/null || true
+        update-alternatives --remove 'koala.clash' '/opt/Koala Clash/' 2>/dev/null || true
     fi
-    rm -f '/usr/bin/sparkle'
+    rm -f '/usr/bin/koala.clash'
 fi
 
 if type update-alternatives 2>/dev/null >&1; then
