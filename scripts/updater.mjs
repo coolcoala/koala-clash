@@ -10,15 +10,26 @@ const latest = {
   changelog
 }
 
+const badge = (format, label, logo) =>
+  `https://img.shields.io/badge/${format}-default?style=flat&logo=${logo}&label=${encodeURIComponent(label)}`
+
+const link = (url, format, label, logo) =>
+  `<a href="${url}"><img src="${badge(format, label, logo)}"></a>`
+
 if (process.env.SKIP_CHANGELOG !== '1') {
   changelog += '\n### Download link：\n\n#### Windows10/11：\n\n'
-  changelog += `- Installation version：[64-bit](${downloadUrl}/koala-clash-windows-${version}-x64-setup.exe) | [ARM64](${downloadUrl}/koala-clash-windows-${version}-arm64-setup.exe)\n\n`
+  changelog += link(`${downloadUrl}/Koala.Clash_x64-setup.exe`, 'EXE', '64-bit', 'windows') + ' '
+  changelog += link(`${downloadUrl}/Koala.Clash_arm64-setup.exe`, 'EXE', 'ARM64', 'windows') + '\n\n'
   changelog += '\n#### macOS 11+：\n\n'
-  changelog += `- PKG：[Intel](${downloadUrl}/koala-clash-macos-${version}-x64.pkg) | [Apple Silicon](${downloadUrl}/koala-clash-macos-${version}-arm64.pkg)\n\n`
+  changelog += link(`${downloadUrl}/Koala.Clash_x64.pkg`, 'PKG', 'Intel', 'apple') + ' '
+  changelog += link(`${downloadUrl}/Koala.Clash_arm64.pkg`, 'PKG', 'Apple Silicon', 'apple') + '\n\n'
   changelog += '\n#### Linux：\n\n'
-  changelog += `- DEB：[64-bit](${downloadUrl}/koala-clash-linux-${version}-amd64.deb) | [ARM64](${downloadUrl}/koala-clash-linux-${version}-arm64.deb)\n\n`
-  changelog += `- RPM：[64-bit](${downloadUrl}/koala-clash-linux-${version}-x86_64.rpm) | [ARM64](${downloadUrl}/koala-clash-linux-${version}-aarch64.rpm)\n\n`
-  changelog += `- PACMAN：[64-bit](${downloadUrl}/koala-clash-linux-${version}-x64.pkg.tar.xz) | [ARM64](${downloadUrl}/koala-clash-linux-${version}-aarch64.pkg.tar.xz)`
+  changelog += link(`${downloadUrl}/Koala.Clash_amd64.deb`, 'DEB', '64-bit', 'linux') + ' '
+  changelog += link(`${downloadUrl}/Koala.Clash_arm64.deb`, 'DEB', 'ARM64', 'linux') + '\n\n'
+  changelog += link(`${downloadUrl}/Koala.Clash_x86_64.rpm`, 'RPM', '64-bit', 'linux') + ' '
+  changelog += link(`${downloadUrl}/Koala.Clash_aarch64.rpm`, 'RPM', 'ARM64', 'linux') + '\n\n'
+  changelog += link(`${downloadUrl}/Koala.Clash_x64.pkg.tar.xz`, 'PACMAN', '64-bit', 'archlinux') + ' '
+  changelog += link(`${downloadUrl}/Koala.Clash_aarch64.pkg.tar.xz`, 'PACMAN', 'ARM64', 'archlinux')
 }
 writeFileSync('latest.yml', yaml.stringify(latest))
 writeFileSync('changelog.md', changelog)

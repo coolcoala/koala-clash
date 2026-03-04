@@ -46,10 +46,10 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
   }
   const baseUrl = `https://github.com/coolcoala/koala-clash/releases/download/${releaseTag}/`
   const fileMap = {
-    'win32-x64': `koala-clash-windows-${version}-x64-setup.exe`,
-    'win32-arm64': `koala-clash-windows-${version}-arm64-setup.exe`,
-    'darwin-x64': `koala-clash-macos-${version}-x64.pkg`,
-    'darwin-arm64': `koala-clash-macos-${version}-arm64.pkg`
+    'win32-x64': `Koala.Clash_x64-setup.exe`,
+    'win32-arm64': `Koala.Clash_arm64-setup.exe`,
+    'darwin-x64': `Koala.Clash_x64.pkg`,
+    'darwin-arm64': `Koala.Clash_arm64.pkg`
   }
   let file = fileMap[`${process.platform}-${process.arch}`]
   if (isPortable()) {
@@ -120,7 +120,9 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
     const localHash = hashSum.digest('hex').toLowerCase()
     if (localHash !== expectedHash) {
       await rm(path.join(dataDir(), file), { force: true })
-      throw new Error(`${t('error.sha256VerificationFailed')}：${t('error.localHash')} ${localHash} ${t('error.expectedHash')} ${expectedHash} ${t('error.mismatch')}`)
+      throw new Error(
+        `${t('error.sha256VerificationFailed')}：${t('error.localHash')} ${localHash} ${t('error.expectedHash')} ${expectedHash} ${t('error.mismatch')}`
+      )
     }
 
     mainWindow?.webContents.send('update-status', {
