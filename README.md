@@ -9,6 +9,14 @@
 </p>
 <h3 align="center">GUI client for <a href="https://github.com/MetaCubeX/mihomo">Mihomo</a></h3>
 
+## Disclaimer
+
+THIS REPOSITORY IS AN OPEN-SOURCE GUI CLIENT FOR LEARNING, PERSONAL USE, AND LOCAL CONFIGURATION WORK.
+IT IS NOT A COMMERCIAL PANEL, NOT A BILLING SYSTEM, AND NOT A PLATFORM FOR SELLING SUBSCRIPTIONS, VPN ACCESS, PROXY ACCESS, OR OTHER NETWORK SERVICES.
+DO NOT TREAT THIS PROJECT AS A READY-MADE BUSINESS SOLUTION.
+IF YOU DO NOT UNDERSTAND HOW THE APP, CORES, OR CONFIGURATION WORK, THAT IS YOUR RESPONSIBILITY.
+USE AT YOUR OWN RISK.
+
 ## Features
 
 - [x] Out-of-the-box Tun mode without service mode
@@ -18,6 +26,15 @@
 
 ## Screenshots
 ![Preview](./docs/preview.png)
+
+## Themes
+
+Custom theme authors can start from `themes/template.css`.
+
+- Put your wallpaper into `--koala-theme-background`
+- If needed, set a separate image for the announce block with `--koala-theme-announce-background`
+- Adjust the top token block (`--base-*`, `--surface-*`, `--accent-*`, `--highlight-*`, `--info-*`) instead of hardcoding colors across the file
+- See `themes/AGENTS.md` for the recommended workflow and checklist
 
 ## Development
 
