@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTotalTraffic } from '@renderer/hooks/use-total-traffic'
-import { calcTraffic } from '@renderer/lib/utils'
+import { calcTraffic } from '@renderer/utils/calc'
 import { Button } from '@renderer/components/ui/button'
 
 const TotalTrafficDisplay: React.FC = () => {

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
 import { includesIgnoreCase } from '@renderer/utils/includes'
+import { subscribeMihomoLogs, unsubscribeMihomoLogs } from '@renderer/utils/ipc'
 import { MapPin, Trash2 } from 'lucide-react'
 
 const cachedLogs: {
@@ -35,7 +36,7 @@ const Logs: React.FC = () => {
   const traceRef = useRef(trace)
 
   const virtuosoRef = useRef<VirtuosoHandle>(null)
-  
+
   useEffect(() => {
     const handleMihomoLogs = (_e: unknown, log: ControllerLog): void => {
       log.time = dayjs().format('L LTS')
@@ -47,10 +48,12 @@ const Logs: React.FC = () => {
         cachedLogs.trigger(cachedLogs.log)
       }
     }
-    
+
     window.electron.ipcRenderer.on('mihomoLogs', handleMihomoLogs)
+    subscribeMihomoLogs()
     return (): void => {
       window.electron.ipcRenderer.removeListener('mihomoLogs', handleMihomoLogs)
+      unsubscribeMihomoLogs()
     }
   }, [])
   const filteredLogs = useMemo(() => {

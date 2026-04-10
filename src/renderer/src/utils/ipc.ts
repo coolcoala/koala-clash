@@ -201,6 +201,22 @@ export async function restartMihomoConnections(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('restartMihomoConnections'))
 }
 
+export function subscribeMihomoConnections(): void {
+  window.electron.ipcRenderer.send('subscribeMihomoConnections')
+}
+
+export function unsubscribeMihomoConnections(): void {
+  window.electron.ipcRenderer.send('unsubscribeMihomoConnections')
+}
+
+export function subscribeMihomoLogs(): void {
+  window.electron.ipcRenderer.send('subscribeMihomoLogs')
+}
+
+export function unsubscribeMihomoLogs(): void {
+  window.electron.ipcRenderer.send('unsubscribeMihomoLogs')
+}
+
 export async function triggerSysProxy(enable: boolean, onlyActiveDevice: boolean): Promise<void> {
   return ipcErrorWrapper(
     await window.electron.ipcRenderer.invoke('triggerSysProxy', enable, onlyActiveDevice)

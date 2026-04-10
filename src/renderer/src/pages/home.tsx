@@ -4,6 +4,7 @@ import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useGroups } from '@renderer/hooks/use-groups'
+import { useTotalTraffic } from '@renderer/hooks/use-total-traffic'
 import { restartCore, triggerSysProxy, updateTrayIcon } from '@renderer/utils/ipc'
 import NumberFlow from '@number-flow/react'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +13,16 @@ import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
-import { InfinityIcon, WifiOff, PlusCircle, ChevronRight, Globe, ArrowUp, ArrowDown, RefreshCcw } from 'lucide-react'
+import {
+  InfinityIcon,
+  WifiOff,
+  PlusCircle,
+  ChevronRight,
+  Globe,
+  ArrowUp,
+  ArrowDown,
+  RefreshCcw
+} from 'lucide-react'
 import { SiTelegram } from 'react-icons/si'
 import EditInfoModal from '@renderer/components/profiles/edit-info-modal'
 import { Spinner } from '@renderer/components/ui/spinner'
@@ -32,11 +42,7 @@ let connectionStartTime: number | null = null
 const Home: React.FC = () => {
   const { t } = useTranslation()
   const { appConfig, patchAppConfig } = useAppConfig()
-  const {
-    mainSwitchMode = 'tun',
-    sysProxy,
-    onlyActiveDevice = false,
-  } = appConfig || {}
+  const { mainSwitchMode = 'tun', sysProxy, onlyActiveDevice = false } = appConfig || {}
   const { enable: sysProxyEnable, mode } = sysProxy || {}
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
   const { tun } = controledMihomoConfig || {}
@@ -45,6 +51,7 @@ const Home: React.FC = () => {
 
   const { profileConfig, addProfileItem } = useProfileConfig()
   const { groups } = useGroups()
+  const { totalUp, totalDown } = useTotalTraffic()
   const navigate = useNavigate()
   const hasProfiles = (profileConfig?.items?.length ?? 0) > 0
   const [showEditModal, setShowEditModal] = useState(false)
@@ -63,19 +70,6 @@ const Home: React.FC = () => {
     setEditingItem(newProfile)
     setShowEditModal(true)
   }
-
-  const [connectionsInfo, setConnectionsInfo] = useState<ControllerConnections>()
-
-  useEffect(() => {
-    const handleConnections = (_e: unknown, info: ControllerConnections): void => {
-      setConnectionsInfo(info)
-    }
-    window.electron.ipcRenderer.on('mihomoConnections', handleConnections)
-    return (): void => {
-      window.electron.ipcRenderer.removeListener('mihomoConnections', handleConnections)
-    }
-  }, [])
-
   const [loading, setLoading] = useState(false)
   const [loadingDirection, setLoadingDirection] = useState<'connecting' | 'disconnecting'>(
     'connecting'
@@ -151,7 +145,8 @@ const Home: React.FC = () => {
   const trafficTotal = subscription?.total ?? 0
   const trafficRemaining = trafficTotal > 0 ? trafficTotal - trafficUsed : 0
   const expireTimestamp = subscription?.expire ?? 0
-  const expireDate = expireTimestamp > 0 ? dayjs.unix(expireTimestamp).format('L') : t('pages.home.never')
+  const expireDate =
+    expireTimestamp > 0 ? dayjs.unix(expireTimestamp).format('L') : t('pages.home.never')
   const daysRemaining =
     expireTimestamp > 0 ? Math.max(0, dayjs.unix(expireTimestamp).diff(dayjs(), 'day')) : 0
 
@@ -165,7 +160,9 @@ const Home: React.FC = () => {
       return {
         href: parsed.toString(),
         isTelegram:
-          parsed.protocol === 'tg:' || normalized.includes('t.me') || normalized.includes('telegram')
+          parsed.protocol === 'tg:' ||
+          normalized.includes('t.me') ||
+          normalized.includes('telegram')
       }
     } catch {
       return null
@@ -381,12 +378,12 @@ const Home: React.FC = () => {
             >
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <ArrowUp className="size-3.5 text-stroke-power-on" />
-                <span>{calcTraffic(connectionsInfo?.uploadTotal ?? 0)}</span>
+                <span>{calcTraffic(totalUp)}</span>
               </div>
               <div className="h-3 w-px bg-stroke" />
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <ArrowDown className="size-3.5 text-stroke-power-on" />
-                <span>{calcTraffic(connectionsInfo?.downloadTotal ?? 0)}</span>
+                <span>{calcTraffic(totalDown)}</span>
               </div>
             </div>
           </div>

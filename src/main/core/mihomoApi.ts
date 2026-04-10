@@ -21,6 +21,8 @@ let logsReconnectTimer: NodeJS.Timeout | null = null
 let mihomoConnectionsWs: WebSocket | null = null
 let connectionsRetry = 10
 let connectionsReconnectTimer: NodeJS.Timeout | null = null
+let logsSubscribers = 0
+let connectionsSubscribers = 0
 let totalUpTraffic = 0
 let totalDownTraffic = 0
 
@@ -248,6 +250,7 @@ export const mihomoUpgradeUI = async (): Promise<void> => {
 }
 
 export const startMihomoTraffic = async (): Promise<void> => {
+  trafficRetry = 10
   await mihomoTraffic()
 }
 
@@ -322,6 +325,7 @@ const mihomoTraffic = async (): Promise<void> => {
 }
 
 export const startMihomoMemory = async (): Promise<void> => {
+  memoryRetry = 10
   await mihomoMemory()
 }
 
@@ -383,6 +387,8 @@ const mihomoMemory = async (): Promise<void> => {
 }
 
 export const startMihomoLogs = async (): Promise<void> => {
+  if (logsSubscribers <= 0) return
+  logsRetry = 10
   await mihomoLogs()
 }
 
@@ -401,7 +407,27 @@ export const stopMihomoLogs = (): void => {
   }
 }
 
+export const hasMihomoLogsSubscribers = (): boolean => {
+  return logsSubscribers > 0
+}
+
+export const subscribeMihomoLogs = async (): Promise<void> => {
+  logsSubscribers++
+  if (logsSubscribers === 1) {
+    await startMihomoLogs()
+  }
+}
+
+export const unsubscribeMihomoLogs = (): void => {
+  logsSubscribers = Math.max(0, logsSubscribers - 1)
+  if (logsSubscribers === 0) {
+    stopMihomoLogs()
+  }
+}
+
 const mihomoLogs = async (): Promise<void> => {
+  if (logsSubscribers <= 0) return
+
   if (logsReconnectTimer) {
     clearTimeout(logsReconnectTimer)
     logsReconnectTimer = null
@@ -430,7 +456,7 @@ const mihomoLogs = async (): Promise<void> => {
   }
 
   mihomoLogsWs.onclose = (): void => {
-    if (logsRetry > 0) {
+    if (logsSubscribers > 0 && logsRetry > 0) {
       logsRetry--
       logsReconnectTimer = setTimeout(() => mihomoLogs(), 1000)
     }
@@ -446,6 +472,8 @@ const mihomoLogs = async (): Promise<void> => {
 }
 
 export const startMihomoConnections = async (): Promise<void> => {
+  if (connectionsSubscribers <= 0) return
+  connectionsRetry = 10
   await mihomoConnections()
 }
 
@@ -464,12 +492,32 @@ export const stopMihomoConnections = (): void => {
   }
 }
 
+export const hasMihomoConnectionsSubscribers = (): boolean => {
+  return connectionsSubscribers > 0
+}
+
+export const subscribeMihomoConnections = async (): Promise<void> => {
+  connectionsSubscribers++
+  if (connectionsSubscribers === 1) {
+    await startMihomoConnections()
+  }
+}
+
+export const unsubscribeMihomoConnections = (): void => {
+  connectionsSubscribers = Math.max(0, connectionsSubscribers - 1)
+  if (connectionsSubscribers === 0) {
+    stopMihomoConnections()
+  }
+}
+
 export const restartMihomoConnections = async (): Promise<void> => {
   stopMihomoConnections()
   await startMihomoConnections()
 }
 
 const mihomoConnections = async (): Promise<void> => {
+  if (connectionsSubscribers <= 0) return
+
   if (connectionsReconnectTimer) {
     clearTimeout(connectionsReconnectTimer)
     connectionsReconnectTimer = null
@@ -499,7 +547,7 @@ const mihomoConnections = async (): Promise<void> => {
   }
 
   mihomoConnectionsWs.onclose = (): void => {
-    if (connectionsRetry > 0) {
+    if (connectionsSubscribers > 0 && connectionsRetry > 0) {
       connectionsRetry--
       connectionsReconnectTimer = setTimeout(() => mihomoConnections(), 1000)
     }

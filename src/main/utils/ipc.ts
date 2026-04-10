@@ -20,6 +20,10 @@ import {
   mihomoConfig,
   patchMihomoConfig,
   restartMihomoConnections,
+  subscribeMihomoConnections,
+  unsubscribeMihomoConnections,
+  subscribeMihomoLogs,
+  unsubscribeMihomoLogs,
   getTotalTraffic,
   resetTotalTraffic
 } from '../core/mihomoApi'
@@ -85,7 +89,13 @@ import {
   getCurrentProfileStr
 } from '../core/factory'
 import { getInterfaces } from '../sys/interface'
-import { closeTrayIcon, copyEnv, setDockVisible, showTrayIcon, updateTrayIcon } from '../resolve/tray'
+import {
+  closeTrayIcon,
+  copyEnv,
+  setDockVisible,
+  showTrayIcon,
+  updateTrayIcon
+} from '../resolve/tray'
 import { registerShortcut } from '../resolve/shortcut'
 import {
   closeMainWindow,
@@ -137,6 +147,18 @@ function ipcErrorWrapper<T>( // eslint-disable-next-line @typescript-eslint/no-e
   }
 }
 export function registerIpcMainHandlers(): void {
+  ipcMain.on('subscribeMihomoConnections', () => {
+    void subscribeMihomoConnections()
+  })
+  ipcMain.on('unsubscribeMihomoConnections', () => {
+    unsubscribeMihomoConnections()
+  })
+  ipcMain.on('subscribeMihomoLogs', () => {
+    void subscribeMihomoLogs()
+  })
+  ipcMain.on('unsubscribeMihomoLogs', () => {
+    unsubscribeMihomoLogs()
+  })
   ipcMain.handle('mihomoVersion', ipcErrorWrapper(mihomoVersion))
   ipcMain.handle('mihomoConfig', ipcErrorWrapper(mihomoConfig))
   ipcMain.handle('mihomoCloseConnection', (_e, id) => ipcErrorWrapper(mihomoCloseConnection)(id))
@@ -328,9 +350,10 @@ export function registerIpcMainHandlers(): void {
     const args = process.argv.slice(1)
     const escapedExePath = exePath.replace(/'/g, "''")
     const argsString = args.map((a) => a.replace(/'/g, "''")).join("' '")
-    const command = args.length > 0
-      ? `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -ArgumentList '${argsString}' -Verb RunAs"`
-      : `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -Verb RunAs"`
+    const command =
+      args.length > 0
+        ? `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -ArgumentList '${argsString}' -Verb RunAs"`
+        : `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -Verb RunAs"`
     exec(command, { windowsHide: true })
     setNotQuitDialog()
     app.quit()
