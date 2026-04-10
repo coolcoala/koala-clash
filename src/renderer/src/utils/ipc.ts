@@ -363,6 +363,14 @@ export async function setNativeTheme(theme: 'system' | 'light' | 'dark'): Promis
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('setNativeTheme', theme))
 }
 
+export async function getTotalTraffic(): Promise<{ up: number; down: number }> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getTotalTraffic'))
+}
+
+export async function resetTotalTraffic(): Promise<void> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('resetTotalTraffic'))
+}
+
 export async function showTrayIcon(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('showTrayIcon'))
 }

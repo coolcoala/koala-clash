@@ -27,17 +27,6 @@ const cachedLogs: {
   }
 }
 
-window.electron.ipcRenderer.on('mihomoLogs', (_e, log: ControllerLog) => {
-  log.time = dayjs().format('L LTS')
-  cachedLogs.log.push(log)
-  if (cachedLogs.log.length >= 500) {
-    cachedLogs.log.shift()
-  }
-  if (cachedLogs.trigger !== null) {
-    cachedLogs.trigger(cachedLogs.log)
-  }
-})
-
 const Logs: React.FC = () => {
   const { t } = useTranslation()
   const [logs, setLogs] = useState<ControllerLog[]>([...cachedLogs.log])
@@ -46,6 +35,24 @@ const Logs: React.FC = () => {
   const traceRef = useRef(trace)
 
   const virtuosoRef = useRef<VirtuosoHandle>(null)
+  
+  useEffect(() => {
+    const handleMihomoLogs = (_e: unknown, log: ControllerLog): void => {
+      log.time = dayjs().format('L LTS')
+      cachedLogs.log.push(log)
+      if (cachedLogs.log.length >= 500) {
+        cachedLogs.log.shift()
+      }
+      if (cachedLogs.trigger !== null) {
+        cachedLogs.trigger(cachedLogs.log)
+      }
+    }
+    
+    window.electron.ipcRenderer.on('mihomoLogs', handleMihomoLogs)
+    return (): void => {
+      window.electron.ipcRenderer.removeListener('mihomoLogs', handleMihomoLogs)
+    }
+  }, [])
   const filteredLogs = useMemo(() => {
     if (filter === '') return logs
     return logs.filter((log) => {

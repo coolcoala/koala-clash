@@ -277,6 +277,15 @@ export async function stopCore(force = false): Promise<void> {
     })
   }
 
+  if (setPublicDNSTimer) {
+    clearTimeout(setPublicDNSTimer)
+    setPublicDNSTimer = null
+  }
+  if (recoverDNSTimer) {
+    clearTimeout(recoverDNSTimer)
+    recoverDNSTimer = null
+  }
+
   stopMihomoTraffic()
   stopMihomoConnections()
   stopMihomoLogs()
@@ -650,6 +659,14 @@ export async function startNetworkDetection(): Promise<void> {
 }
 
 export async function stopNetworkDetection(): Promise<void> {
+  if (setPublicDNSTimer) {
+    clearTimeout(setPublicDNSTimer)
+    setPublicDNSTimer = null
+  }
+  if (recoverDNSTimer) {
+    clearTimeout(recoverDNSTimer)
+    recoverDNSTimer = null
+  }
   if (networkDetectionTimer) {
     clearInterval(networkDetectionTimer)
     networkDetectionTimer = null

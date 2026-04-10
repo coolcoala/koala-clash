@@ -277,7 +277,12 @@ const Home: React.FC = () => {
           )}
           {/* Subscription info */}
           {subscription && (
-            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center rounded-2xl border border-stroke bg-card/50 backdrop-blur-xl p-1">
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center rounded-2xl border border-stroke bg-card/50 backdrop-blur-xl p-1">
+              <div className="flex flex-col items-center py-2 px-1">
+                <span className="text-sm text-foreground">Traffic used</span>
+                <span className="font-bold text-base mt-0.5">{formatBytes(trafficUsed)}</span>
+              </div>
+              <div className="h-8 w-px bg-stroke" />
               <div className="flex flex-col items-center py-2 px-1">
                 <span className="text-sm text-foreground">{t('pages.home.trafficRemaining')}</span>
                 <span className="font-bold text-base mt-0.5">

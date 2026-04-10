@@ -13,11 +13,12 @@ import { ControledMihomoConfigProvider } from './hooks/use-controled-mihomo-conf
 import { ProfileConfigProvider } from './hooks/use-profile-config'
 import { RulesProvider } from './hooks/use-rules'
 import { GroupsProvider } from './hooks/use-groups'
+import { TotalTrafficProvider } from './hooks/use-total-traffic'
 
 let F12Count = 0
 
 init().then(() => {
-  document.addEventListener('keydown', (e) => {
+  const handleKeydown = (e: KeyboardEvent): void => {
     if (platform !== 'darwin' && e.ctrlKey && e.key === 'q') {
       e.preventDefault()
       quitApp()
@@ -34,7 +35,8 @@ init().then(() => {
         F12Count = 0
       }
     }
-  })
+  }
+  document.addEventListener('keydown', handleKeydown)
 })
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -47,8 +49,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
                 <ProfileConfigProvider>
                   <GroupsProvider>
                     <RulesProvider>
-                      <App />
-                      <Toaster richColors position="bottom-right" />
+                      <TotalTrafficProvider>
+                        <App />
+                        <Toaster richColors position="bottom-right" />
+                      </TotalTrafficProvider>
                     </RulesProvider>
                   </GroupsProvider>
                 </ProfileConfigProvider>

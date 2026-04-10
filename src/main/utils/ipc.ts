@@ -19,7 +19,9 @@ import {
   mihomoVersion,
   mihomoConfig,
   patchMihomoConfig,
-  restartMihomoConnections
+  restartMihomoConnections,
+  getTotalTraffic,
+  resetTotalTraffic
 } from '../core/mihomoApi'
 import { checkAutoRun, disableAutoRun, enableAutoRun } from '../sys/autoRun'
 import {
@@ -333,4 +335,6 @@ export function registerIpcMainHandlers(): void {
     setNotQuitDialog()
     app.quit()
   })
+  ipcMain.handle('getTotalTraffic', () => getTotalTraffic())
+  ipcMain.handle('resetTotalTraffic', () => resetTotalTraffic())
 }
