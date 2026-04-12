@@ -513,8 +513,16 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
         await scheduleLightweightMode()
       }
     })
-    mainWindow.webContents.on('did-fail-load', () => {
-      mainWindow?.webContents.reload()
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode) => {
+      if (errorCode !== -3) {
+        mainWindow?.webContents.reload()
+      }
+    })
+
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason !== 'clean-exit') {
+        mainWindow?.webContents.reload()
+      }
     })
 
     mainWindow.webContents.once('did-finish-load', () => {
