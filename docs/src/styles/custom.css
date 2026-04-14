@@ -1,0 +1,52 @@
+/* Dark mode colors. */
+:root {
+	--sl-color-accent-low: #17303b;
+	--sl-color-accent: #388fc9;
+	--sl-color-accent-high: #c8efff;
+	--sl-color-white: #f5f9ff;
+	--sl-color-gray-1: #dde6f5;
+	--sl-color-gray-2: #b7c5da;
+	--sl-color-gray-3: #8598b3;
+	--sl-color-gray-4: #5c7090;
+	--sl-color-gray-5: #334762;
+	--sl-color-gray-6: #18273c;
+	--sl-color-black: #07111d;
+}
+/* Light mode colors. */
+:root[data-theme='light'] {
+	--sl-color-accent-low: #d8e7ef;
+	--sl-color-accent: #2a749f;
+	--sl-color-accent-high: #173547;
+	--sl-color-white: #09111b;
+	--sl-color-gray-1: #162338;
+	--sl-color-gray-2: #334865;
+	--sl-color-gray-3: #5c7393;
+	--sl-color-gray-4: #869ab6;
+	--sl-color-gray-5: #c2d0e0;
+	--sl-color-gray-6: #eaf1f9;
+	--sl-color-gray-7: #f6f9fd;
+	--sl-color-black: #ffffff;
+}
+
+/* Fix button text color */
+.sl-link-button.primary {
+	color: black !important;
+}
+.sl-link-button.primary * {
+	color: black !important;
+}
+
+/* Fix splash page overflow */
+html[data-has-hero] {
+	overflow-y: hidden;
+}
+
+html[data-has-hero] body {
+	overflow-y: hidden;
+	max-height: 100vh;
+}
+
+.page[data-has-hero] {
+	max-height: 100vh;
+	overflow-y: hidden;
+}
