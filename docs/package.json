@@ -1,0 +1,28 @@
+{
+  "name": "koala-clash-docs",
+  "type": "module",
+  "version": "1.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.3",
+    "@lorenzo_lewis/starlight-utils": "^0.3.2",
+    "astro": "^6.1.6",
+    "astro-auto-import": "^0.5.1",
+    "sharp": "^0.34.5",
+    "starlight-github-alerts": "^0.2.0",
+    "starlight-kbd": "^0.4.0",
+    "starlight-links-validator": "^0.23.0",
+    "starlight-package-managers": "^0.12.0",
+    "starlight-scroll-to-top": "^1.0.1",
+    "starlight-showcases": "^0.3.2",
+    "starlight-sidebar-topics": "^0.7.1",
+    "starlight-sidebar-topics-dropdown": "^0.6.0",
+    "starlight-theme-galaxy": "^0.8.0"
+  }
+}
