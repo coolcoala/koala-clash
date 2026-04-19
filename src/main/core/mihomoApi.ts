@@ -7,6 +7,7 @@ import { calcTraffic } from '../utils/calc'
 import { getRuntimeConfig } from './factory'
 import { floatingWindow } from '../resolve/floatingWindow'
 import { mihomoIpcPath } from '../utils/dirs'
+import { safeSend } from '../utils/safeSend'
 
 let axiosIns: AxiosInstance = null!
 let mihomoTrafficWs: WebSocket | null = null
@@ -253,7 +254,7 @@ const mihomoTraffic = async (): Promise<void> => {
     const json = JSON.parse(data) as ControllerTraffic
     trafficRetry = 10
     try {
-      mainWindow?.webContents.send('mihomoTraffic', json)
+      safeSend(mainWindow, 'mihomoTraffic', json)
       if (process.platform !== 'linux') {
         tray?.setToolTip(
           '↑' +
@@ -262,7 +263,7 @@ const mihomoTraffic = async (): Promise<void> => {
             `${calcTraffic(json.down)}/s`.padStart(9)
         )
       }
-      floatingWindow?.webContents.send('mihomoTraffic', json)
+      safeSend(floatingWindow, 'mihomoTraffic', json)
     } catch {
       // ignore
     }
@@ -304,7 +305,7 @@ const mihomoMemory = async (): Promise<void> => {
     const data = e.data as string
     memoryRetry = 10
     try {
-      mainWindow?.webContents.send('mihomoMemory', JSON.parse(data) as ControllerMemory)
+      safeSend(mainWindow, 'mihomoMemory', JSON.parse(data) as ControllerMemory)
     } catch {
       // ignore
     }
@@ -348,7 +349,7 @@ const mihomoLogs = async (): Promise<void> => {
     const data = e.data as string
     logsRetry = 10
     try {
-      mainWindow?.webContents.send('mihomoLogs', JSON.parse(data) as ControllerLog)
+      safeSend(mainWindow, 'mihomoLogs', JSON.parse(data) as ControllerLog)
     } catch {
       // ignore
     }
@@ -398,7 +399,7 @@ const mihomoConnections = async (): Promise<void> => {
     const data = e.data as string
     connectionsRetry = 10
     try {
-      mainWindow?.webContents.send('mihomoConnections', JSON.parse(data) as ControllerConnections)
+      safeSend(mainWindow, 'mihomoConnections', JSON.parse(data) as ControllerConnections)
     } catch {
       // ignore
     }

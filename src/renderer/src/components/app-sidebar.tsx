@@ -66,7 +66,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
       collapsible="icon"
       side="left"
       variant="floating"
-      className="pt-[57px]"
+      className="pt-14.25"
     >
       <SidebarContent>
         <SidebarGroup>
@@ -78,6 +78,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
+                      className="cursor-pointer"
                       tooltip={t(item.i18nKey)}
                       isActive={isActive}
                       data-guide={item.key === 'main' ? 'sidebar-home-button' : undefined}
@@ -102,7 +103,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
           {latest && latest.version && <UpdaterButton iconOnly={collapsed} latest={latest} />}
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip={t('common.toggleSidebar')} onClick={toggleSidebar}>
+              <SidebarMenuButton tooltip={t('common.toggleSidebar')} onClick={toggleSidebar} className="cursor-pointer">
                 {collapsed ? (
                   <ExpandedIcon className="size-4 shrink-0" />
                 ) : (

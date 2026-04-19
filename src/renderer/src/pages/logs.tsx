@@ -98,7 +98,7 @@ const Logs: React.FC = () => {
           />
           <Button
             size="icon-sm"
-            className={cn('ml-2', trace && 'bg-primary text-primary-foreground')}
+            className={cn('ml-2 p-0 bg-clip-border', trace && 'bg-primary text-primary-foreground')}
             variant={trace ? 'default' : 'outline'}
             title={t('logs.autoScroll')}
             onClick={toggleTrace}
@@ -108,7 +108,7 @@ const Logs: React.FC = () => {
           <Button
             size="icon-sm"
             title={t('pages.logs.clearLogs')}
-            className="ml-2"
+            className="ml-2 p-0 bg-clip-border"
             variant="ghost"
             onClick={() => {
               cachedLogs.clean()

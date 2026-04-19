@@ -16,9 +16,9 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --stroke-power-off: oklch(0.8791 0.0724 165.68);
-  --gradient-start-power-off: oklch(0.9124 0.1431 158.3);
-  --gradient-end-power-off: oklch(0.7604 0.209252 150.0295);
+  --stroke-power-off: oklch(0.8245 0.0724 24);
+  --gradient-start-power-off: oklch(0.8962 0.0921 28);
+  --gradient-end-power-off: oklch(0.7065 0.1648 25);
   --stroke-power-on: oklch(0.9441 0.083 166.12);
   --gradient-start-power-on: oklch(0.8738 0.2417 149.81);
   --gradient-end-power-on: oklch(0.7333 0.2018 150.03);
@@ -66,9 +66,9 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --stroke-power-off: oklch(0.5426 0.0741 152.1);
-  --gradient-start-power-off: oklch(0.7737 0.21336 149.9445);
-  --gradient-end-power-off: oklch(0.3828 0.095 152.78);
+  --stroke-power-off: oklch(0.5682 0.0961 25);
+  --gradient-start-power-off: oklch(0.7014 0.1722 25);
+  --gradient-end-power-off: oklch(0.3828 0.095 25);
   --stroke-power-on: oklch(0.7827 0.1797 149.49);
   --gradient-start-power-on: oklch(0.8738 0.2417 149.81);
   --gradient-end-power-on: oklch(0.6958 0.1883 150.53);

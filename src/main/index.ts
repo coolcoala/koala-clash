@@ -525,6 +525,44 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
       }
     })
 
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason === 'clean-exit') return
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.reload()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.webContents.on('unresponsive', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.forcefullyCrashRenderer()
+        mainWindow.webContents.reload()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.on('focus', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.invalidate()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.on('show', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.invalidate()
+      } catch {
+        // ignore
+      }
+    })
+
     mainWindow.webContents.once('did-finish-load', () => {
       if (pendingDeepLink) {
         const url = pendingDeepLink

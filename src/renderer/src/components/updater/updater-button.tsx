@@ -67,20 +67,17 @@ const UpdaterButton: React.FC<Props> = (props) => {
       )}
       {iconOnly ? (
         <Button
-          size="icon"
-          className="app-nodrag"
-          variant="destructive"
+          size="icon-lg"
+          className="app-nodrag cursor-pointer rounded-md font-medium hover:bg-accent transition-colors bg-gradient-to-br from-gradient-start-power-on/15 to-gradient-end-power-on/15 border border-stroke-power-on/50 text-foreground shadow-sm"
           onClick={() => {
             setOpenModal(true)
           }}
         >
-          <CircleFadingArrowUp />
+          <CircleFadingArrowUp className="size-5" />
         </Button>
       ) : (
         <Button
-          size="default"
-          className="app-nodrag w-full"
-          variant="destructive"
+          className="app-nodrag w-full rounded-md h-10 font-medium hover:bg-accent transition-colors bg-gradient-to-br from-gradient-start-power-on/15 to-gradient-end-power-on/15 border border-stroke-power-on/50 text-foreground shadow-sm"
           onClick={() => {
             setOpenModal(true)
           }}

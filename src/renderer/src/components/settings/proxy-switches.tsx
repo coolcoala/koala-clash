@@ -84,8 +84,15 @@ const ProxySwitches: React.FC = () => {
           onCheckedChange={async (enable: boolean) => {
             if (mode == 'manual' && sysProxyDisabled) return
             try {
-              await triggerSysProxy(enable, onlyActiveDevice)
-              await patchAppConfig({ sysProxy: { enable } })
+              if (enable) {
+                await patchAppConfig({ sysProxy: { enable: true } })
+                await restartCore()
+                await triggerSysProxy(true, onlyActiveDevice)
+              } else {
+                await triggerSysProxy(false, onlyActiveDevice)
+                await patchAppConfig({ sysProxy: { enable: false } })
+                await restartCore()
+              }
               window.electron.ipcRenderer.send('updateFloatingWindow')
               window.electron.ipcRenderer.send('updateTrayMenu')
               await updateTrayIcon()

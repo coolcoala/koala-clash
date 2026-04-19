@@ -336,14 +336,37 @@ const Connections: React.FC = () => {
     [tab, trashClosedConnection]
   )
 
+  const allConnectionsRef = useRef(allConnections)
+  const activeConnectionsRef = useRef(activeConnections)
+  const deletedIdsRef = useRef(deletedIds)
+
   useEffect(() => {
+    allConnectionsRef.current = allConnections
+  }, [allConnections])
+  useEffect(() => {
+    activeConnectionsRef.current = activeConnections
+  }, [activeConnections])
+  useEffect(() => {
+    deletedIdsRef.current = deletedIds
+  }, [deletedIds])
+
+  useEffect(() => {
+    if (isPaused) return
     const handleConnections = (_e: unknown, info: ControllerConnections): void => {
-      setConnectionsInfo(info)
+      setConnectionsInfo({
+        uploadTotal: info.uploadTotal,
+        downloadTotal: info.downloadTotal,
+        memory: info.memory
+      })
 
       if (!info.connections) return
 
-      const prevActiveMap = new Map(activeConnections.map((conn) => [conn.id, conn]))
-      const existingConnectionIds = new Set(allConnections.map((conn) => conn.id))
+      const prevAllConnections = allConnectionsRef.current
+      const prevActiveConnections = activeConnectionsRef.current
+      const currentDeletedIds = deletedIdsRef.current
+
+      const prevActiveMap = new Map(prevActiveConnections.map((conn) => [conn.id, conn]))
+      const existingConnectionIds = new Set(prevAllConnections.map((conn) => conn.id))
 
       const activeConns = info.connections.map((conn) => {
         const preConn = prevActiveMap.get(conn.id)
@@ -364,48 +387,55 @@ const Connections: React.FC = () => {
       })
 
       const newConnections = activeConns.filter(
-        (conn) => !existingConnectionIds.has(conn.id) && !deletedIds.has(conn.id)
+        (conn) => !existingConnectionIds.has(conn.id) && !currentDeletedIds.has(conn.id)
       )
 
-      if (newConnections.length > 0) {
-        const updatedAllConnections = [...allConnections, ...newConnections]
+      const activeConnMap = new Map(activeConns.map((conn) => [conn.id, conn]))
 
-        const activeConnIds = new Set(activeConns.map((conn) => conn.id))
-        const allConns = updatedAllConnections.map((conn) => {
-          const activeConn = activeConns.find((ac) => ac.id === conn.id)
-          return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
-        })
+      const baseAllConnections =
+        newConnections.length > 0 ? [...prevAllConnections, ...newConnections] : prevAllConnections
 
-        const closedConns = allConns.filter((conn) => !activeConnIds.has(conn.id))
+      const allConns = baseAllConnections.map((conn) => {
+        const activeConn = activeConnMap.get(conn.id)
+        return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
+      })
 
-        setActiveConnections(activeConns)
-        setClosedConnections(closedConns)
-        const finalAllConnections = allConns.slice(-(activeConns.length + 200))
-        setAllConnections(finalAllConnections)
-        cachedConnections = finalAllConnections
-      } else {
-        const activeConnIds = new Set(activeConns.map((conn) => conn.id))
-        const allConns = allConnections.map((conn) => {
-          const activeConn = activeConns.find((ac) => ac.id === conn.id)
-          return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
-        })
+      const closedConns = allConns.filter((conn) => !activeConnMap.has(conn.id))
 
-        const closedConns = allConns.filter((conn) => !activeConnIds.has(conn.id))
+      const finalAllConnections =
+        newConnections.length > 0 ? allConns.slice(-(activeConns.length + 200)) : allConns
 
-        setActiveConnections(activeConns)
-        setClosedConnections(closedConns)
-        setAllConnections(allConns)
-        cachedConnections = allConns
+      setActiveConnections(activeConns)
+      setClosedConnections(closedConns)
+      setAllConnections(finalAllConnections)
+      cachedConnections = finalAllConnections
+
+      if (currentDeletedIds.size > 0) {
+        const liveIds = new Set(finalAllConnections.map((conn) => conn.id))
+        let hasStale = false
+        for (const id of currentDeletedIds) {
+          if (!liveIds.has(id)) {
+            hasStale = true
+            break
+          }
+        }
+        if (hasStale) {
+          setDeletedIds((prev) => {
+            const next = new Set<string>()
+            for (const id of prev) {
+              if (liveIds.has(id)) next.add(id)
+            }
+            return next.size === prev.size ? prev : next
+          })
+        }
       }
     }
-    if (!isPaused) {
-      window.electron.ipcRenderer.on('mihomoConnections', handleConnections)
-    }
+    window.electron.ipcRenderer.on('mihomoConnections', handleConnections)
 
     return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('mihomoConnections')
+      window.electron.ipcRenderer.removeListener('mihomoConnections', handleConnections)
     }
-  }, [allConnections, activeConnections, closedConnections, deletedIds, isPaused])
+  }, [isPaused])
   const togglePause = useCallback(() => {
     setIsPaused((prev) => !prev)
   }, [])
@@ -957,7 +987,7 @@ const Connections: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <Button
-                    className="border flex items-center justify-center"
+                    className="border flex items-center justify-center p-0 bg-clip-border"
                     size="icon-sm"
                     variant="secondary"
                     onClick={handleDirectionToggle}
