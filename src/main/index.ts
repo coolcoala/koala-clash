@@ -520,12 +520,6 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
     })
 
     mainWindow.webContents.on('render-process-gone', (_event, details) => {
-      if (details.reason !== 'clean-exit') {
-        mainWindow?.webContents.reload()
-      }
-    })
-
-    mainWindow.webContents.on('render-process-gone', (_event, details) => {
       if (details.reason === 'clean-exit') return
       if (!mainWindow || mainWindow.isDestroyed()) return
       try {

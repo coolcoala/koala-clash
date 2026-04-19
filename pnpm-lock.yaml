@@ -18,10 +18,10 @@ importers:
     dependencies:
       '@electron-toolkit/preload':
         specifier: ^3.0.2
-        version: 3.0.2(electron@41.2.0)
+        version: 3.0.2(electron@40.9.1)
       '@electron-toolkit/utils':
         specifier: ^4.0.0
-        version: 4.0.0(electron@41.2.0)
+        version: 4.0.0(electron@40.9.1)
       '@number-flow/react':
         specifier: ^0.5.12
         version: 0.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -153,8 +153,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       electron:
-        specifier: ^41.2.0
-        version: 41.2.0
+        specifier: ~40.9.1
+        version: 40.9.1
       electron-builder:
         specifier: 26.0.12
         version: 26.0.12(electron-builder-squirrel-windows@25.0.4)
@@ -2670,8 +2670,8 @@ packages:
     resolution: {integrity: sha512-1mNTwCfkolXl3kMf50yW3vE2lZj0y92P/HYWFBrb+v2S/pCka5mdwN3cagKm458A7NjndSwijynXgcLWRodsVg==}
     engines: {node: '>=8.0.0'}
 
-  electron@41.2.0:
-    resolution: {integrity: sha512-0OKLiymqfV0WK68RBXqAm3Myad2TpI5wwxLCBEUcH5Nugo3YfSk7p1Js/AL9266qTz5xZioUnxt9hG8FFwax0g==}
+  electron@40.9.1:
+    resolution: {integrity: sha512-dgUqGjpTJeLZQEbvZQlnjMtPCUfOGRBNJIYjw8yC2ZN9O1QS172r09trhLke+rC8JCLBGbf2DeU63AArd0tbhQ==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -5086,17 +5086,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron-toolkit/preload@3.0.2(electron@41.2.0)':
+  '@electron-toolkit/preload@3.0.2(electron@40.9.1)':
     dependencies:
-      electron: 41.2.0
+      electron: 40.9.1
 
   '@electron-toolkit/tsconfig@2.0.0(@types/node@24.10.13)':
     dependencies:
       '@types/node': 24.10.13
 
-  '@electron-toolkit/utils@4.0.0(electron@41.2.0)':
+  '@electron-toolkit/utils@4.0.0(electron@40.9.1)':
     dependencies:
-      electron: 41.2.0
+      electron: 40.9.1
 
   '@electron/asar@3.2.18':
     dependencies:
@@ -7556,7 +7556,7 @@ snapshots:
       jsonfile: 4.0.0
       mkdirp: 0.5.6
 
-  electron@41.2.0:
+  electron@40.9.1:
     dependencies:
       '@electron/get': 2.0.3
       '@types/node': 24.10.13
