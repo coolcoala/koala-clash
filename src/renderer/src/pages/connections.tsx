@@ -338,6 +338,7 @@ const Connections: React.FC = () => {
 
   const allConnectionsRef = useRef(allConnections)
   const activeConnectionsRef = useRef(activeConnections)
+  const closedConnectionsRef = useRef(closedConnections)
   const deletedIdsRef = useRef(deletedIds)
 
   useEffect(() => {
@@ -347,31 +348,60 @@ const Connections: React.FC = () => {
     activeConnectionsRef.current = activeConnections
   }, [activeConnections])
   useEffect(() => {
+    closedConnectionsRef.current = closedConnections
+  }, [closedConnections])
+  useEffect(() => {
     deletedIdsRef.current = deletedIds
   }, [deletedIds])
 
   useEffect(() => {
     if (isPaused) return
     const handleConnections = (_e: unknown, info: ControllerConnections): void => {
-      setConnectionsInfo({
-        uploadTotal: info.uploadTotal,
-        downloadTotal: info.downloadTotal,
-        memory: info.memory
+      setConnectionsInfo((prev) => {
+        if (
+          prev &&
+          prev.uploadTotal === info.uploadTotal &&
+          prev.downloadTotal === info.downloadTotal &&
+          prev.memory === info.memory
+        ) {
+          return prev
+        }
+        return {
+          uploadTotal: info.uploadTotal,
+          downloadTotal: info.downloadTotal,
+          memory: info.memory
+        }
       })
 
       if (!info.connections) return
 
       const prevAllConnections = allConnectionsRef.current
       const prevActiveConnections = activeConnectionsRef.current
+      const prevClosedConnections = closedConnectionsRef.current
       const currentDeletedIds = deletedIdsRef.current
 
       const prevActiveMap = new Map(prevActiveConnections.map((conn) => [conn.id, conn]))
       const existingConnectionIds = new Set(prevAllConnections.map((conn) => conn.id))
 
+      // Preserve identity: reuse previous object reference for connections
+      // whose traffic counters haven't changed — old objects become GC-eligible
+      // and React/useMemo/Virtuoso can bail out of unnecessary work.
       const activeConns = info.connections.map((conn) => {
         const preConn = prevActiveMap.get(conn.id)
         const downloadSpeed = preConn ? conn.download - preConn.download : 0
         const uploadSpeed = preConn ? conn.upload - preConn.upload : 0
+
+        if (
+          preConn &&
+          preConn.isActive === true &&
+          preConn.upload === conn.upload &&
+          preConn.download === conn.download &&
+          preConn.downloadSpeed === downloadSpeed &&
+          preConn.uploadSpeed === uploadSpeed
+        ) {
+          return preConn
+        }
+
         const metadata =
           conn.metadata.type === 'Inner'
             ? { ...conn.metadata, process: 'mihomo', processPath: 'mihomo' }
@@ -395,9 +425,13 @@ const Connections: React.FC = () => {
       const baseAllConnections =
         newConnections.length > 0 ? [...prevAllConnections, ...newConnections] : prevAllConnections
 
+      // Preserve identity for already-closed connections (their data is frozen).
+      // Only the active→closed transition needs a fresh object.
       const allConns = baseAllConnections.map((conn) => {
         const activeConn = activeConnMap.get(conn.id)
-        return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
+        if (activeConn) return activeConn
+        if (conn.isActive === false) return conn
+        return { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
       })
 
       const closedConns = allConns.filter((conn) => !activeConnMap.has(conn.id))
@@ -405,10 +439,31 @@ const Connections: React.FC = () => {
       const finalAllConnections =
         newConnections.length > 0 ? allConns.slice(-(activeConns.length + 200)) : allConns
 
-      setActiveConnections(activeConns)
-      setClosedConnections(closedConns)
-      setAllConnections(finalAllConnections)
-      cachedConnections = finalAllConnections
+      // Skip setState when the resulting list is element-wise identical to the
+      // previous one (all references match). Saves a re-render of the whole
+      // Virtuoso / memo chain when nothing actually changed.
+      const arraysIdentical = (
+        a: ControllerConnectionDetail[],
+        b: ControllerConnectionDetail[]
+      ): boolean => {
+        if (a === b) return true
+        if (a.length !== b.length) return false
+        for (let i = 0; i < a.length; i++) {
+          if (a[i] !== b[i]) return false
+        }
+        return true
+      }
+
+      if (!arraysIdentical(activeConns, prevActiveConnections)) {
+        setActiveConnections(activeConns)
+      }
+      if (!arraysIdentical(closedConns, prevClosedConnections)) {
+        setClosedConnections(closedConns)
+      }
+      if (!arraysIdentical(finalAllConnections, prevAllConnections)) {
+        setAllConnections(finalAllConnections)
+        cachedConnections = finalAllConnections
+      }
 
       if (currentDeletedIds.size > 0) {
         const liveIds = new Set(finalAllConnections.map((conn) => conn.id))
