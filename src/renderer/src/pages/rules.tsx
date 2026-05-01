@@ -1,7 +1,7 @@
 import BasePage from '@renderer/components/base/base-page'
 import RuleItem from '@renderer/components/rules/rule-item'
 import EditRulesModal from '@renderer/components/profiles/edit-rules-modal'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import yaml from 'js-yaml'
 import useSWR from 'swr'
 import { Separator } from '@renderer/components/ui/separator'
@@ -127,6 +127,57 @@ const vpnTargets = ['PROXY', 'DIRECT', 'REJECT']
 interface RuleTargetOption {
   value: string
   label: string
+}
+
+interface OverflowRevealSubtitleProps {
+  text: string
+}
+
+const OverflowRevealSubtitle: React.FC<OverflowRevealSubtitleProps> = ({ text }) => {
+  const textRef = useRef<HTMLSpanElement>(null)
+  const [overflowPixels, setOverflowPixels] = useState(0)
+
+  useEffect(() => {
+    const element = textRef.current
+    if (!element) return
+
+    const updateOverflow = (): void => {
+      const nextOverflow = Math.ceil(element.scrollWidth - element.clientWidth)
+      setOverflowPixels(nextOverflow > 1 ? nextOverflow : 0)
+    }
+
+    updateOverflow()
+
+    const resizeObserver = new ResizeObserver(updateOverflow)
+    resizeObserver.observe(element)
+
+    return () => resizeObserver.disconnect()
+  }, [text])
+
+  const isOverflowing = overflowPixels > 0
+  const revealStyle = isOverflowing
+    ? ({
+        '--overflow-reveal-distance': `${overflowPixels}px`,
+        '--overflow-reveal-duration': `${Math.min(Math.max(overflowPixels / 28, 2.4), 7)}s`
+      } as React.CSSProperties)
+    : undefined
+
+  return (
+    <span
+      className="quick-rule-card-subtitle block text-[11px] opacity-80"
+      data-overflow={isOverflowing ? 'true' : undefined}
+      title={text}
+    >
+      <span ref={textRef} className="quick-rule-card-subtitle__static">
+        {text}
+      </span>
+      {isOverflowing && (
+        <span aria-hidden="true" className="quick-rule-card-subtitle__reveal" style={revealStyle}>
+          {text}
+        </span>
+      )}
+    </span>
+  )
 }
 
 const Rules: React.FC = () => {
@@ -1212,15 +1263,13 @@ const Rules: React.FC = () => {
                     key={action.target}
                     type="button"
                     variant={newRuleTarget === action.target ? 'default' : 'outline'}
-                    className="h-auto justify-start gap-2 px-2 py-1.5 text-left"
+                    className="quick-rule-card h-auto justify-start gap-2 px-2 py-1.5 text-left"
                     onClick={() => setNewRuleTarget(action.target)}
                   >
                     {action.icon}
                     <span className="min-w-0">
                       <span className="block text-xs font-medium">{action.label}</span>
-                      <span className="block truncate text-[11px] opacity-80">
-                        {action.description}
-                      </span>
+                      <OverflowRevealSubtitle text={action.description} />
                     </span>
                   </Button>
                 ))}
@@ -1238,7 +1287,7 @@ const Rules: React.FC = () => {
                       key={target.type}
                       type="button"
                       variant={normalizedNewRuleType === target.type ? 'default' : 'outline'}
-                      className="h-auto justify-start gap-2 px-2 py-1.5 text-left"
+                      className="quick-rule-card h-auto justify-start gap-2 px-2 py-1.5 text-left"
                       onClick={() => {
                         setNewRuleType(target.type)
                         if (normalizeUnifiedRuleType(target.type) === 'MATCH') setNewRuleValue('')
@@ -1247,9 +1296,7 @@ const Rules: React.FC = () => {
                       {target.icon}
                       <span className="min-w-0">
                         <span className="block text-xs font-medium">{target.label}</span>
-                        <span className="block truncate text-[11px] opacity-80">
-                          {target.description}
-                        </span>
+                        <OverflowRevealSubtitle text={target.description} />
                       </span>
                     </Button>
                   ))}

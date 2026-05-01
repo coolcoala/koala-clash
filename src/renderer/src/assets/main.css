@@ -166,6 +166,71 @@
   }
 }
 
+.quick-rule-card-subtitle {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.quick-rule-card-subtitle__static {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+
+.quick-rule-card-subtitle__reveal {
+  position: absolute;
+  inset: 0 auto 0 0;
+  max-width: none;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(0);
+  transition:
+    opacity 120ms ease,
+    transform 180ms ease-out;
+}
+
+.quick-rule-card:is(:hover, :focus-visible)
+  .quick-rule-card-subtitle[data-overflow='true']
+  .quick-rule-card-subtitle__static {
+  opacity: 0;
+}
+
+.quick-rule-card:is(:hover, :focus-visible)
+  .quick-rule-card-subtitle[data-overflow='true']
+  .quick-rule-card-subtitle__reveal {
+  opacity: 1;
+  transform: translateX(calc(-1 * var(--overflow-reveal-distance, 0px)));
+  transition:
+    opacity 120ms ease,
+    transform var(--overflow-reveal-duration, 4s) linear;
+  transition-delay: 0s, 250ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-rule-card-subtitle__static,
+  .quick-rule-card-subtitle__reveal {
+    transition: none;
+  }
+
+  .quick-rule-card:is(:hover, :focus-visible)
+    .quick-rule-card-subtitle[data-overflow='true']
+    .quick-rule-card-subtitle__static {
+    opacity: 1;
+  }
+
+  .quick-rule-card:is(:hover, :focus-visible)
+    .quick-rule-card-subtitle[data-overflow='true']
+    .quick-rule-card-subtitle__reveal {
+    opacity: 0;
+    transform: translateX(0);
+  }
+}
+
 @font-face {
   font-family: 'twemoji';
   src: url('./twemoji.ttf');

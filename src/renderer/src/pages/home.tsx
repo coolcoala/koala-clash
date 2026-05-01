@@ -29,6 +29,7 @@ import { CharacterMorph } from '@renderer/components/ui/character-morph'
 import { calcTraffic } from '@renderer/utils/calc'
 import { useTrafficStore } from '@renderer/store/traffic-store'
 import CoreReadinessShortcut from '@renderer/components/mihomo/core-readiness-shortcut'
+import { getUserFacingProxyDisplayName } from '../../../core/ui/proxy-group-presentation'
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
@@ -160,6 +161,7 @@ const Home: React.FC = () => {
     expireTimestamp > 0 ? Math.max(0, dayjs.unix(expireTimestamp).diff(dayjs(), 'day')) : 0
 
   const firstGroup = groups?.[0]
+  const firstGroupDisplayName = getUserFacingProxyDisplayName(firstGroup?.now || firstGroup?.name)
   const supportUrl = currentProfile?.supportUrl
   const supportLinkInfo = useMemo(() => {
     if (!supportUrl) return null
@@ -424,7 +426,7 @@ const Home: React.FC = () => {
               >
                 <div className="flex items-center justify-between h-9 rounded-2xl border border-stroke pl-3 pr-1 py-3 backdrop-blur-xl bg-card/50 transition-colors hover:bg-card/70">
                   <div className="flag-emoji text-sm truncate max-w-52">
-                    {firstGroup.now || firstGroup.name}
+                    {firstGroupDisplayName}
                   </div>
                   <ChevronRight />
                 </div>
