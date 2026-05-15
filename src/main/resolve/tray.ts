@@ -31,7 +31,8 @@ import {
   Tray
 } from 'electron'
 import { triggerSysProxy } from '../sys/sysproxy'
-import { quitWithoutCore, restartCore } from '../core/manager'
+import { quitWithoutCore } from '../core/manager'
+import { mihomoHotReloadConfig } from '../core/mihomoApi'
 import { floatingWindow } from './floatingWindow'
 import { is } from '@electron-toolkit/utils'
 import { join } from 'path'
@@ -135,6 +136,7 @@ export const buildContextMenu = async (): Promise<Menu> => {
   const { mode, tun } = await getControledMihomoConfig()
   const {
     sysProxy,
+    proxyMode = false,
     onlyActiveDevice = false,
     autoCloseConnection,
     proxyInTray = true,
@@ -208,6 +210,8 @@ export const buildContextMenu = async (): Promise<Menu> => {
     }
   }
   const { current, items = [] } = await getProfileConfig()
+  const currentProfile = items.find((i) => i.id === current)
+  const globalModeAllowed = currentProfile?.globalMode !== false
 
   const contextMenu = [
     {
@@ -222,12 +226,12 @@ export const buildContextMenu = async (): Promise<Menu> => {
     { type: 'separator' },
     {
       type: 'normal',
-      label: (mainSwitchMode === 'tun' ? (tun?.enable ?? false) : sysProxy.enable)
+      label: (mainSwitchMode === 'tun' ? (tun?.enable ?? false) : proxyMode)
         ? t('tray.disable')
         : t('tray.enable'),
       accelerator: mainSwitchMode === 'tun' ? triggerTunShortcut : triggerSysProxyShortcut,
       click: async (): Promise<void> => {
-        const currentEnabled = mainSwitchMode === 'tun' ? (tun?.enable ?? false) : sysProxy.enable
+        const currentEnabled = mainSwitchMode === 'tun' ? (tun?.enable ?? false) : proxyMode
         const enable = !currentEnabled
         try {
           if (mainSwitchMode === 'tun') {
@@ -238,10 +242,20 @@ export const buildContextMenu = async (): Promise<Menu> => {
             }
             mainWindow?.webContents.send('controledMihomoConfigUpdated')
             floatingWindow?.webContents.send('controledMihomoConfigUpdated')
-            await restartCore()
           } else {
-            await triggerSysProxy(enable, onlyActiveDevice)
-            await patchAppConfig({ sysProxy: { enable } })
+            if (enable) {
+              await patchAppConfig({ proxyMode: true })
+              await mihomoHotReloadConfig()
+              if (sysProxy.enable) {
+                await triggerSysProxy(true, onlyActiveDevice)
+              }
+            } else {
+              if (sysProxy.enable) {
+                await triggerSysProxy(false, onlyActiveDevice)
+              }
+              await patchAppConfig({ proxyMode: false })
+              await mihomoHotReloadConfig()
+            }
             mainWindow?.webContents.send('appConfigUpdated')
             floatingWindow?.webContents.send('appConfigUpdated')
           }
@@ -254,40 +268,44 @@ export const buildContextMenu = async (): Promise<Menu> => {
       }
     },
     { type: 'separator' },
-    {
-      type: 'submenu',
-      label: `${t('tray.outboundMode')} (${mode === 'rule' ? t('tray.rule') : t('tray.global')})`,
-      submenu: [
-        {
-          id: 'rule',
-          label: t('tray.ruleMode'),
-          accelerator: ruleModeShortcut,
-          type: 'radio',
-          checked: mode === 'rule',
-          click: async (): Promise<void> => {
-            await patchControledMihomoConfig({ mode: 'rule' })
-            await patchMihomoConfig({ mode: 'rule' })
-            mainWindow?.webContents.send('controledMihomoConfigUpdated')
-            mainWindow?.webContents.send('groupsUpdated')
-            ipcMain.emit('updateTrayMenu')
+    ...(globalModeAllowed
+      ? [
+          {
+            type: 'submenu' as const,
+            label: `${t('tray.outboundMode')} (${mode === 'rule' ? t('tray.rule') : t('tray.global')})`,
+            submenu: [
+              {
+                id: 'rule',
+                label: t('tray.ruleMode'),
+                accelerator: ruleModeShortcut,
+                type: 'radio' as const,
+                checked: mode === 'rule',
+                click: async (): Promise<void> => {
+                  await patchControledMihomoConfig({ mode: 'rule' })
+                  await patchMihomoConfig({ mode: 'rule' })
+                  mainWindow?.webContents.send('controledMihomoConfigUpdated')
+                  mainWindow?.webContents.send('groupsUpdated')
+                  ipcMain.emit('updateTrayMenu')
+                }
+              },
+              {
+                id: 'global',
+                label: t('tray.globalMode'),
+                accelerator: globalModeShortcut,
+                type: 'radio' as const,
+                checked: mode === 'global',
+                click: async (): Promise<void> => {
+                  await patchControledMihomoConfig({ mode: 'global' })
+                  await patchMihomoConfig({ mode: 'global' })
+                  mainWindow?.webContents.send('controledMihomoConfigUpdated')
+                  mainWindow?.webContents.send('groupsUpdated')
+                  ipcMain.emit('updateTrayMenu')
+                }
+              }
+            ]
           }
-        },
-        {
-          id: 'global',
-          label: t('tray.globalMode'),
-          accelerator: globalModeShortcut,
-          type: 'radio',
-          checked: mode === 'global',
-          click: async (): Promise<void> => {
-            await patchControledMihomoConfig({ mode: 'global' })
-            await patchMihomoConfig({ mode: 'global' })
-            mainWindow?.webContents.send('controledMihomoConfigUpdated')
-            mainWindow?.webContents.send('groupsUpdated')
-            ipcMain.emit('updateTrayMenu')
-          }
-        }
-      ]
-    },
+        ]
+      : []),
     ...groupsMenu,
     { type: 'separator' },
     {
@@ -458,9 +476,9 @@ export async function closeTrayIcon(): Promise<void> {
 
 export async function updateTrayIcon(): Promise<void> {
   if (!tray) return
-  const { sysProxy } = await getAppConfig()
+  const { proxyMode = false } = await getAppConfig()
   const { tun } = await getControledMihomoConfig()
-  const proxyEnabled = sysProxy.enable || (tun?.enable ?? false)
+  const proxyEnabled = proxyMode || (tun?.enable ?? false)
 
   try {
     if (process.platform === 'darwin') {

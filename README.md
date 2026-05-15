@@ -1,6 +1,6 @@
 # Koala Clash
 <p align="center">
-  <img src="./resources/icon.png" alt="Clash" width="128" />
+  <img src="./build/icon.png" alt="Clash" width="128" />
   <br>
   <br>
   <a href="https://github.com/coolcoala/koala-clash/releases">

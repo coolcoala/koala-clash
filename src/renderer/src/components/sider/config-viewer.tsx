@@ -61,17 +61,30 @@ const ConfigViewer: React.FC<Props> = ({ onClose }) => {
         <DialogFooter className="flex items-center justify-between sm:justify-between">
           <div className="flex items-center space-x-4">
             <label className="flex items-center space-x-2 text-sm">
-              <Switch checked={isDiff} onCheckedChange={setIsDiff} />
+              <Switch
+                checked={isDiff}
+                onCheckedChange={(checked) => {
+                  setIsDiff(checked)
+                  if (!checked) {
+                    setSideBySide(false)
+                    setIsRaw(false)
+                  }
+                }}
+              />
               <span>{t('sider.compareCurrentConfig')}</span>
             </label>
-            <label className="flex items-center space-x-2 text-sm">
-              <Switch checked={sideBySide} onCheckedChange={setSideBySide} />
-              <span>{t('sider.sideBySide')}</span>
-            </label>
-            <label className="flex items-center space-x-2 text-sm">
-              <Switch checked={isRaw} onCheckedChange={setIsRaw} />
-              <span>{t('sider.showRawText')}</span>
-            </label>
+            {isDiff && (
+              <>
+                <label className="flex items-center space-x-2 text-sm">
+                  <Switch checked={sideBySide} onCheckedChange={setSideBySide} />
+                  <span>{t('sider.sideBySide')}</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <Switch checked={isRaw} onCheckedChange={setIsRaw} />
+                  <span>{t('sider.showRawText')}</span>
+                </label>
+              </>
+            )}
           </div>
           <DialogClose asChild>
             <Button size="sm" variant="ghost">

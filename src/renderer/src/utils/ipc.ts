@@ -84,6 +84,10 @@ export async function mihomoUpgrade(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('mihomoUpgrade'))
 }
 
+export async function mihomoHotReloadConfig(): Promise<void> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('mihomoHotReloadConfig'))
+}
+
 export async function mihomoProxyDelay(
   proxy: string,
   url?: string

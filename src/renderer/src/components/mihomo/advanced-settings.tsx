@@ -2,7 +2,6 @@ import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-c
 import SettingCard from '../base/base-setting-card'
 import SettingItem from '../base/base-setting-item'
 import InterfaceSelect from '../base/interface-select'
-import { restartCore } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import {
@@ -43,7 +42,6 @@ const AdvancedSetting: React.FC = () => {
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
-    await restartCore()
   }
 
   return (

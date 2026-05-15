@@ -97,7 +97,6 @@ const Mihomo: React.FC = () => {
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
-    await restartCore()
   }
 
   const handleConfigChangeWithRestart = async (key: string, value: unknown): Promise<void> => {

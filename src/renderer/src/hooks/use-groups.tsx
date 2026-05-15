@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react'
 import useSWR from 'swr'
 import { mihomoGroups } from '@renderer/utils/ipc'
+import { subscribeCoreStarted } from '@renderer/store/core-lifecycle-store'
 
 interface GroupsContextType {
   groups: ControllerMixedGroup[] | undefined
@@ -12,19 +13,22 @@ const GroupsContext = createContext<GroupsContextType | undefined>(undefined)
 export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { data: groups, mutate } = useSWR<ControllerMixedGroup[]>('mihomoGroups', mihomoGroups, {
     errorRetryInterval: 200,
-    errorRetryCount: 10
+    errorRetryCount: 10,
+    keepPreviousData: true,
+    dedupingInterval: 300
   })
 
   React.useEffect(() => {
-    window.electron.ipcRenderer.on('groupsUpdated', () => {
+    const onGroupsUpdated = (): void => {
       mutate()
-    })
-    window.electron.ipcRenderer.on('core-started', () => {
+    }
+    window.electron.ipcRenderer.on('groupsUpdated', onGroupsUpdated)
+    const unsubscribe = subscribeCoreStarted(() => {
       mutate()
     })
     return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('groupsUpdated')
-      window.electron.ipcRenderer.removeAllListeners('core-started')
+      window.electron.ipcRenderer.removeListener('groupsUpdated', onGroupsUpdated)
+      unsubscribe()
     }
   }, [])
 

@@ -40,7 +40,7 @@ export default {
     settings: 'Настройки',
     hideSidebar: 'Скрыть',
     toggleSidebar: 'Раскрыть',
-    updateAvailable: 'Обновление',
+    updateAvailable: 'Обновить',
     loading: 'Загрузка...'
   },
 
@@ -93,6 +93,7 @@ export default {
     domainSniffing: 'Определение доменов',
     coreSettings: 'Настройки ядра',
     systemProxy: 'Системный прокси',
+    proxyMode: 'Режим прокси',
     virtualInterface: 'Режим TUN',
     externalResources: 'Внешние ресурсы',
     viewRuntimeConfig: 'Просмотр текущей конфигурации',
@@ -295,6 +296,8 @@ export default {
     },
     sysproxy: {
       title: 'Настройки системного прокси',
+      proxyModeTitle: 'Настройки режима прокси',
+      systemProxyToggle: 'Системный прокси',
       proxyHost: 'Хост прокси',
       proxyHostPlaceholder: 'По умолчанию: 127.0.0.1. Не меняйте без необходимости',
       proxyMode: 'Режим прокси',
@@ -477,12 +480,16 @@ export default {
       low: 'Низкий',
       mainSwitch: 'Основной переключатель',
       mainSwitchTun: 'Режим TUN',
-      mainSwitchSysproxy: 'Системный прокси',
+      mainSwitchSysproxy: 'Режим прокси',
+      mainSwitchProxyMode: 'Режим прокси',
       takeOverDNS: 'Управлять настройками DNS',
       takeOverSniffer: 'Управлять настройками определения доменов',
       stopCoreOnDisconnect: 'Останавливать ядро при потере сети',
       stopCoreOnDisconnectHelp:
         'Если включено, приложение автоматически остановит ядро при потере сети и запустит его снова после восстановления',
+      useHotReloadProfile: 'Горячая перезагрузка конфигурации при смене профиля',
+      useHotReloadProfileHelp:
+        'Если включено, при смене или сохранении профиля конфигурация обновляется через API без перезапуска ядра. Иначе ядро перезапускается.',
       disconnectDetectInterval: 'Интервал проверки соединения',
       bypassDetectInterfaces: 'Исключить интерфейсы из проверки',
       directOnSpecificWifi: 'Включать прямой режим для указанных Wi-Fi SSID'
@@ -491,7 +498,7 @@ export default {
       title: 'Настройки горячих клавиш',
       toggleWindow: 'Переключить окно',
       toggleFloatingWindow: 'Переключить плавающее окно',
-      toggleSysProxy: 'Переключить системный прокси',
+      toggleSysProxy: 'Переключить режим прокси',
       toggleTun: 'Переключить режим TUN',
       switchRuleMode: 'Переключить на режим правил',
       switchGlobalMode: 'Переключить на глобальный режим',
@@ -707,7 +714,10 @@ export default {
       delete: 'Удалить правило',
       restore: 'Восстановить правило',
       invalidPayload: 'Неверное значение',
-      expectedFormat: 'Ожидаемый формат'
+      expectedFormat: 'Ожидаемый формат',
+      yamlMode: 'YAML-редактор',
+      visualMode: 'Визуальный редактор',
+      invalidYaml: 'Некорректный YAML'
     },
     openFile: 'Открыть файл',
     delete: 'Удалить',
@@ -844,7 +854,7 @@ export default {
   },
 
   updater: {
-    versionReady: 'Версия {{version}} готова',
+    versionReady: 'Версия {{version}} доступна',
     goToDownload: 'Перейти к загрузке',
     downloadProgress: 'Прогресс загрузки',
     cancelDownload: 'Отменить загрузку',

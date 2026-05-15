@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@renderer/components/ui/avatar'
 import { Button } from '@renderer/components/ui/button'
+import { useProcessIcon, useProcessAppName } from '@renderer/store/icons-store'
 import { calcTraffic } from '@renderer/utils/calc'
 import dayjs from 'dayjs'
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
@@ -8,10 +8,8 @@ import { Trash2, X } from 'lucide-react'
 interface Props {
   index: number
   info: ControllerConnectionDetail
-  displayIcon?: boolean
-  iconUrl: string
-  displayName?: string
-  selected: ControllerConnectionDetail | undefined
+  displayIcon: boolean
+  displayAppName: boolean
   setSelected: React.Dispatch<React.SetStateAction<ControllerConnectionDetail | undefined>>
   setIsDetailModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   close: (id: string) => void
@@ -20,12 +18,14 @@ interface Props {
 const ConnectionItemComponent: React.FC<Props> = ({
   info,
   displayIcon,
-  iconUrl,
-  displayName,
+  displayAppName,
   close,
   setSelected,
   setIsDetailModalOpen
 }) => {
+  const path = info.metadata.processPath || ''
+  const iconUrl = useProcessIcon(path, displayIcon)
+  const displayName = useProcessAppName(path, displayAppName)
   const fallbackProcessName = useMemo(
     () => info.metadata.process || info.metadata.sourceIP,
     [info.metadata.process, info.metadata.sourceIP]
@@ -101,12 +101,15 @@ const ConnectionItemComponent: React.FC<Props> = ({
         <div className="w-full flex items-center">
           {displayIcon && (
             <div className="pl-3">
-              <Avatar className="size-12 rounded-lg">
-                <AvatarImage src={iconUrl} />
-                <AvatarFallback className="rounded-lg text-xs font-semibold text-muted-foreground">
-                  {(processName || '').slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {iconUrl ? (
+                <img src={iconUrl} className="size-12 shrink-0" />
+              ) : (
+                <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {(processName || '').slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
           )}
           <div
@@ -171,10 +174,8 @@ const ConnectionItem = memo(ConnectionItemComponent, (prevProps, nextProps) => {
     prevProps.info.uploadSpeed === nextProps.info.uploadSpeed &&
     prevProps.info.downloadSpeed === nextProps.info.downloadSpeed &&
     prevProps.info.isActive === nextProps.info.isActive &&
-    prevProps.iconUrl === nextProps.iconUrl &&
     prevProps.displayIcon === nextProps.displayIcon &&
-    prevProps.displayName === nextProps.displayName &&
-    prevProps.selected?.id === nextProps.selected?.id
+    prevProps.displayAppName === nextProps.displayAppName
   )
 })
 

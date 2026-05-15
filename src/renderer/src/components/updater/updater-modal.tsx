@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -10,7 +11,7 @@ import { Button } from '@renderer/components/ui/button'
 import { Progress } from '@renderer/components/ui/progress'
 import { Spinner } from '@renderer/components/ui/spinner'
 import ReactMarkdown from 'react-markdown'
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { downloadAndInstallUpdate } from '@renderer/utils/ipc'
 import { useTranslation } from 'react-i18next'
 import { Download, X } from 'lucide-react'
@@ -31,6 +32,11 @@ const UpdaterModal: React.FC<Props> = (props) => {
   const { t } = useTranslation()
   const { version, changelog, updateStatus, onCancel, onClose } = props
   const [downloading, setDownloading] = useState(false)
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  const closeWithAnimation = (): void => {
+    closeRef.current?.click()
+  }
   const onUpdate = async (): Promise<void> => {
     try {
       setDownloading(true)
@@ -45,7 +51,7 @@ const UpdaterModal: React.FC<Props> = (props) => {
       setDownloading(false)
       onCancel()
     } else {
-      onClose()
+      closeWithAnimation()
     }
   }
 
@@ -62,6 +68,7 @@ const UpdaterModal: React.FC<Props> = (props) => {
         className="h-[calc(100%-111px)] w-[calc(100%-100px)] max-w-none sm:max-w-none flex flex-col"
         showCloseButton={false}
       >
+        <DialogClose ref={closeRef} className="hidden" />
         <DialogHeader className="app-drag flex-row items-center justify-between">
           <DialogTitle className="flex items-center gap-2">
             <Download className="text-lg" />
@@ -81,52 +88,50 @@ const UpdaterModal: React.FC<Props> = (props) => {
           )}
         </DialogHeader>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {updateStatus?.downloading && (
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {t('updater.downloadProgress')}
-                </span>
-                <span className="text-sm font-medium">{updateStatus.progress}%</span>
-              </div>
-              <Progress value={updateStatus.progress} />
-              {updateStatus.error && (
-                <div className="text-destructive text-sm">{updateStatus.error}</div>
-              )}
-            </div>
-          )}
-          {!updateStatus?.downloading && (
-            <div className="markdown-body">
-              <ReactMarkdown
-                components={{
-                  a: ({ ...props }) => <a target="_blank" className="text-primary" {...props} />,
-                  code: ({ className, children, ...props }) => (
-                    <code
-                      className={['rounded bg-muted px-1.5 py-0.5 font-mono text-xs', className]
-                        .filter(Boolean)
-                        .join(' ')}
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  ),
-                  pre: ({ children, ...props }) => (
-                    <pre
-                      className="rounded bg-muted p-3 overflow-x-auto [&>code]:bg-transparent [&>code]:p-0 [&>code]:rounded-none"
-                      {...props}
-                    >
-                      {children}
-                    </pre>
-                  ),
-                  h3: ({ ...props }) => <h3 className="text-lg font-bold" {...props} />,
-                  li: ({ children }) => <li className="list-disc list-inside">{children}</li>
-                }}
-              >
-                {changelog}
-              </ReactMarkdown>
-            </div>
-          )}
+          <div className="markdown-body">
+            <ReactMarkdown
+              components={{
+                a: ({ ...props }) => <a target="_blank" className="text-primary" {...props} />,
+                code: ({ className, children, ...props }) => (
+                  <code
+                    className={['rounded bg-muted px-1.5 py-0.5 font-mono text-xs', className]
+                      .filter(Boolean)
+                      .join(' ')}
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                ),
+                pre: ({ children, ...props }) => (
+                  <pre
+                    className="rounded bg-muted p-3 overflow-x-auto [&>code]:bg-transparent [&>code]:p-0 [&>code]:rounded-none"
+                    {...props}
+                  >
+                    {children}
+                  </pre>
+                ),
+                h3: ({ ...props }) => <h3 className="text-lg font-bold" {...props} />,
+                li: ({ children }) => <li className="list-disc list-inside">{children}</li>
+              }}
+            >
+              {changelog}
+            </ReactMarkdown>
+          </div>
         </div>
+        {updateStatus?.downloading && (
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {t('updater.downloadProgress')}
+              </span>
+              <span className="text-sm font-medium">{updateStatus.progress}%</span>
+            </div>
+            <Progress value={updateStatus.progress} />
+            {updateStatus.error && (
+              <div className="text-destructive text-sm">{updateStatus.error}</div>
+            )}
+          </div>
+        )}
         <DialogFooter className="gap-2">
           <Button size="sm" variant="ghost" onClick={handleCancel}>
             {updateStatus?.downloading ? <X className="mr-2" /> : null}

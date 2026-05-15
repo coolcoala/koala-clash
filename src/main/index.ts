@@ -150,7 +150,7 @@ function getDeepLinkFromArgs(argv: string[]): string | undefined {
 
 app.on('second-instance', async (_event, commandline) => {
   showMainWindow()
-  const url = commandline.pop()
+  const url = getDeepLinkFromArgs(commandline)
   if (url) {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
       await handleDeepLink(url)
@@ -300,6 +300,14 @@ app.whenReady().then(async () => {
     const deepLinkArg = getDeepLinkFromArgs(process.argv)
     if (deepLinkArg) {
       pendingDeepLink = deepLinkArg
+    }
+  }
+
+  if (process.platform === 'win32') {
+    try {
+      writeFileSync(path.join(taskDir(), 'param.txt'), 'empty')
+    } catch {
+      // ignore
     }
   }
 
@@ -515,6 +523,44 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
     })
     mainWindow.webContents.on('did-fail-load', () => {
       mainWindow?.webContents.reload()
+    })
+
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason === 'clean-exit') return
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.reload()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.webContents.on('unresponsive', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.forcefullyCrashRenderer()
+        mainWindow.webContents.reload()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.on('focus', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.invalidate()
+      } catch {
+        // ignore
+      }
+    })
+
+    mainWindow.on('show', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      try {
+        mainWindow.webContents.invalidate()
+      } catch {
+        // ignore
+      }
     })
 
     mainWindow.webContents.once('did-finish-load', () => {

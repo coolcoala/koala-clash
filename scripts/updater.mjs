@@ -1,9 +1,12 @@
 import yaml from 'yaml'
 import { readFileSync, writeFileSync } from 'fs'
+import { extractVersionSection } from './changelog.mjs'
 
 const pkg = readFileSync('package.json', 'utf-8')
-let changelog = readFileSync('changelog.md', 'utf-8')
+const rawChangelog = readFileSync('changelog.md', 'utf-8')
 const { version } = JSON.parse(pkg)
+
+let changelog = extractVersionSection(rawChangelog, version)
 const downloadUrl = `https://github.com/coolcoala/koala-clash/releases/download/${version}`
 const latest = {
   version,
@@ -17,7 +20,7 @@ const link = (url, format, label, logo) =>
   `<a href="${url}"><img src="${badge(format, label, logo)}"></a>`
 
 if (process.env.SKIP_CHANGELOG !== '1') {
-  changelog += '\n### Download link：\n\n#### Windows10/11：\n\n'
+  changelog += '\n### Download link：\n\n#### Windows 10/11：\n\n'
   changelog += link(`${downloadUrl}/Koala.Clash_x64-setup.exe`, 'EXE', '64-bit', 'windows') + ' '
   changelog += link(`${downloadUrl}/Koala.Clash_arm64-setup.exe`, 'EXE', 'ARM64', 'windows') + '\n\n'
   changelog += '\n#### macOS 11+：\n\n'
@@ -33,3 +36,4 @@ if (process.env.SKIP_CHANGELOG !== '1') {
 }
 writeFileSync('latest.yml', yaml.stringify(latest))
 writeFileSync('changelog.md', changelog)
+writeFileSync('rawChangelog.md', rawChangelog)

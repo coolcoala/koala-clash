@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { cn } from '@renderer/lib/utils'
 import SettingItem from '../base/base-setting-item'
 import { Spinner } from '@renderer/components/ui/spinner'
-import { getFilePath, readTextFile, restartCore } from '@renderer/utils/ipc'
+import { getFilePath, readTextFile, mihomoHotReloadConfig } from '@renderer/utils/ipc'
 import { useTranslation } from 'react-i18next'
 import {
   ClipboardPaste,
@@ -68,7 +68,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
       const itemToSave = { ...values }
       await updateProfileItem(itemToSave)
       if (item.id && isCurrent) {
-        await restartCore()
+        await mihomoHotReloadConfig()
       }
       closeRef.current?.click()
     } catch (e) {
@@ -144,6 +144,7 @@ const EditInfoModal: React.FC<Props> = (props) => {
           'w-120'
         )}
         showCloseButton={false}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogClose ref={closeRef} className="hidden" />
         <DialogHeader className="app-drag">

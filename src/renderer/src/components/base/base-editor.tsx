@@ -1,13 +1,15 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as monaco from 'monaco-editor'
 import MonacoEditor, { MonacoDiffEditor } from 'react-monaco-editor'
 import { configureMonacoYaml } from 'monaco-yaml'
-import metaSchema from 'meta-json-schema/schemas/meta-json-schema.json'
+import metaSchemaCn from '@renderer/assets/schemas/meta-json-scheme-cn.json'
+import metaSchemaEn from '@renderer/assets/schemas/meta-json-scheme-en.json'
+import metaSchemaRu from '@renderer/assets/schemas/meta-json-scheme-ru.json'
 import pac from 'types-pac/pac.d.ts?raw'
 import { useTheme } from 'next-themes'
 import { nanoid } from 'nanoid'
 import React from 'react'
-import { t } from 'i18next'
+import i18n, { t } from 'i18next'
 type Language = 'yaml' | 'javascript' | 'css' | 'json' | 'text'
 
 interface Props {
@@ -19,25 +21,42 @@ interface Props {
   onChange?: (value: string) => void
 }
 
-let initialized = false
+type SchemaLocale = 'cn' | 'en' | 'ru'
+
+const SCHEMA_BY_LOCALE: Record<SchemaLocale, unknown> = {
+  cn: metaSchemaCn,
+  en: metaSchemaEn,
+  ru: metaSchemaRu
+}
+
+const resolveSchemaLocale = (lng: string | undefined): SchemaLocale => {
+  if (!lng) return 'en'
+  if (lng.startsWith('zh')) return 'cn'
+  if (lng.startsWith('ru')) return 'ru'
+  return 'en'
+}
+
+let pacExtraLibConfigured = false
+let configuredLocale: SchemaLocale | null = null
+
 const monacoInitialization = (): void => {
-  if (initialized) return
+  const locale = resolveSchemaLocale(i18n.language)
+  if (configuredLocale === locale) return
 
   const insertPrefixDescription = t('editor.schema.insertPrefix')
   const appendSuffixDescription = t('editor.schema.appendSuffix')
   const forceOverrideDescription = t('editor.schema.forceOverride')
 
-  // configure yaml worker
   configureMonacoYaml(monaco, {
     validate: true,
     enableSchemaRequest: true,
     schemas: [
       {
-        uri: 'http://example.com/meta-json-schema.json',
+        uri: `http://example.com/meta-json-scheme-${locale}.json`,
         fileMatch: ['**/*.clash.yaml'],
         // @ts-ignore // type JSONSchema7
         schema: {
-          ...metaSchema,
+          ...(SCHEMA_BY_LOCALE[locale] as object),
           patternProperties: {
             '\\+rules': {
               type: 'array',
@@ -86,9 +105,12 @@ const monacoInitialization = (): void => {
       }
     ]
   })
-  // configure PAC definition
-  monaco.languages.typescript.javascriptDefaults.addExtraLib(pac, 'pac.d.ts')
-  initialized = true
+
+  if (!pacExtraLibConfigured) {
+    monaco.languages.typescript.javascriptDefaults.addExtraLib(pac, 'pac.d.ts')
+    pacExtraLibConfigured = true
+  }
+  configuredLocale = locale
 }
 
 export const BaseEditor: React.FC<Props> = (props) => {
@@ -105,6 +127,21 @@ export const BaseEditor: React.FC<Props> = (props) => {
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(undefined)
   const diffEditorRef = useRef<monaco.editor.IStandaloneDiffEditor>(undefined)
+
+  const [schemaLocale, setSchemaLocale] = useState<SchemaLocale>(() =>
+    resolveSchemaLocale(i18n.language)
+  )
+
+  useEffect(() => {
+    const handler = (lng: string): void => {
+      const next = resolveSchemaLocale(lng)
+      setSchemaLocale((prev) => (prev === next ? prev : next))
+    }
+    i18n.on('languageChanged', handler)
+    return () => {
+      i18n.off('languageChanged', handler)
+    }
+  }, [])
 
   const editorWillMount = (): void => {
     monacoInitialization()
@@ -178,6 +215,7 @@ export const BaseEditor: React.FC<Props> = (props) => {
   if (originalValue !== undefined) {
     return (
       <MonacoDiffEditor
+        key={schemaLocale}
         language={language}
         original={originalValue}
         value={value}
@@ -194,6 +232,7 @@ export const BaseEditor: React.FC<Props> = (props) => {
 
   return (
     <MonacoEditor
+      key={schemaLocale}
       language={language}
       value={value}
       height="100%"

@@ -8,9 +8,9 @@ import { useControledMihomoConfig } from './hooks/use-controled-mihomo-config'
 const FloatingApp: React.FC = () => {
   const { appConfig } = useAppConfig()
   const { controledMihomoConfig } = useControledMihomoConfig()
-  const { sysProxy, spinFloatingIcon = true } = appConfig || {}
+  const { proxyMode = false, spinFloatingIcon = true } = appConfig || {}
   const { tun } = controledMihomoConfig || {}
-  const sysProxyEnabled = sysProxy?.enable
+  const proxyModeEnabled = proxyMode
   const tunEnabled = tun?.enable
 
   const [upload, setUpload] = useState(0)
@@ -78,7 +78,7 @@ const FloatingApp: React.FC = () => {
                   }
                 : {}
             }
-            className={`app-nodrag cursor-pointer floating-thumb ${tunEnabled ? 'bg-gradient-end-power-on' : sysProxyEnabled ? 'bg-primary' : 'bg-muted'} hover:opacity-80 rounded-full h-[calc(100%-4px)] aspect-square`}
+            className={`app-nodrag cursor-pointer floating-thumb ${tunEnabled ? 'bg-gradient-end-power-on' : proxyModeEnabled ? 'bg-primary' : 'bg-muted'} hover:opacity-80 rounded-full h-[calc(100%-4px)] aspect-square`}
           >
             <MihomoIcon className="floating-icon text-primary-foreground h-full leading-full text-[22px] mx-auto" />
           </div>

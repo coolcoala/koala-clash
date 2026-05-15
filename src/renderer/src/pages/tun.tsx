@@ -4,6 +4,13 @@ import { Input } from '@renderer/components/ui/input'
 import { Spinner } from '@renderer/components/ui/spinner'
 import { Switch } from '@renderer/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@renderer/components/ui/select'
 import BasePage from '@renderer/components/base/base-page'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import SettingItem from '@renderer/components/base/base-setting-item'
@@ -53,9 +60,13 @@ const Tun: React.FC = () => {
   }
 
   const onSave = async (patch: Partial<MihomoConfig>): Promise<void> => {
-    await patchControledMihomoConfig(patch)
-    await restartCore()
-    setChanged(false)
+    try {
+      await patchControledMihomoConfig(patch)
+    } catch (e) {
+      toast.error(`${e}`)
+    } finally {
+      setChanged(false)
+    }
   }
 
   return (
@@ -97,7 +108,6 @@ const Tun: React.FC = () => {
                 try {
                   await patchAppConfig({ controlTun: value })
                   await patchControledMihomoConfig(value ? {} : { tun: { enable: false } })
-                  await restartCore()
                 } catch (e) {
                   toast.error(`${e}`)
                 }
@@ -129,18 +139,21 @@ const Tun: React.FC = () => {
           )}
           {platform === 'darwin' && (
             <SettingItem title={t('pages.tun.autoSetSystemDNS')} divider>
-              <Tabs
+              <Select
                 value={autoSetDNSMode}
                 onValueChange={async (value) => {
                   await patchAppConfig({ autoSetDNSMode: value as 'none' | 'exec' | 'service' })
                 }}
               >
-                <TabsList>
-                  <TabsTrigger value="none">{t('pages.tun.noAutoSet')}</TabsTrigger>
-                  <TabsTrigger value="exec">{t('pages.tun.execCommand')}</TabsTrigger>
-                  <TabsTrigger value="service">{t('pages.tun.serviceMode')}</TabsTrigger>
-                </TabsList>
-              </Tabs>
+                <SelectTrigger size="sm" className="w-50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" className="mr-5.5">
+                  <SelectItem value="none">{t('pages.tun.noAutoSet')}</SelectItem>
+                  <SelectItem value="exec">{t('pages.tun.execCommand')}</SelectItem>
+                  <SelectItem value="service">{t('pages.tun.serviceMode')}</SelectItem>
+                </SelectContent>
+              </Select>
             </SettingItem>
           )}
           <SettingItem title={t('pages.tun.tunModeStack')} divider>

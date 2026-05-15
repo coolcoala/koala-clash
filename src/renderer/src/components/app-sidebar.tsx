@@ -25,15 +25,7 @@ import {
 } from '@renderer/components/ui/sidebar'
 import OutboundModeSwitcher from '@renderer/components/sider/outbound-mode-switcher'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
-import UpdaterButton from '@renderer/components/updater/updater-button'
 import ConfigViewer from '@renderer/components/sider/config-viewer'
-
-interface AppSidebarProps {
-  latest?: {
-    version: string
-    changelog: string
-  }
-}
 
 const navItems = [
   { key: 'main', path: '/home', icon: HomeIcon, i18nKey: 'sider.home' },
@@ -47,7 +39,7 @@ const navItems = [
 
 const allowedWithoutProfiles = new Set(['main', 'profile', 'settings'])
 
-const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
+const AppSidebar: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
@@ -56,6 +48,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
   const [showRuntimeConfig, setShowRuntimeConfig] = useState(false)
   const { profileConfig } = useProfileConfig()
   const hasProfiles = (profileConfig?.items?.length ?? 0) > 0
+  const currentProfile = profileConfig?.items?.find((i) => i.id === profileConfig.current)
+  const globalModeAllowed = currentProfile?.globalMode !== false
   const filteredNavItems = hasProfiles
     ? navItems
     : navItems.filter((item) => allowedWithoutProfiles.has(item.key))
@@ -66,7 +60,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
       collapsible="icon"
       side="left"
       variant="floating"
-      className="pt-[57px]"
+      className="pt-14.25"
     >
       <SidebarContent>
         <SidebarGroup>
@@ -78,6 +72,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
+                      className="cursor-pointer"
                       tooltip={t(item.i18nKey)}
                       isActive={isActive}
                       data-guide={item.key === 'main' ? 'sidebar-home-button' : undefined}
@@ -98,11 +93,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ latest }) => {
       </SidebarContent>
       <SidebarFooter>
         <div className="flex flex-col items-center gap-2">
-          {hasProfiles && <OutboundModeSwitcher />}
-          {latest && latest.version && <UpdaterButton iconOnly={collapsed} latest={latest} />}
+          {hasProfiles && globalModeAllowed && <OutboundModeSwitcher />}
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip={t('common.toggleSidebar')} onClick={toggleSidebar}>
+              <SidebarMenuButton tooltip={t('common.toggleSidebar')} onClick={toggleSidebar} className="cursor-pointer">
                 {collapsed ? (
                   <ExpandedIcon className="size-4 shrink-0" />
                 ) : (

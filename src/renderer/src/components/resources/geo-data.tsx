@@ -34,6 +34,7 @@ const GeoData: React.FC = () => {
   const [geositeInput, setGeositeInput] = useState(geoxUrl.geosite)
   const [mmdbInput, setMmdbInput] = useState(geoxUrl.mmdb)
   const [asnInput, setAsnInput] = useState(geoxUrl.asn)
+  const [intervalInput, setIntervalInput] = useState((geoUpdateInterval ?? 24).toString())
   const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
@@ -42,6 +43,10 @@ const GeoData: React.FC = () => {
     setMmdbInput(geoxUrl.mmdb)
     setAsnInput(geoxUrl.asn)
   }, [geoxUrl])
+
+  useEffect(() => {
+    setIntervalInput((geoUpdateInterval ?? 24).toString())
+  }, [geoUpdateInterval])
 
   return (
     <SettingCard>
@@ -172,12 +177,16 @@ const GeoData: React.FC = () => {
         <SettingItem title={t('resources.updateInterval')}>
           <Input
             type="number"
-            className="w-[100px] h-8"
-            value={geoUpdateInterval.toString()}
-            onChange={(event) => {
-              patchControledMihomoConfig({
-                'geo-update-interval': parseInt(event.target.value)
-              })
+            className="w-25 h-8"
+            value={intervalInput}
+            onChange={(event) => setIntervalInput(event.target.value)}
+            onBlur={() => {
+              const val = parseInt(intervalInput)
+              if (!isNaN(val) && val > 0) {
+                patchControledMihomoConfig({ 'geo-update-interval': val })
+              } else {
+                setIntervalInput((geoUpdateInterval ?? 24).toString())
+              }
             }}
           />
         </SettingItem>

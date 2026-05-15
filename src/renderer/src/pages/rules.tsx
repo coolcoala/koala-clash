@@ -8,7 +8,6 @@ import { Input } from '@renderer/components/ui/input'
 import { Button } from '@renderer/components/ui/button'
 import { useRules } from '@renderer/hooks/use-rules'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
-import { restartCore } from '@renderer/utils/ipc'
 import { includesIgnoreCase } from '@renderer/utils/includes'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -65,10 +64,7 @@ const Rules: React.FC = () => {
       {showRulesEditor && profileConfig?.current && (
         <EditRulesModal
           id={profileConfig.current}
-          onClose={async () => {
-            setShowRulesEditor(false)
-            await restartCore()
-          }}
+          onClose={() => setShowRulesEditor(false)}
         />
       )}
       <div className="sticky top-0 z-40">

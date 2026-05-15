@@ -7,7 +7,7 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
-import { restartCore, triggerSysProxy, updateTrayIcon } from '@renderer/utils/ipc'
+import { triggerSysProxy, updateTrayIcon, mihomoHotReloadConfig } from '@renderer/utils/ipc'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
@@ -18,8 +18,13 @@ const ProxySwitches: React.FC = () => {
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
   const { tun } = controledMihomoConfig || {}
   const { appConfig, patchAppConfig } = useAppConfig()
-  const { sysProxy, onlyActiveDevice = false, mainSwitchMode = 'tun' } = appConfig || {}
-  const { enable: sysProxyEnable, mode } = sysProxy || {}
+  const {
+    sysProxy,
+    proxyMode = false,
+    onlyActiveDevice = false,
+    mainSwitchMode = 'tun'
+  } = appConfig || {}
+  const { enable: writeSysProxy = true, mode } = sysProxy || {}
   const { 'mixed-port': mixedPort } = controledMihomoConfig || {}
   const sysProxyDisabled = mixedPort == 0
 
@@ -34,7 +39,7 @@ const ProxySwitches: React.FC = () => {
         >
           <TabsList>
             <TabsTrigger value="tun">{t('settings.advanced.mainSwitchTun')}</TabsTrigger>
-            <TabsTrigger value="sysproxy">{t('settings.advanced.mainSwitchSysproxy')}</TabsTrigger>
+            <TabsTrigger value="sysproxy">{t('settings.advanced.mainSwitchProxyMode')}</TabsTrigger>
           </TabsList>
         </Tabs>
       </SettingItem>
@@ -59,7 +64,6 @@ const ProxySwitches: React.FC = () => {
             } else {
               await patchControledMihomoConfig({ tun: { enable } })
             }
-            await restartCore()
             window.electron.ipcRenderer.send('updateFloatingWindow')
             window.electron.ipcRenderer.send('updateTrayMenu')
             await updateTrayIcon()
@@ -67,7 +71,7 @@ const ProxySwitches: React.FC = () => {
         />
       </SettingItem>
       <SettingItem
-        title={t('sider.systemProxy')}
+        title={t('sider.proxyMode')}
         actions={
           <Button
             size="icon-sm"
@@ -79,13 +83,24 @@ const ProxySwitches: React.FC = () => {
         }
       >
         <Switch
-          checked={sysProxyEnable}
-          disabled={mode == 'manual' && sysProxyDisabled}
+          checked={proxyMode}
+          disabled={writeSysProxy && mode == 'manual' && sysProxyDisabled}
           onCheckedChange={async (enable: boolean) => {
-            if (mode == 'manual' && sysProxyDisabled) return
+            if (enable && writeSysProxy && mode == 'manual' && sysProxyDisabled) return
             try {
-              await triggerSysProxy(enable, onlyActiveDevice)
-              await patchAppConfig({ sysProxy: { enable } })
+              if (enable) {
+                await patchAppConfig({ proxyMode: true })
+                await mihomoHotReloadConfig()
+                if (writeSysProxy) {
+                  await triggerSysProxy(true, onlyActiveDevice)
+                }
+              } else {
+                if (writeSysProxy) {
+                  await triggerSysProxy(false, onlyActiveDevice)
+                }
+                await patchAppConfig({ proxyMode: false })
+                await mihomoHotReloadConfig()
+              }
               window.electron.ipcRenderer.send('updateFloatingWindow')
               window.electron.ipcRenderer.send('updateTrayMenu')
               await updateTrayIcon()

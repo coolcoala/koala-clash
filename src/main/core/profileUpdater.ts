@@ -1,116 +1,43 @@
-import { addProfileItem, getCurrentProfileItem, getProfileConfig } from '../config'
+import { addProfileItem, getProfileConfig } from '../config'
 
-const intervalPool: Record<string, NodeJS.Timeout> = {}
+const TICK_INTERVAL_MS = 60_000
+const START_DELAY_MS = 10_000
 
-function calculateUpdateDelay(item: ProfileItem): number {
-  if (!item.interval) {
-    return -1
+const inFlight = new Set<string>()
+let started = false
+
+function isDue(item: ProfileItem): boolean {
+  if (item.type !== 'remote') return false
+  if (!item.interval) return false
+  if (item.autoUpdate === false) return false
+  const timeSince = Date.now() - (item.updated || 0)
+  return timeSince >= item.interval * 60 * 1000
+}
+
+async function runTick(): Promise<void> {
+  try {
+    const { items = [] } = await getProfileConfig()
+    for (const item of items) {
+      if (inFlight.has(item.id)) continue
+      if (!isDue(item)) continue
+      inFlight.add(item.id)
+      try {
+        await addProfileItem(item)
+      } catch {
+        // next tick will retry
+      } finally {
+        inFlight.delete(item.id)
+      }
+    }
+  } catch {
+    // ignore — ticker must not die
+  } finally {
+    setTimeout(runTick, TICK_INTERVAL_MS)
   }
-
-  const now = Date.now()
-  const lastUpdated = item.updated || 0
-  const intervalMs = item.interval * 60 * 1000
-  const timeSinceLastUpdate = now - lastUpdated
-
-  if (timeSinceLastUpdate >= intervalMs) {
-    return 0
-  }
-
-  return intervalMs - timeSinceLastUpdate
 }
 
 export async function initProfileUpdater(): Promise<void> {
-  const { items, current } = await getProfileConfig()
-  const currentItem = await getCurrentProfileItem()
-  for (const item of items.filter((i) => i.id !== current)) {
-    if (item.type === 'remote' && item.interval && item.autoUpdate !== false) {
-      const delay = calculateUpdateDelay(item)
-
-      if (delay === -1) {
-        continue
-      }
-
-      if (delay === 0) {
-        try {
-          await addProfileItem(item)
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      intervalPool[item.id] = setTimeout(
-        async () => {
-          try {
-            await addProfileItem(item)
-          } catch (e) {
-            // ignore
-          }
-        },
-        delay === 0 ? item.interval * 60 * 1000 : delay
-      )
-    }
-  }
-
-  if (currentItem?.type === 'remote' && currentItem.interval && currentItem.autoUpdate !== false) {
-    const delay = calculateUpdateDelay(currentItem)
-
-    if (delay === 0) {
-      try {
-        await addProfileItem(currentItem)
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    intervalPool[currentItem.id] = setTimeout(
-      async () => {
-        try {
-          await addProfileItem(currentItem)
-        } catch (e) {
-          // ignore
-        }
-      },
-      (delay === 0 ? currentItem.interval * 60 * 1000 : delay) + 10000 // +10s
-    )
-  }
-}
-
-export async function addProfileUpdater(item: ProfileItem): Promise<void> {
-  if (item.type === 'remote' && item.interval && item.autoUpdate !== false) {
-    if (intervalPool[item.id]) {
-      clearTimeout(intervalPool[item.id])
-    }
-
-    const delay = calculateUpdateDelay(item)
-
-    if (delay === -1) {
-      return
-    }
-
-    if (delay === 0) {
-      try {
-        await addProfileItem(item)
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    intervalPool[item.id] = setTimeout(
-      async () => {
-        try {
-          await addProfileItem(item)
-        } catch (e) {
-          // ignore
-        }
-      },
-      delay === 0 ? item.interval * 60 * 1000 : delay
-    )
-  }
-}
-
-export async function delProfileUpdater(id: string): Promise<void> {
-  if (intervalPool[id]) {
-    clearTimeout(intervalPool[id])
-    delete intervalPool[id]
-  }
+  if (started) return
+  started = true
+  setTimeout(runTick, START_DELAY_MS)
 }

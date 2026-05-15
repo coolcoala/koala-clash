@@ -189,6 +189,8 @@ interface ControllerGroupDelay {
 interface ControllerTraffic {
   up: number
   down: number
+  upTotal: number
+  downTotal: number
 }
 
 // ${api}/rules

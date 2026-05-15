@@ -13,8 +13,10 @@ import {
   resetAppConfig,
   cancelUpdate
 } from '@renderer/utils/ipc'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import useSWR from 'swr'
+import { useUpdaterStore } from '@renderer/store/updater-store'
+import { useShallow } from 'zustand/react/shallow'
 import UpdaterModal from '../updater/updater-modal'
 import { version } from '@renderer/utils/init'
 import { startTour } from '@renderer/utils/driver'
@@ -41,34 +43,15 @@ const Actions: React.FC<ActionsProps> = (props) => {
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const versionTapCountRef = useRef(0)
-  const [updateStatus, setUpdateStatus] = useState<{
-    downloading: boolean
-    progress: number
-    error?: string
-  }>({
-    downloading: false,
-    progress: 0
-  })
-
-  useEffect(() => {
-    const handleUpdateStatus = (
-      _: Electron.IpcRendererEvent,
-      status: typeof updateStatus
-    ): void => {
-      setUpdateStatus(status)
-    }
-
-    window.electron.ipcRenderer.on('update-status', handleUpdateStatus)
-
-    return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('update-status')
-    }
-  }, [])
+  const updateStatus = useUpdaterStore(
+    useShallow((s) => ({ downloading: s.downloading, progress: s.progress, error: s.error }))
+  )
+  const resetUpdateStatus = useUpdaterStore((s) => s.reset)
 
   const handleCancelUpdate = async (): Promise<void> => {
     try {
       await cancelUpdate()
-      setUpdateStatus({ downloading: false, progress: 0 })
+      resetUpdateStatus()
     } catch (e) {
       // ignore
     }
@@ -133,9 +116,7 @@ const Actions: React.FC<ActionsProps> = (props) => {
                   setChangelog(version.changelog)
                   setOpenUpdate(true)
                 } else {
-                  new window.Notification(t('settings.actions.alreadyLatest'), {
-                    body: t('settings.actions.noNeedUpdate')
-                  })
+                  toast.success(t('settings.actions.noNeedUpdate'))
                 }
               } catch (e) {
                 toast.error(`${e}`)

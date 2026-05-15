@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
 import { parseYaml } from '../utils/yaml'
 import { app, shell } from 'electron'
-import { getControledMihomoConfig } from '../config'
+import { getRuntimeConfig } from '../core/factory'
 import { dataDir, exeDir, exePath, isPortable, resourcesFilesDir } from '../utils/dirs'
 import { copyFile, rm, writeFile, readFile } from 'fs/promises'
 import path from 'path'
@@ -16,7 +16,7 @@ import { t } from '../utils/i18n'
 let downloadCancelToken: CancelTokenSource | null = null
 
 export async function checkUpdate(): Promise<AppVersion | undefined> {
-  const { 'mixed-port': mixedPort = 7897 } = await getControledMihomoConfig()
+  const { 'mixed-port': mixedPort = 0 } = (await getRuntimeConfig()) ?? {}
   const url = 'https://github.com/coolcoala/koala-clash/releases/latest/download/latest.yml'
   const res = await axios.get(url, {
     headers: { 'Content-Type': 'application/octet-stream' },
@@ -39,7 +39,7 @@ export async function checkUpdate(): Promise<AppVersion | undefined> {
 }
 
 export async function downloadAndInstallUpdate(version: string): Promise<void> {
-  const { 'mixed-port': mixedPort = 7897 } = await getControledMihomoConfig()
+  const { 'mixed-port': mixedPort = 0 } = (await getRuntimeConfig()) ?? {}
   const releaseTag = version
   const baseUrl = `https://github.com/coolcoala/koala-clash/releases/download/${releaseTag}/`
   const fileMap = {
@@ -75,6 +75,7 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
       downloading: true,
       progress: 0
     })
+    mainWindow?.setProgressBar(0)
 
     const releaseRes = await axios.get(apiUrl, apiRequestConfig)
     const assets: Array<{ name: string; digest?: string }> = releaseRes.data.assets || []
@@ -106,6 +107,7 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
             downloading: true,
             progress: percentCompleted
           })
+          mainWindow?.setProgressBar(percentCompleted / 100)
         }
       })
       await writeFile(path.join(dataDir(), file), res.data)
@@ -126,6 +128,7 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
       downloading: false,
       progress: 100
     })
+    mainWindow?.setProgressBar(-1)
 
     disableSysProxy(false)
     if (file.endsWith('.exe')) {
@@ -165,6 +168,7 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
     }
   } catch (e) {
     await rm(path.join(dataDir(), file), { force: true })
+    mainWindow?.setProgressBar(-1)
     if (axios.isCancel(e)) {
       mainWindow?.webContents.send('update-status', {
         downloading: false,

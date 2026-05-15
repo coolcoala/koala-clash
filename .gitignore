@@ -9,3 +9,6 @@ out
 .idea
 *.ttf
 .serena
+.zed
+*.tsbuildinfo
+latest.yml

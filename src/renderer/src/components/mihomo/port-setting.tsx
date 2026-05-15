@@ -4,7 +4,7 @@ import SettingItem from '../base/base-setting-item'
 import EditableList from '../base/base-list-editor'
 
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { restartCore, triggerSysProxy } from '@renderer/utils/ipc'
+import { triggerSysProxy, mihomoHotReloadConfig } from '@renderer/utils/ipc'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { platform } from '@renderer/utils/init'
 import { Button } from '@renderer/components/ui/button'
@@ -17,7 +17,7 @@ import { Network } from 'lucide-react'
 const PortSetting: React.FC = () => {
   const { t } = useTranslation()
   const { appConfig } = useAppConfig()
-  const { sysProxy, onlyActiveDevice = false } = appConfig || {}
+  const { sysProxy, proxyMode = false, onlyActiveDevice = false } = appConfig || {}
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
   const {
     authentication = [],
@@ -61,7 +61,7 @@ const PortSetting: React.FC = () => {
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
-    await restartCore()
+    await mihomoHotReloadConfig()
   }
 
   return (
@@ -77,7 +77,7 @@ const PortSetting: React.FC = () => {
                 disabled={hasPortConflict()}
                 onClick={async () => {
                   await onChangeNeedRestart({ 'mixed-port': mixedPortInput })
-                  if (sysProxy?.enable) {
+                  if (proxyMode && sysProxy?.enable) {
                     await triggerSysProxy(true, onlyActiveDevice)
                   }
                 }}

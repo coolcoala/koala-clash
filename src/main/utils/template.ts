@@ -16,7 +16,8 @@ export const defaultConfig: AppConfig = {
   controlDns: false,
   controlSniff: false,
   hosts: [],
-  sysProxy: { enable: false, mode: 'manual' },
+  sysProxy: { enable: true, mode: 'manual' },
+  proxyMode: false,
   disableLoopbackDetector: false,
   disableEmbedCA: false,
   disableSystemCA: false,
@@ -26,7 +27,8 @@ export const defaultConfig: AppConfig = {
   proxyDisplayLayout: 'double',
   groupDisplayLayout: 'double',
   autoLightweightMode: 'core',
-  mainSwitchMode: 'tun'
+  mainSwitchMode: 'tun',
+  useHotReloadProfile: true
 }
 
 export const defaultControledMihomoConfig: Partial<MihomoConfig> = {
@@ -64,7 +66,25 @@ export const defaultControledMihomoConfig: Partial<MihomoConfig> = {
     'auto-redirect': false,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53'],
-    'route-exclude-address': [],
+    'route-exclude-address': [
+      '0.0.0.0/8',
+      '10.0.0.0/8',
+      '100.64.0.0/10',
+      '127.0.0.0/8',
+      '169.254.0.0/16',
+      '172.16.0.0/12',
+      '192.0.0.0/24',
+      '192.0.2.0/24',
+      '192.88.99.0/24',
+      '192.168.0.0/16',
+      '198.51.100.0/24',
+      '203.0.113.0/24',
+      '224.0.0.0/3',
+      '::/127',
+      'fc00::/7',
+      'fe80::/10',
+      'ff00::/8'
+    ],
     mtu: 1500
   },
   dns: {

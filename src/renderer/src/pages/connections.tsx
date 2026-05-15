@@ -1,6 +1,7 @@
 import BasePage from '@renderer/components/base/base-page'
 import { mihomoCloseAllConnections, mihomoCloseConnection } from '@renderer/utils/ipc'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConnectionsStore } from '@renderer/store/connections-store'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Badge } from '@renderer/components/ui/badge'
 import { Button } from '@renderer/components/ui/button'
 import {
@@ -33,9 +34,7 @@ import ConnectionDetailModal from '@renderer/components/connections/connection-d
 import ConnectionSettingModal from '@renderer/components/connections/connection-setting-modal'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { includesIgnoreCase } from '@renderer/utils/includes'
-import { getIconDataURL, getAppName } from '@renderer/utils/ipc'
-import { cropAndPadTransparent } from '@renderer/utils/image'
-import { platform } from '@renderer/utils/init'
+import { useIconsStore, useProcessAppName } from '@renderer/store/icons-store'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useTranslation } from 'react-i18next'
 import {
@@ -50,8 +49,6 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-
-let cachedConnections: ControllerConnectionDetail[] = []
 
 const Connections: React.FC = () => {
   const { t } = useTranslation()
@@ -84,22 +81,19 @@ const Connections: React.FC = () => {
     displayIcon = true,
     displayAppName = true
   } = appConfig || {}
-  const [connectionsInfo, setConnectionsInfo] = useState<ControllerConnections>()
-  const [allConnections, setAllConnections] =
-    useState<ControllerConnectionDetail[]>(cachedConnections)
-  const [activeConnections, setActiveConnections] = useState<ControllerConnectionDetail[]>([])
-  const [closedConnections, setClosedConnections] = useState<ControllerConnectionDetail[]>([])
+  const info = useConnectionsStore((s) => s.info)
+  const activeConnections = useConnectionsStore((s) => s.active)
+  const closedConnections = useConnectionsStore((s) => s.closed)
+  const isPaused = useConnectionsStore((s) => s.isPaused)
+  const togglePause = useConnectionsStore((s) => s.togglePause)
+  const removeClosedById = useConnectionsStore((s) => s.removeClosedById)
+  const clearAllClosed = useConnectionsStore((s) => s.clearAllClosed)
+
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isSettingModalOpen, setIsSettingModalOpen] = useState(false)
   const [selected, setSelected] = useState<ControllerConnectionDetail>()
 
-  const [iconMap, setIconMap] = useState<Record<string, string>>({})
-  const [appNameCache, setAppNameCache] = useState<Record<string, string>>({})
-  const [firstItemRefreshTrigger, setFirstItemRefreshTrigger] = useState(0)
-
   const [tab, setTab] = useState('active')
-  const [isPaused, setIsPaused] = useState(false)
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'list' | 'table'>(connectionViewMode)
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(connectionTableColumns))
 
@@ -132,14 +126,6 @@ const Connections: React.FC = () => {
     ],
     [t]
   )
-
-  const iconRequestQueue = useRef(new Set<string>())
-  const processingIcons = useRef(new Set<string>())
-  const processIconTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const appNameRequestQueue = useRef(new Set<string>())
-  const processingAppNames = useRef(new Set<string>())
-  const processAppNameTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build process groups from connections
   const processGroups = useMemo(() => {
@@ -189,37 +175,25 @@ const Connections: React.FC = () => {
     activeConnections.forEach((conn) => addToGroup(conn, true))
     closedConnections.forEach((conn) => addToGroup(conn, false))
 
-    const groups: ProcessGroup[] = Array.from(groupMap.values()).map((g) => ({
-      ...g,
-      displayName: displayAppName && g.processPath ? appNameCache[g.processPath] : undefined,
-      iconUrl: (displayIcon && findProcessMode !== 'off' && iconMap[g.processPath]) || ''
-    }))
+    const groups: ProcessGroup[] = Array.from(groupMap.values())
 
-    // Sort by active count descending, then by total traffic
     groups.sort((a, b) => {
       if (b.activeCount !== a.activeCount) return b.activeCount - a.activeCount
       return b.totalUpload + b.totalDownload - (a.totalUpload + a.totalDownload)
     })
 
     return groups
-  }, [
-    activeConnections,
-    closedConnections,
-    appNameCache,
-    iconMap,
-    displayIcon,
-    displayAppName,
-    findProcessMode
-  ])
+  }, [activeConnections, closedConnections])
 
-  // Filter process groups by search
   const filteredProcessGroups = useMemo(() => {
     if (filter === '') return processGroups
+    const appNames = useIconsStore.getState().appNames
     return processGroups.filter((pg) => {
-      const searchable = [pg.processName, pg.displayName, pg.processPath].filter(Boolean).join(' ')
+      const name = displayAppName && pg.processPath ? appNames[pg.processPath] : undefined
+      const searchable = [pg.processName, name, pg.processPath].filter(Boolean).join(' ')
       return includesIgnoreCase(searchable, filter)
     })
-  }, [processGroups, filter])
+  }, [processGroups, filter, displayAppName])
 
   const filteredConnections = useMemo(() => {
     const connections = tab === 'active' ? activeConnections : closedConnections
@@ -302,113 +276,24 @@ const Connections: React.FC = () => {
     selectedProcess
   ])
 
-  const trashAllClosedConnection = useCallback((): void => {
-    if (closedConnections.length === 0) return
-
-    const trashIds = closedConnections.map((conn) => conn.id)
-    setDeletedIds((prev) => new Set([...prev, ...trashIds]))
-    setAllConnections((allConns) => {
-      const updatedConnections = allConns.filter((conn) => !trashIds.includes(conn.id))
-      cachedConnections = updatedConnections
-      return updatedConnections
-    })
-    setClosedConnections([])
-  }, [closedConnections])
-
-  const trashClosedConnection = useCallback((id: string): void => {
-    setDeletedIds((prev) => new Set([...prev, id]))
-    setAllConnections((allConns) => {
-      const updatedConnections = allConns.filter((conn) => conn.id !== id)
-      cachedConnections = updatedConnections
-      return updatedConnections
-    })
-    setClosedConnections((closedConns) => closedConns.filter((conn) => conn.id !== id))
-  }, [])
-
   const closeAllConnections = useCallback((): void => {
-    tab === 'active' ? mihomoCloseAllConnections() : trashAllClosedConnection()
-  }, [tab, trashAllClosedConnection])
+    if (tab === 'active') {
+      mihomoCloseAllConnections()
+    } else {
+      clearAllClosed()
+    }
+  }, [tab, clearAllClosed])
 
   const closeConnection = useCallback(
     (id: string): void => {
-      tab === 'active' ? mihomoCloseConnection(id) : trashClosedConnection(id)
-    },
-    [tab, trashClosedConnection]
-  )
-
-  useEffect(() => {
-    const handleConnections = (_e: unknown, info: ControllerConnections): void => {
-      setConnectionsInfo(info)
-
-      if (!info.connections) return
-
-      const prevActiveMap = new Map(activeConnections.map((conn) => [conn.id, conn]))
-      const existingConnectionIds = new Set(allConnections.map((conn) => conn.id))
-
-      const activeConns = info.connections.map((conn) => {
-        const preConn = prevActiveMap.get(conn.id)
-        const downloadSpeed = preConn ? conn.download - preConn.download : 0
-        const uploadSpeed = preConn ? conn.upload - preConn.upload : 0
-        const metadata =
-          conn.metadata.type === 'Inner'
-            ? { ...conn.metadata, process: 'mihomo', processPath: 'mihomo' }
-            : conn.metadata
-
-        return {
-          ...conn,
-          metadata,
-          isActive: true,
-          downloadSpeed,
-          uploadSpeed
-        }
-      })
-
-      const newConnections = activeConns.filter(
-        (conn) => !existingConnectionIds.has(conn.id) && !deletedIds.has(conn.id)
-      )
-
-      if (newConnections.length > 0) {
-        const updatedAllConnections = [...allConnections, ...newConnections]
-
-        const activeConnIds = new Set(activeConns.map((conn) => conn.id))
-        const allConns = updatedAllConnections.map((conn) => {
-          const activeConn = activeConns.find((ac) => ac.id === conn.id)
-          return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
-        })
-
-        const closedConns = allConns.filter((conn) => !activeConnIds.has(conn.id))
-
-        setActiveConnections(activeConns)
-        setClosedConnections(closedConns)
-        const finalAllConnections = allConns.slice(-(activeConns.length + 200))
-        setAllConnections(finalAllConnections)
-        cachedConnections = finalAllConnections
+      if (tab === 'active') {
+        mihomoCloseConnection(id)
       } else {
-        const activeConnIds = new Set(activeConns.map((conn) => conn.id))
-        const allConns = allConnections.map((conn) => {
-          const activeConn = activeConns.find((ac) => ac.id === conn.id)
-          return activeConn || { ...conn, isActive: false, downloadSpeed: 0, uploadSpeed: 0 }
-        })
-
-        const closedConns = allConns.filter((conn) => !activeConnIds.has(conn.id))
-
-        setActiveConnections(activeConns)
-        setClosedConnections(closedConns)
-        setAllConnections(allConns)
-        cachedConnections = allConns
+        removeClosedById(id)
       }
-    }
-    if (!isPaused) {
-      window.electron.ipcRenderer.on('mihomoConnections', handleConnections)
-    }
-
-    return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('mihomoConnections')
-    }
-  }, [allConnections, activeConnections, closedConnections, deletedIds, isPaused])
-  const togglePause = useCallback(() => {
-    setIsPaused((prev) => !prev)
-  }, [])
+    },
+    [tab, removeClosedById]
+  )
 
   const handleColumnWidthChange = useCallback(
     async (widths: Record<string, number>) => {
@@ -426,168 +311,6 @@ const Connections: React.FC = () => {
     },
     [patchAppConfig]
   )
-
-  const processAppNameQueue = useCallback(async () => {
-    if (processingAppNames.current.size >= 3 || appNameRequestQueue.current.size === 0) return
-
-    const pathsToProcess = Array.from(appNameRequestQueue.current).slice(0, 3)
-    pathsToProcess.forEach((path) => appNameRequestQueue.current.delete(path))
-
-    const promises = pathsToProcess.map(async (path) => {
-      if (processingAppNames.current.has(path)) return
-      processingAppNames.current.add(path)
-
-      try {
-        const appName = await getAppName(path)
-        if (appName) {
-          setAppNameCache((prev) => ({ ...prev, [path]: appName }))
-        }
-      } catch {
-        // ignore
-      } finally {
-        processingAppNames.current.delete(path)
-      }
-    })
-
-    await Promise.all(promises)
-
-    if (appNameRequestQueue.current.size > 0) {
-      processAppNameTimer.current = setTimeout(processAppNameQueue, 100)
-    }
-  }, [])
-
-  const processIconQueue = useCallback(async () => {
-    if (processingIcons.current.size >= 5 || iconRequestQueue.current.size === 0) return
-
-    const pathsToProcess = Array.from(iconRequestQueue.current).slice(0, 5)
-    pathsToProcess.forEach((path) => iconRequestQueue.current.delete(path))
-
-    const promises = pathsToProcess.map(async (path) => {
-      if (processingIcons.current.has(path)) return
-      processingIcons.current.add(path)
-
-      try {
-        const rawBase64 = await getIconDataURL(path)
-        if (!rawBase64) return
-
-        const fullDataURL = rawBase64.startsWith('data:')
-          ? rawBase64
-          : `data:image/png;base64,${rawBase64}`
-
-        let processedDataURL = fullDataURL
-        if (platform != 'darwin') {
-          processedDataURL = await cropAndPadTransparent(fullDataURL)
-        }
-
-        try {
-          localStorage.setItem(path, processedDataURL)
-        } catch {
-          // ignore
-        }
-
-        setIconMap((prev) => ({ ...prev, [path]: processedDataURL }))
-
-        const firstConnection = filteredConnections[0]
-        if (firstConnection?.metadata.processPath === path) {
-          setFirstItemRefreshTrigger((prev) => prev + 1)
-        }
-      } catch {
-        // ignore
-      } finally {
-        processingIcons.current.delete(path)
-      }
-    })
-
-    await Promise.all(promises)
-
-    if (iconRequestQueue.current.size > 0) {
-      processIconTimer.current = setTimeout(processIconQueue, 50)
-    }
-  }, [filteredConnections])
-
-  useEffect(() => {
-    if (!displayIcon || findProcessMode === 'off') return
-
-    const visiblePaths = new Set<string>()
-    const otherPaths = new Set<string>()
-
-    const visibleConnections = filteredConnections.slice(0, 20)
-    visibleConnections.forEach((c) => {
-      const path = c.metadata.processPath || ''
-      visiblePaths.add(path)
-    })
-
-    const collectPaths = (connections: ControllerConnectionDetail[]) => {
-      for (const c of connections) {
-        const path = c.metadata.processPath || ''
-        if (!visiblePaths.has(path)) {
-          otherPaths.add(path)
-        }
-      }
-    }
-
-    collectPaths(activeConnections)
-    collectPaths(closedConnections)
-
-    const loadIcon = (path: string, isVisible: boolean = false): void => {
-      if (iconMap[path] || processingIcons.current.has(path)) return
-
-      const fromStorage = localStorage.getItem(path)
-      if (fromStorage) {
-        setIconMap((prev) => ({ ...prev, [path]: fromStorage }))
-        if (isVisible && filteredConnections[0]?.metadata.processPath === path) {
-          setFirstItemRefreshTrigger((prev) => prev + 1)
-        }
-        return
-      }
-
-      iconRequestQueue.current.add(path)
-    }
-
-    const loadAppName = (path: string): void => {
-      if (appNameCache[path] || processingAppNames.current.has(path)) return
-      appNameRequestQueue.current.add(path)
-    }
-
-    visiblePaths.forEach((path) => {
-      loadIcon(path, true)
-      if (displayAppName) loadAppName(path)
-    })
-
-    if (otherPaths.size > 0) {
-      const loadOtherPaths = () => {
-        otherPaths.forEach((path) => {
-          loadIcon(path, false)
-          if (displayAppName) loadAppName(path)
-        })
-      }
-
-      setTimeout(loadOtherPaths, 100)
-    }
-
-    if (processIconTimer.current) clearTimeout(processIconTimer.current)
-    if (processAppNameTimer.current) clearTimeout(processAppNameTimer.current)
-
-    processIconTimer.current = setTimeout(processIconQueue, 10)
-    if (displayAppName) {
-      processAppNameTimer.current = setTimeout(processAppNameQueue, 10)
-    }
-
-    return (): void => {
-      if (processIconTimer.current) clearTimeout(processIconTimer.current)
-      if (processAppNameTimer.current) clearTimeout(processAppNameTimer.current)
-    }
-  }, [
-    activeConnections,
-    closedConnections,
-    iconMap,
-    appNameCache,
-    displayIcon,
-    filteredConnections,
-    processIconQueue,
-    processAppNameQueue,
-    displayAppName
-  ])
 
   const handleTabChange = useCallback((value: string) => {
     setTab(value)
@@ -641,13 +364,18 @@ const Connections: React.FC = () => {
     setFilter('')
   }, [])
 
-  // Get the display name of the selected process for the header
+  const selectedProcessAppName = useProcessAppName(
+    selectedProcess || '',
+    displayAppName && selectedProcess !== null
+  )
+
   const selectedProcessName = useMemo(() => {
     if (selectedProcess === null) return ''
+    if (selectedProcessAppName) return selectedProcessAppName
     const group = processGroups.find((g) => g.processPath === selectedProcess)
     if (!group) return selectedProcess
-    return group.displayName || group.processName || t('pages.connections.unknownProcess')
-  }, [selectedProcess, processGroups, t])
+    return group.processName || t('pages.connections.unknownProcess')
+  }, [selectedProcess, selectedProcessAppName, processGroups, t])
 
   const matchesSelectedProcess = useCallback(
     (conn: ControllerConnectionDetail) => {
@@ -668,41 +396,24 @@ const Connections: React.FC = () => {
     return closedConnections.filter(matchesSelectedProcess).length
   }, [closedConnections, selectedProcess, matchesSelectedProcess])
 
+  const iconEnabled = displayIcon && findProcessMode !== 'off'
+
   const renderConnectionItem = useCallback(
     (i: number, connection: ControllerConnectionDetail) => {
-      const path = connection.metadata.processPath || ''
-      const iconUrl = (displayIcon && findProcessMode !== 'off' && iconMap[path]) || ''
-      const itemKey = i === 0 ? `${connection.id}-${firstItemRefreshTrigger}` : connection.id
-      const displayName =
-        displayAppName && connection.metadata.processPath
-          ? appNameCache[connection.metadata.processPath]
-          : undefined
-
       return (
         <ConnectionItem
           setSelected={setSelected}
           setIsDetailModalOpen={setIsDetailModalOpen}
-          selected={selected}
-          iconUrl={iconUrl}
-          displayIcon={displayIcon && findProcessMode !== 'off'}
-          displayName={displayName}
+          displayIcon={iconEnabled}
+          displayAppName={displayAppName}
           close={closeConnection}
           index={i}
-          key={itemKey}
+          key={connection.id}
           info={connection}
         />
       )
     },
-    [
-      displayIcon,
-      iconMap,
-      firstItemRefreshTrigger,
-      selected,
-      closeConnection,
-      appNameCache,
-      findProcessMode,
-      displayAppName
-    ]
+    [iconEnabled, displayAppName, closeConnection]
   )
 
   const renderProcessItem = useCallback(
@@ -711,12 +422,13 @@ const Connections: React.FC = () => {
         <ProcessItem
           key={process.processPath}
           process={process}
-          displayIcon={displayIcon && findProcessMode !== 'off'}
+          displayIcon={iconEnabled}
+          displayAppName={displayAppName}
           onClick={handleProcessClick}
         />
       )
     },
-    [displayIcon, findProcessMode, handleProcessClick]
+    [iconEnabled, displayAppName, handleProcessClick]
   )
 
   // Whether we are in the process list view (level 1) or connections view (level 2)
@@ -737,10 +449,10 @@ const Connections: React.FC = () => {
         <div className="flex items-center gap-1">
           <div className="flex h-8 items-center gap-1 whitespace-nowrap">
             <span className="px-1 text-gray-400">
-              {'\u2191'} {calcTraffic(connectionsInfo?.uploadTotal ?? 0)}
+              {'\u2191'} {calcTraffic(info.uploadTotal)}
             </span>
             <span className="px-1 text-gray-400">
-              {'\u2193'} {calcTraffic(connectionsInfo?.downloadTotal ?? 0)}
+              {'\u2193'} {calcTraffic(info.downloadTotal)}
             </span>
           </div>
           {!isProcessListView && (
@@ -957,7 +669,7 @@ const Connections: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <Button
-                    className="border flex items-center justify-center"
+                    className="border flex items-center justify-center p-0 bg-clip-border"
                     size="icon-sm"
                     variant="secondary"
                     onClick={handleDirectionToggle}
@@ -976,9 +688,17 @@ const Connections: React.FC = () => {
       </div>
       <div className="h-[calc(100vh-106px)] mt-px mb-2">
         {isProcessListView ? (
-          <Virtuoso data={filteredProcessGroups} itemContent={renderProcessItem} />
+          <Virtuoso
+            data={filteredProcessGroups}
+            itemContent={renderProcessItem}
+            initialItemCount={Math.min(filteredProcessGroups.length, 15)}
+          />
         ) : viewMode === 'list' ? (
-          <Virtuoso data={filteredConnections} itemContent={renderConnectionItem} />
+          <Virtuoso
+            data={filteredConnections}
+            itemContent={renderConnectionItem}
+            initialItemCount={Math.min(filteredConnections.length, 15)}
+          />
         ) : (
           <ConnectionTable
             connections={filteredConnections}

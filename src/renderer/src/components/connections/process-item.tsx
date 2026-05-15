@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@renderer/components/ui/avatar'
 import { Badge } from '@renderer/components/ui/badge'
+import { useProcessIcon, useProcessAppName } from '@renderer/store/icons-store'
 import { calcTraffic } from '@renderer/utils/calc'
 import React, { memo, useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
@@ -8,8 +8,6 @@ import { useTranslation } from 'react-i18next'
 export interface ProcessGroup {
   processPath: string
   processName: string
-  displayName?: string
-  iconUrl: string
   activeCount: number
   closedCount: number
   totalUpload: number
@@ -21,11 +19,14 @@ export interface ProcessGroup {
 interface Props {
   process: ProcessGroup
   displayIcon: boolean
+  displayAppName: boolean
   onClick: (processPath: string) => void
 }
 
-const ProcessItemComponent: React.FC<Props> = ({ process, displayIcon, onClick }) => {
+const ProcessItemComponent: React.FC<Props> = ({ process, displayIcon, displayAppName, onClick }) => {
   const { t } = useTranslation()
+  const iconUrl = useProcessIcon(process.processPath, displayIcon)
+  const appName = useProcessAppName(process.processPath, displayAppName)
 
   const uploadTraffic = useMemo(() => calcTraffic(process.totalUpload), [process.totalUpload])
   const downloadTraffic = useMemo(
@@ -47,7 +48,7 @@ const ProcessItemComponent: React.FC<Props> = ({ process, displayIcon, onClick }
     [process.totalUploadSpeed, process.totalDownloadSpeed]
   )
 
-  const name = process.displayName || process.processName || t('pages.connections.unknownProcess')
+  const name = appName || process.processName || t('pages.connections.unknownProcess')
   const hasActive = process.activeCount > 0
 
   return (
@@ -67,12 +68,15 @@ const ProcessItemComponent: React.FC<Props> = ({ process, displayIcon, onClick }
         <div className="w-full flex items-center">
           {displayIcon && (
             <div className="pl-3">
-              <Avatar className="size-12 rounded-lg">
-                <AvatarImage src={process.iconUrl} />
-                <AvatarFallback className="rounded-lg text-xs font-semibold text-muted-foreground">
-                  {name.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {iconUrl ? (
+                <img src={iconUrl} className="size-12 shrink-0" />
+              ) : (
+                <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {name.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
           )}
           <div className={`flex-1 flex flex-col truncate ${displayIcon ? 'pl-3' : 'pl-4'} pr-1`}>
@@ -130,9 +134,8 @@ const ProcessItem = memo(ProcessItemComponent, (prevProps, nextProps) => {
     prev.totalDownload === next.totalDownload &&
     prev.totalUploadSpeed === next.totalUploadSpeed &&
     prev.totalDownloadSpeed === next.totalDownloadSpeed &&
-    prev.iconUrl === next.iconUrl &&
-    prev.displayName === next.displayName &&
-    prevProps.displayIcon === nextProps.displayIcon
+    prevProps.displayIcon === nextProps.displayIcon &&
+    prevProps.displayAppName === nextProps.displayAppName
   )
 })
 

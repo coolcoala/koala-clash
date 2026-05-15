@@ -167,6 +167,7 @@ export default {
     domainSniffing: '域名嗅探',
     coreSettings: '内核设置',
     systemProxy: '系统代理',
+    proxyMode: '代理模式',
     virtualInterface: '虚拟网卡',
     externalResources: '外部资源',
     viewRuntimeConfig: '查看当前运行时配置',
@@ -367,6 +368,8 @@ export default {
     },
     sysproxy: {
       title: '系统代理设置',
+      proxyModeTitle: '代理模式设置',
+      systemProxyToggle: '系统代理',
       proxyHost: '代理主机',
       proxyHostPlaceholder: '默认 127.0.0.1 若无特殊需求请勿修改',
       proxyMode: '代理模式',
@@ -542,12 +545,16 @@ export default {
       low: '低',
       mainSwitch: '主开关',
       mainSwitchTun: 'TUN 模式',
-      mainSwitchSysproxy: '系统代理',
+      mainSwitchSysproxy: '代理模式',
+      mainSwitchProxyMode: '代理模式',
       takeOverDNS: '接管 DNS 设置',
       takeOverSniffer: '接管域名嗅探设置',
       stopCoreOnDisconnect: '断网时停止内核',
       stopCoreOnDisconnectHelp:
         '开启后，应用会在检测到网络断开时自动停止内核，并在网络恢复后自动重启内核',
+      useHotReloadProfile: '切换订阅时热重载配置',
+      useHotReloadProfileHelp:
+        '启用后切换或保存订阅时通过 API 热重载配置而无需重启内核，禁用时仍使用重启方式切换',
       disconnectDetectInterval: '断网检测间隔',
       bypassDetectInterfaces: '绕过检测的接口',
       directOnSpecificWifi: '在特定的 WiFi SSID 下直连'
@@ -556,7 +563,7 @@ export default {
       title: '快捷键设置',
       toggleWindow: '打开/关闭窗口',
       toggleFloatingWindow: '打开/关闭悬浮窗',
-      toggleSysProxy: '打开/关闭系统代理',
+      toggleSysProxy: '打开/关闭代理模式',
       toggleTun: '打开/关闭虚拟网卡',
       switchRuleMode: '切换规则模式',
       switchGlobalMode: '切换全局模式',
@@ -767,7 +774,10 @@ export default {
       delete: '删除规则',
       restore: '恢复规则',
       invalidPayload: '无效的规则内容',
-      expectedFormat: '期望格式'
+      expectedFormat: '期望格式',
+      yamlMode: 'YAML 编辑器',
+      visualMode: '可视化编辑器',
+      invalidYaml: '无效的 YAML'
     },
     openFile: '打开文件',
     delete: '删除',

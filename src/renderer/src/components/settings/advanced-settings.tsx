@@ -31,7 +31,8 @@ import {
   patchControledMihomoConfig,
   restartCore,
   startNetworkDetection,
-  stopNetworkDetection
+  stopNetworkDetection,
+  mihomoHotReloadConfig
 } from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
 import { ChevronDownIcon, Copy, MessageCircleQuestionMark, Settings } from 'lucide-react'
@@ -60,6 +61,7 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const { appConfig, patchAppConfig } = useAppConfig()
   const {
     diffWorkDir = false,
+    useHotReloadProfile = true,
     controlDns = true,
     controlSniff = true,
     pauseSSID,
@@ -249,7 +251,7 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             try {
               await patchAppConfig({ controlDns: value })
               await patchControledMihomoConfig({})
-              await restartCore()
+              await mihomoHotReloadConfig()
             } catch (e) {
               toast.error(`${e}`)
             }
@@ -271,7 +273,7 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             try {
               await patchAppConfig({ controlSniff: value })
               await patchControledMihomoConfig({})
-              await restartCore()
+              await mihomoHotReloadConfig()
             } catch (e) {
               toast.error(`${e}`)
             }
@@ -296,6 +298,27 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           checked={diffWorkDir}
           onCheckedChange={(v) => {
             patchAppConfig({ diffWorkDir: v })
+          }}
+        />
+      </SettingItem>
+      <SettingItem
+        title={t('settings.advanced.useHotReloadProfile')}
+        actions={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon-sm" variant="ghost">
+                <MessageCircleQuestionMark className="text-lg" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.advanced.useHotReloadProfileHelp')}</TooltipContent>
+          </Tooltip>
+        }
+        divider
+      >
+        <Switch
+          checked={useHotReloadProfile}
+          onCheckedChange={(v) => {
+            patchAppConfig({ useHotReloadProfile: v })
           }}
         />
       </SettingItem>

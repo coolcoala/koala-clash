@@ -175,6 +175,16 @@ async function migration(): Promise<void> {
     }
   }
 
+  // Migrate: the old sysProxy.enable toggle now maps to the new proxyMode toggle.
+  // sysProxy.enable becomes a sub-toggle (default ON) that only writes proxy to the OS.
+  const legacyAppConfig = appConfig as Partial<AppConfig>
+  if (!('proxyMode' in legacyAppConfig)) {
+    appConfigPatch.proxyMode = legacyAppConfig.sysProxy?.enable ?? false
+    if (!legacyAppConfig.sysProxy?.enable) {
+      appConfigPatch.sysProxy = { ...(legacyAppConfig.sysProxy ?? {}), enable: true }
+    }
+  }
+
   if (Object.keys(appConfigPatch).length > 0) {
     await patchAppConfig(appConfigPatch)
   }
@@ -214,7 +224,13 @@ export async function init(): Promise<void> {
     })
   ])
 
-  const { sysProxy, onlyActiveDevice = false, networkDetection = false } = appConfig
+  const {
+    sysProxy,
+    proxyMode = false,
+    onlyActiveDevice = false,
+    networkDetection = false
+  } = appConfig
+  const writeSysProxy = proxyMode && sysProxy.enable
 
   const initTasks: Promise<void>[] = [
     startSSIDCheck()
@@ -227,10 +243,10 @@ export async function init(): Promise<void> {
   initTasks.push(
     (async (): Promise<void> => {
       try {
-        if (sysProxy.enable) {
+        if (writeSysProxy) {
           await startPacServer()
         }
-        await triggerSysProxy(sysProxy.enable, onlyActiveDevice)
+        await triggerSysProxy(writeSysProxy, onlyActiveDevice)
       } catch {
         // ignore
       }

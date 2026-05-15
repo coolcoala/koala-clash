@@ -72,6 +72,25 @@ let networkDownHandled = false
 let child: ChildProcess
 let retry = 10
 
+let initialized = false
+let providerNames = new Set<string>()
+let unmatchedProviders = new Set<string>()
+
+const normalize = (s: string): string =>
+  s
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .normalize('NFC')
+
+export async function resetProviderTracking(): Promise<void> {
+  const { 'rule-providers': ruleProviders, 'proxy-providers': proxyProviders } =
+    await getRuntimeConfig()
+  providerNames = new Set(
+    [...Object.keys(ruleProviders || {}), ...Object.keys(proxyProviders || {})].map(normalize)
+  )
+  unmatchedProviders = new Set(providerNames)
+  initialized = false
+}
+
 export async function startCore(detached = false): Promise<Promise<void>[]> {
   const {
     core = 'mihomo',
@@ -111,18 +130,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
       })
     }
   }
-  const { 'rule-providers': ruleProviders, 'proxy-providers': proxyProviders } =
-    await getRuntimeConfig()
-
-  const normalize = (s: string): string =>
-    s
-      .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-      .normalize('NFC')
-
-  const providerNames = new Set(
-    [...Object.keys(ruleProviders || {}), ...Object.keys(proxyProviders || {})].map(normalize)
-  )
-  const unmatchedProviders = new Set(providerNames)
+  await resetProviderTracking()
   const stdout = createWriteStream(logPath(), { flags: 'a' })
   const stderr = createWriteStream(logPath(), { flags: 'a' })
   const env = {
@@ -133,7 +141,6 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     SAFE_PATHS: safePaths.join(path.delimiter),
     PATH: process.env.PATH
   }
-  let initialized = false
   child = spawn(
     corePath,
     [
@@ -587,7 +594,7 @@ async function setDNS(dns: string, mode: 'none' | 'exec' | 'service'): Promise<v
   }
 }
 
-async function setPublicDNS(): Promise<void> {
+export async function setPublicDNS(): Promise<void> {
   if (process.platform !== 'darwin') return
   if (net.isOnline()) {
     const { originDNS, autoSetDNSMode = 'none' } = await getAppConfig()
@@ -601,7 +608,7 @@ async function setPublicDNS(): Promise<void> {
   }
 }
 
-async function recoverDNS(): Promise<void> {
+export async function recoverDNS(): Promise<void> {
   if (process.platform !== 'darwin') return
   if (net.isOnline()) {
     const { originDNS, autoSetDNSMode = 'none' } = await getAppConfig()
@@ -620,8 +627,10 @@ export async function startNetworkDetection(): Promise<void> {
     onlyActiveDevice = false,
     networkDetectionBypass = [],
     networkDetectionInterval = 10,
-    sysProxy = { enable: false }
+    sysProxy = { enable: false },
+    proxyMode = false
   } = await getAppConfig()
+  const writeSysProxy = proxyMode && sysProxy.enable
   const { tun: { device = process.platform === 'darwin' ? undefined : 'mihomo' } = {} } =
     await getControledMihomoConfig()
   if (networkDetectionTimer) {
@@ -636,12 +645,12 @@ export async function startNetworkDetection(): Promise<void> {
       if ((networkDownHandled && !child) || (child && child.killed)) {
         const promises = await startCore()
         await Promise.all(promises)
-        if (sysProxy.enable) triggerSysProxy(true, onlyActiveDevice)
+        if (writeSysProxy) triggerSysProxy(true, onlyActiveDevice)
         networkDownHandled = false
       }
     } else {
       if (!networkDownHandled) {
-        if (sysProxy.enable) disableSysProxy(onlyActiveDevice)
+        if (writeSysProxy) disableSysProxy(onlyActiveDevice)
         await stopCore()
         networkDownHandled = true
       }

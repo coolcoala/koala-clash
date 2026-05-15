@@ -74,6 +74,7 @@ interface AppConfig {
   autoCloseConnection: boolean
   expandProxyGroups?: boolean
   sysProxy: ISysProxyConfig
+  proxyMode: boolean
   maxLogDays: number
   userAgent?: string
   delayTestConcurrency?: number
@@ -103,6 +104,7 @@ interface AppConfig {
   displayAppName?: boolean
   disableGPU: boolean
   mainSwitchMode?: 'tun' | 'sysproxy'
+  useHotReloadProfile?: boolean
 }
 
 interface ProfileConfig {
@@ -128,6 +130,8 @@ interface ProfileItem {
   announce?: string
   logo?: string
   supportUrl?: string
+  globalMode?: boolean
+  customCss?: string
 }
 
 interface SubscriptionUserInfo {

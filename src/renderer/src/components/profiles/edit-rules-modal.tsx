@@ -63,6 +63,7 @@ import {
   ArrowUpToLine,
   CheckIcon,
   ChevronsUpDownIcon,
+  Code,
   GripVertical,
   Trash2,
   Undo2,
@@ -78,10 +79,12 @@ import React, {
   useRef
 } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { getProfileStr, setRuleStr, getRuleStr } from '@renderer/utils/ipc'
+import { getProfileStr, setRuleStr, getRuleStr, mihomoHotReloadConfig } from '@renderer/utils/ipc'
+import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useTranslation } from 'react-i18next'
 import yaml from 'js-yaml'
 import { platform } from '@renderer/utils/init'
+import { BaseEditor } from '@renderer/components/base/base-editor-lazy'
 
 interface Props {
   id: string
@@ -989,9 +992,11 @@ RuleListItem.displayName = 'RuleListItem'
 
 const EditRulesModal: React.FC<Props> = (props) => {
   const { id, onClose } = props
+  const { profileConfig } = useProfileConfig()
+  const isCurrentProfile = profileConfig?.current === id
   const dialogCloseRef = useRef<HTMLButtonElement>(null)
   const [rules, setRules] = useState<RuleItem[]>([])
-  const [, setProfileContent] = useState('')
+  const [profileContent, setProfileContent] = useState('')
   const [newRule, setNewRule] = useState<RuleDraft>({
     type: 'DOMAIN',
     payload: '',
@@ -1012,6 +1017,8 @@ const EditRulesModal: React.FC<Props> = (props) => {
   const [activeDragSize, setActiveDragSize] = useState<{ width: number; height: number } | null>(
     null
   )
+  const [isYamlMode, setIsYamlMode] = useState(false)
+  const [yamlContent, setYamlContent] = useState('')
   const { t } = useTranslation()
 
   const ruleIndexMap = useMemo(() => {
@@ -1195,6 +1202,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                 prependRuleItems.push(parseRuleString(ruleStr))
               })
 
+              let prependInsertCount = 0
               const { updatedRules, ruleIndices } = processRulesWithPositions(
                 prependRuleItems,
                 allRules,
@@ -1202,7 +1210,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                   if (rule.offset !== undefined && rule.offset < currentRules.length) {
                     return rule.offset
                   }
-                  return 0
+                  return prependInsertCount++
                 }
               )
 
@@ -1352,42 +1360,145 @@ const EditRulesModal: React.FC<Props> = (props) => {
     dialogCloseRef.current?.click()
   }
 
+  const serializeToYaml = useCallback((): string => {
+    const prependRuleStrings = Array.from(prependRules)
+      .sort((a, b) => a - b)
+      .filter((index) => !deletedRules.has(index) && index < rules.length)
+      .map((index) => convertRuleToString(rules[index]))
+
+    const appendRuleStrings = Array.from(appendRules)
+      .filter((index) => !deletedRules.has(index) && index < rules.length)
+      .map((index) => convertRuleToString(rules[index]))
+
+    const deletedRuleStrings = Array.from(deletedRules)
+      .filter(
+        (index) => index < rules.length && !prependRules.has(index) && !appendRules.has(index)
+      )
+      .map((index) => {
+        const rule = rules[index]
+        const parts = [rule.type]
+        if (rule.payload) parts.push(rule.payload)
+        if (rule.proxy) parts.push(rule.proxy)
+        if (rule.additionalParams && rule.additionalParams.length > 0) {
+          parts.push(...rule.additionalParams)
+        }
+        return parts.join(',')
+      })
+
+    return yaml.dump({ prepend: prependRuleStrings, append: appendRuleStrings, delete: deletedRuleStrings })
+  }, [prependRules, appendRules, deletedRules, rules])
+
+  const applyYamlToVisualState = useCallback(
+    (yamlStr: string): boolean => {
+      try {
+        const ruleData = yaml.load(yamlStr) as {
+          prepend?: string[]
+          append?: string[]
+          delete?: string[]
+        } | null
+
+        const parsed = yaml.load(profileContent) as Record<string, unknown> | undefined
+        let initialRules: RuleItem[] = []
+        if (parsed && parsed.rules && Array.isArray(parsed.rules)) {
+          initialRules = parsed.rules.map((rule: string) => parseRuleStringToItem(rule))
+        }
+
+        if (ruleData && typeof ruleData === 'object') {
+          let allRules = [...initialRules]
+          const newPrependRules = new Set<number>()
+          const newAppendRules = new Set<number>()
+          const newDeletedRules = new Set<number>()
+
+          if (ruleData.prepend && Array.isArray(ruleData.prepend)) {
+            let prependInsertCount = 0
+            const { updatedRules, ruleIndices } = processRulesWithPositions(
+              ruleData.prepend.map((s) => parseRuleStringToItem(s)),
+              allRules,
+              (rule, currentRules) => {
+                if (rule.offset !== undefined && rule.offset < currentRules.length) {
+                  return rule.offset
+                }
+                return prependInsertCount++
+              }
+            )
+            allRules = updatedRules
+            ruleIndices.forEach((index) => newPrependRules.add(index))
+          }
+
+          if (ruleData.append && Array.isArray(ruleData.append)) {
+            const { updatedRules, ruleIndices } = processAppendRulesWithPositions(
+              ruleData.append.map((s) => parseRuleStringToItem(s)),
+              allRules,
+              (rule, currentRules) => {
+                if (rule.offset !== undefined) {
+                  return Math.max(0, currentRules.length - rule.offset)
+                }
+                return currentRules.length
+              }
+            )
+            allRules = updatedRules
+            ruleIndices.forEach((index) => newAppendRules.add(index))
+          }
+
+          if (ruleData.delete && Array.isArray(ruleData.delete)) {
+            ruleData.delete
+              .map((s) => parseRuleStringToItem(s))
+              .forEach((deleteRule) => {
+                const matchedIndex = allRules.findIndex(
+                  (rule) =>
+                    rule.type === deleteRule.type &&
+                    rule.payload === deleteRule.payload &&
+                    rule.proxy === deleteRule.proxy &&
+                    JSON.stringify(rule.additionalParams || []) ===
+                      JSON.stringify(deleteRule.additionalParams || [])
+                )
+                if (matchedIndex !== -1) {
+                  newDeletedRules.add(matchedIndex)
+                }
+              })
+          }
+
+          setPrependRules(newPrependRules)
+          setAppendRules(newAppendRules)
+          setDeletedRules(newDeletedRules)
+          setRules(allRules)
+        } else {
+          setRules(initialRules)
+          setPrependRules(new Set())
+          setAppendRules(new Set())
+          setDeletedRules(new Set())
+        }
+        return true
+      } catch (e) {
+        toast.error(
+          t('profile.editRules.invalidYaml') + ': ' + (e instanceof Error ? e.message : String(e))
+        )
+        return false
+      }
+    },
+    [profileContent, processRulesWithPositions, processAppendRulesWithPositions, t]
+  )
+
+  const handleToggleYamlMode = useCallback(() => {
+    if (!isYamlMode) {
+      setYamlContent(serializeToYaml())
+      setIsYamlMode(true)
+    } else {
+      if (applyYamlToVisualState(yamlContent)) {
+        setIsYamlMode(false)
+      }
+    }
+  }, [isYamlMode, serializeToYaml, applyYamlToVisualState, yamlContent])
+
   const handleSave = useCallback(async (): Promise<boolean> => {
     try {
-      // 保存规则到文件
-      const prependRuleStrings = Array.from(prependRules)
-        .filter((index) => !deletedRules.has(index) && index < rules.length)
-        .map((index) => convertRuleToString(rules[index]))
-
-      const appendRuleStrings = Array.from(appendRules)
-        .filter((index) => !deletedRules.has(index) && index < rules.length)
-        .map((index) => convertRuleToString(rules[index]))
-
-      // 保存删除的规则
-      const deletedRuleStrings = Array.from(deletedRules)
-        .filter(
-          (index) => index < rules.length && !prependRules.has(index) && !appendRules.has(index)
-        )
-        .map((index) => {
-          const rule = rules[index]
-          const parts = [rule.type]
-          if (rule.payload) parts.push(rule.payload)
-          if (rule.proxy) parts.push(rule.proxy)
-          if (rule.additionalParams && rule.additionalParams.length > 0) {
-            parts.push(...rule.additionalParams)
-          }
-          return parts.join(',')
-        })
-
-      // 创建规则数据对象
-      const ruleData = {
-        prepend: prependRuleStrings,
-        append: appendRuleStrings,
-        delete: deletedRuleStrings
+      if (isYamlMode) {
+        yaml.load(yamlContent)
+        await setRuleStr(id, yamlContent)
+        return true
       }
 
-      // 保存到 YAML 文件
-      const ruleYaml = yaml.dump(ruleData)
+      const ruleYaml = serializeToYaml()
       await setRuleStr(id, ruleYaml)
       return true
     } catch (e) {
@@ -1396,7 +1507,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
       )
       return false
     }
-  }, [prependRules, deletedRules, rules, appendRules, id, t])
+  }, [isYamlMode, yamlContent, serializeToYaml, id, t])
 
   const handleRuleTypeChange = (selected: string): void => {
     const noResolveSupported = isRuleSupportsNoResolve(selected)
@@ -1536,7 +1647,13 @@ const EditRulesModal: React.FC<Props> = (props) => {
           } else {
             // Insert before the last MATCH rule, or at the end if no MATCH
             const lastMatchIndex = rules.findLastIndex((r) => r.type === 'MATCH')
-            insertPosition = lastMatchIndex !== -1 ? lastMatchIndex : rules.length
+            if (lastMatchIndex !== -1) {
+              insertPosition = lastMatchIndex
+              // Encode offset so the generated config also places the rule before MATCH
+              newRuleItem.offset = rules.length - lastMatchIndex
+            } else {
+              insertPosition = rules.length
+            }
           }
 
           updatedRules = [...rules]
@@ -1753,9 +1870,29 @@ const EditRulesModal: React.FC<Props> = (props) => {
         showCloseButton={false}
       >
         <DialogHeader className="pb-0 app-drag">
-          <DialogTitle>{t('profile.editRules.title')}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{t('profile.editRules.title')}</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="app-nodrag"
+              onClick={handleToggleYamlMode}
+            >
+              <Code className="size-4" />
+              {isYamlMode ? t('profile.editRules.visualMode') : t('profile.editRules.yamlMode')}
+            </Button>
+          </div>
         </DialogHeader>
         <div className="h-full overflow-hidden">
+          {isYamlMode ? (
+            <div className="h-full">
+              <BaseEditor
+                language="yaml"
+                value={yamlContent}
+                onChange={(value) => setYamlContent(value)}
+              />
+            </div>
+          ) : (
           <div className="flex gap-4 h-full">
             {/* Left panel - Rule form */}
             <div className="w-2/5 flex flex-col gap-3 pr-1 overflow-y-auto min-h-0">
@@ -1970,14 +2107,14 @@ const EditRulesModal: React.FC<Props> = (props) => {
 
             {/* Right panel - Rule list in actual order */}
             <div className="w-3/5 border-l pl-4 pr-1 flex flex-col min-h-0">
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">{t('profile.editRules.currentRules')}</h3>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 shrink-0">
+                  <h3 className="text-lg font-semibold whitespace-nowrap">{t('profile.editRules.currentRules')}</h3>
                   <Badge variant="secondary">{rules.length}</Badge>
                   {customRulesCount > 0 && (
                     <Badge
                       variant="outline"
-                      className="text-[10px] text-green-600 border-green-500/30"
+                      className="text-[10px] text-emerald-700 dark:text-emerald-400 border-emerald-600/40 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/50"
                     >
                       +{customRulesCount}
                     </Badge>
@@ -1985,7 +2122,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                 </div>
                 <Input
                   placeholder={t('profile.editRules.searchPlaceholder')}
-                  className="max-w-42 h-8"
+                  className="min-w-0 h-8 ml-auto"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -2051,6 +2188,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
               </DndContext>
             </div>
           </div>
+          )}
         </div>
         <DialogFooter className="pt-0">
           <DialogClose asChild>
@@ -2073,6 +2211,9 @@ const EditRulesModal: React.FC<Props> = (props) => {
               const saved = await handleSave()
               if (saved) {
                 closeWithAnimation()
+                if (isCurrentProfile) {
+                  await mihomoHotReloadConfig()
+                }
               }
             }}
           >

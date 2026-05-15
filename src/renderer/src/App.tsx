@@ -18,10 +18,16 @@ import useSWR from 'swr'
 import ConfirmModal from '@renderer/components/base/base-confirm'
 import { SidebarProvider } from '@renderer/components/ui/sidebar'
 import AppSidebar from '@renderer/components/app-sidebar'
+import UpdateBanner from '@renderer/components/updater/update-banner'
 import HwidLimitAlert from '@renderer/components/profiles/hwid-limit-alert'
 import WindowControls from '@renderer/components/window-controls'
 import mapDark from '@renderer/assets/map_darktheme.svg'
 import mapLight from '@renderer/assets/map_lighttheme.svg'
+import { attachConnectionsStore } from '@renderer/store/connections-store'
+import { attachTrafficStore } from '@renderer/store/traffic-store'
+import { attachLogsStore } from '@renderer/store/logs-store'
+import { attachUpdaterStore } from '@renderer/store/updater-store'
+import { attachCoreLifecycleStore } from '@renderer/store/core-lifecycle-store'
 
 let navigate: NavigateFunction
 
@@ -46,6 +52,21 @@ const App: React.FC = () => {
       refreshInterval: 1000 * 60 * 10
     }
   )
+
+  useEffect(() => {
+    const detachConnections = attachConnectionsStore()
+    const detachTraffic = attachTrafficStore()
+    const detachLogs = attachLogsStore()
+    const detachUpdater = attachUpdaterStore()
+    const detachCoreLifecycle = attachCoreLifecycleStore()
+    return (): void => {
+      detachConnections()
+      detachTraffic()
+      detachLogs()
+      detachUpdater()
+      detachCoreLifecycle()
+    }
+  }, [])
 
   useEffect(() => {
     const tourShown = window.localStorage.getItem('tourShown')
@@ -222,8 +243,11 @@ const App: React.FC = () => {
           <WindowControls />
         </div>
       )}
-      <AppSidebar latest={latest} />
-      <div className="relative z-10 main grow h-full overflow-y-auto">{page}</div>
+      <AppSidebar />
+      {latest?.version && <UpdateBanner latest={latest} />}
+      <div className="relative z-10 main grow h-full overflow-y-auto">
+        {page}
+      </div>
     </SidebarProvider>
   )
 }

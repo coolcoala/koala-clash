@@ -86,6 +86,7 @@ async function setSysProxy(onlyActiveDevice: boolean): Promise<void> {
         }
       } else {
         await execFilePromise(servicePath(), [
+          'sysproxy',
           'pac',
           '--url',
           `http://${host || '127.0.0.1'}:${pacPort}/pac`
@@ -104,6 +105,7 @@ async function setSysProxy(onlyActiveDevice: boolean): Promise<void> {
           }
         } else {
           await execFilePromise(servicePath(), [
+            'sysproxy',
             'proxy',
             '--server',
             `${host || '127.0.0.1'}:${port}`,
@@ -131,6 +133,6 @@ export async function disableSysProxy(onlyActiveDevice: boolean): Promise<void> 
       throw new Error(t('error.serviceMayNotInstalled'))
     }
   } else {
-    await execFilePromise(servicePath(), ['disable'])
+    await execFilePromise(servicePath(), ['sysproxy', 'disable'])
   }
 }

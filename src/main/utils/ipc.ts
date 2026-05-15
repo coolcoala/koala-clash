@@ -16,6 +16,7 @@ import {
   mihomoUpgrade,
   mihomoUpgradeUI,
   mihomoUpgradeGeo,
+  mihomoHotReloadConfig,
   mihomoVersion,
   mihomoConfig,
   patchMihomoConfig,
@@ -159,6 +160,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('mihomoUpgradeGeo', ipcErrorWrapper(mihomoUpgradeGeo))
   ipcMain.handle('mihomoUpgradeUI', ipcErrorWrapper(mihomoUpgradeUI))
   ipcMain.handle('mihomoUpgrade', ipcErrorWrapper(mihomoUpgrade))
+  ipcMain.handle('mihomoHotReloadConfig', ipcErrorWrapper(mihomoHotReloadConfig))
   ipcMain.handle('mihomoProxyDelay', (_e, proxy, url) =>
     ipcErrorWrapper(mihomoProxyDelay)(proxy, url)
   )

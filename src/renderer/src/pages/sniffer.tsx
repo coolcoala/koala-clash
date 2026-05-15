@@ -7,7 +7,6 @@ import SettingCard from '@renderer/components/base/base-setting-card'
 import SettingItem from '@renderer/components/base/base-setting-item'
 import EditableList from '@renderer/components/base/base-list-editor'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { restartCore } from '@renderer/utils/ipc'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -62,7 +61,6 @@ const Sniffer: React.FC = () => {
     try {
       setChanged(false)
       await patchControledMihomoConfig(patch)
-      await restartCore()
     } catch (e) {
       toast.error(`${e}`)
     }

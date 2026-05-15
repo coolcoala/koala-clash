@@ -11,7 +11,6 @@ import EditableList from '@renderer/components/base/base-list-editor'
 import AdvancedDnsSetting from '@renderer/components/dns/advanced-dns-setting'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
-import { restartCore } from '@renderer/utils/ipc'
 import React, { useState } from 'react'
 import {
   isValidIPv4Cidr,
@@ -104,7 +103,6 @@ const DNS: React.FC = () => {
     try {
       setChanged(false)
       await patchControledMihomoConfig(patch)
-      await restartCore()
     } catch (e) {
       toast.error(`${e}`)
     }

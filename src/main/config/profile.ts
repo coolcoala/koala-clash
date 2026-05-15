@@ -1,9 +1,12 @@
-import { getControledMihomoConfig } from './controledMihomo'
 import { mihomoProfileWorkDir, mihomoWorkDir, profileConfigPath, profilePath, rulePath } from '../utils/dirs'
-import { addProfileUpdater, delProfileUpdater } from '../core/profileUpdater'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { restartCore } from '../core/manager'
-import { getAppConfig } from './app'
+import { getRuntimeConfig } from '../core/factory'
+import { mihomoHotReloadConfig, patchMihomoConfig } from '../core/mihomoApi'
+import { getAppConfig, patchAppConfig } from './app'
+import { getControledMihomoConfig, patchControledMihomoConfig } from './controledMihomo'
+import { ipcMain } from 'electron'
+import { mainWindow } from '..'
 import { existsSync } from 'fs'
 import axios, { AxiosResponse } from 'axios'
 import https from 'https'
@@ -14,6 +17,7 @@ import { deepMerge } from '../utils/merge'
 import { getUserAgent } from '../utils/userAgent'
 import { getHWID, getDeviceOS, getOSVersion, getDeviceModel } from '../utils/deviceInfo'
 import { t } from '../utils/i18n'
+import { downloadCustomCss } from '../resolve/theme'
 
 let profileConfig: ProfileConfig // profile.yaml
 
@@ -43,13 +47,22 @@ export async function changeCurrentProfile(id: string): Promise<void> {
   config.current = id
   await setProfileConfig(config)
   try {
-    await restartCore()
+    const { useHotReloadProfile = true } = await getAppConfig()
+    if (useHotReloadProfile) {
+      await mihomoHotReloadConfig()
+    } else {
+      await restartCore()
+    }
   } catch (e) {
     config.current = current
     throw e
   } finally {
     await setProfileConfig(config)
   }
+  await enforceGlobalModeRestriction(id)
+  const profile = await getProfileItem(id)
+  await patchAppConfig({ customTheme: profile?.customCss || 'default.css' })
+  mainWindow?.webContents.send('appConfigUpdated')
 }
 
 export async function updateProfileItem(item: ProfileItem): Promise<void> {
@@ -59,7 +72,6 @@ export async function updateProfileItem(item: ProfileItem): Promise<void> {
     throw new Error('Profile not found')
   }
   config.items[index] = item
-  if (!item.autoUpdate) await delProfileUpdater(item.id)
   await setProfileConfig(config)
 }
 
@@ -84,8 +96,25 @@ export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> 
 
   if (!isExisting || !config.current) {
     await changeCurrentProfile(newItem.id)
+  } else if (config.current === newItem.id) {
+    await enforceGlobalModeRestriction(newItem.id)
+    await patchAppConfig({ customTheme: newItem.customCss || 'default.css' })
+    mainWindow?.webContents.send('appConfigUpdated')
   }
-  await addProfileUpdater(newItem)
+}
+
+async function enforceGlobalModeRestriction(id: string): Promise<void> {
+  const profile = await getProfileItem(id)
+  if (profile?.globalMode === false) {
+    const { mode } = await getControledMihomoConfig()
+    if (mode === 'global') {
+      await patchControledMihomoConfig({ mode: 'rule' })
+      await patchMihomoConfig({ mode: 'rule' })
+      mainWindow?.webContents.send('controledMihomoConfigUpdated')
+      mainWindow?.webContents.send('groupsUpdated')
+      ipcMain.emit('updateTrayMenu')
+    }
+  }
 }
 
 export async function removeProfileItem(id: string): Promise<void> {
@@ -105,12 +134,20 @@ export async function removeProfileItem(id: string): Promise<void> {
     await rm(profilePath(id))
   }
   if (shouldRestart) {
+    const { useHotReloadProfile = false } = await getAppConfig()
+    if (useHotReloadProfile) {
+      try {
+        await mihomoHotReloadConfig()
+        return
+      } catch {
+        // fall back to restart
+      }
+    }
     await restartCore()
   }
   if (existsSync(mihomoProfileWorkDir(id))) {
     await rm(mihomoProfileWorkDir(id), { recursive: true })
   }
-  await delProfileUpdater(id)
 }
 
 export async function getCurrentProfileItem(): Promise<ProfileItem> {
@@ -154,7 +191,7 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
   } as ProfileItem
   switch (newItem.type) {
     case 'remote': {
-      const { 'mixed-port': mixedPort = 7897 } = await getControledMihomoConfig()
+      const { 'mixed-port': mixedPort = 0 } = (await getRuntimeConfig()) ?? {}
       if (!item.url) throw new Error('Empty URL')
       let res: AxiosResponse
       try {
@@ -195,14 +232,20 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
 
       const data = res.data
       const headers = res.headers
-      const contentType = (headers['content-type'] || '').toLowerCase()
+      const contentType = String(headers['content-type'] ?? '').toLowerCase()
       if (contentType.includes('text/html') || contentType.includes('text/xml')) {
         throw new Error(t('error.subscriptionFormatError'))
       }
       const hwidLimitKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('x-hwid-limit')
       )
-      if (hwidLimitKey && headers[hwidLimitKey] === 'true') {
+      const hwidMaxDevicesKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('x-hwid-max-devices-reached')
+      )
+      if (
+        (hwidLimitKey && headers[hwidLimitKey] === 'true') ||
+        (hwidMaxDevicesKey && headers[hwidMaxDevicesKey] === 'true')
+      ) {
         const hwidSupportKey = Object.keys(headers).find((k) =>
           k.toLowerCase().endsWith('support-url')
         )
@@ -266,15 +309,36 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
       if (supportUrlKey) {
         newItem.supportUrl = headers[supportUrlKey]
       }
+      const globalModeKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('global-mode')
+      )
+      if (globalModeKey) {
+        newItem.globalMode = headers[globalModeKey].toLowerCase() !== 'false'
+      }
       const announceKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('announce')
       )
       if (announceKey) {
         const announceValue = headers[announceKey]
-        if (announceValue.startsWith('base64:')) {
-          newItem.announce = Buffer.from(announceValue.slice(7), 'base64').toString('utf-8')
-        } else {
-          newItem.announce = announceValue
+        const decoded = announceValue.startsWith('base64:')
+          ? Buffer.from(announceValue.slice(7), 'base64').toString('utf-8')
+          : announceValue
+        newItem.announce = decoded.replace(/\\n/g, '\n')
+      }
+      const customCssKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('custom-css')
+      )
+      if (customCssKey) {
+        const cssUrl = headers[customCssKey]
+        try {
+          const proxyConfig =
+            newItem.useProxy && mixedPort
+              ? { protocol: 'http', host: '127.0.0.1', port: mixedPort }
+              : undefined
+          const existingProfile = await getProfileItem(id)
+          newItem.customCss = await downloadCustomCss(cssUrl, proxyConfig, existingProfile?.customCss)
+        } catch {
+          // ignore css download failure
         }
       }
       if (newItem.verify) {
@@ -336,7 +400,18 @@ export async function getProfileParseStr(id: string | undefined): Promise<string
 export async function setProfileStr(id: string, content: string): Promise<void> {
   const { current } = await getProfileConfig()
   await writeFile(profilePath(id), content, 'utf-8')
-  if (current === id) await restartCore()
+  if (current === id) {
+    const { useHotReloadProfile = true } = await getAppConfig()
+    if (useHotReloadProfile) {
+      try {
+        await mihomoHotReloadConfig()
+        return
+      } catch {
+        // fall back to restart
+      }
+    }
+    await restartCore()
+  }
 }
 
 export async function getProfile(id: string | undefined): Promise<MihomoConfig> {

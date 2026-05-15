@@ -20,6 +20,7 @@ export async function getControledMihomoConfig(force = false): Promise<Partial<M
 
 export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): Promise<void> {
   await getControledMihomoConfig()
+  const previousTunEnabled = controledMihomoConfig.tun?.enable ?? false
   const patchToMerge = JSON.parse(JSON.stringify(patch)) as Partial<MihomoConfig>
   const { controlDns = false, controlSniff = false, controlTun = false } = await getAppConfig()
   if (!controlDns) {
@@ -42,9 +43,13 @@ export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): 
   if (!controlTun) {
     const previousTunEnable = controledMihomoConfig.tun?.enable ?? false
     const nextTunEnable = patchToMerge.tun?.enable ?? previousTunEnable
-    controledMihomoConfig.tun = { enable: nextTunEnable }
+    const routeExcludeAddress = controledMihomoConfig.tun?.['route-exclude-address']
+    controledMihomoConfig.tun = {
+      enable: nextTunEnable,
+      'route-exclude-address': routeExcludeAddress
+    } as MihomoTunConfig
     if (patchToMerge.tun) {
-      patchToMerge.tun = { enable: nextTunEnable }
+      patchToMerge.tun = { enable: nextTunEnable } as MihomoTunConfig
     }
   } else {
     if (!controledMihomoConfig.tun) {
@@ -61,4 +66,21 @@ export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): 
   controledMihomoConfig = deepMerge(controledMihomoConfig, patchToMerge)
   await generateProfile()
   await writeFile(controledMihomoConfigPath(), stringifyYaml(controledMihomoConfig), 'utf-8')
+
+  const currentTunEnabled = controledMihomoConfig.tun?.enable ?? false
+  if (currentTunEnabled !== previousTunEnabled) {
+    const { setPublicDNS, recoverDNS } = await import('../core/manager')
+    if (currentTunEnabled) {
+      await setPublicDNS().catch(() => {})
+    } else {
+      await recoverDNS().catch(() => {})
+    }
+  }
+
+  try {
+    const { patchMihomoConfig } = await import('../core/mihomoApi')
+    await patchMihomoConfig(patch as Partial<ControllerConfigs>)
+  } catch {
+    // running core may not be ready; changes will apply on next restart/reload
+  }
 }

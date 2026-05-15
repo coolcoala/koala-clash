@@ -22,7 +22,7 @@ import { Spinner } from '@renderer/components/ui/spinner'
 import { Switch } from '@renderer/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { mihomoUpgradeUI, restartCore } from '@renderer/utils/ipc'
+import { mihomoUpgradeUI, mihomoHotReloadConfig } from '@renderer/utils/ipc'
 import { isValidListenAddress } from '@renderer/utils/validate'
 import { useTranslation } from 'react-i18next'
 import { CloudDownload, ExternalLink, Eye, EyeClosed, RefreshCcw } from 'lucide-react'
@@ -68,7 +68,7 @@ const ControllerSetting: React.FC = () => {
   }
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
-    await restartCore()
+    await mihomoHotReloadConfig()
     if ('external-ui-url' in patch) {
       setTimeout(async () => {
         await upgradeUI()

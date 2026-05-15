@@ -54,12 +54,14 @@ function processRulesWithOffset(ruleStrings: string[], currentRules: string[], i
 
 export async function generateProfile(): Promise<void> {
   const { current } = await getProfileConfig()
+  const appConfig = await getAppConfig()
   const {
     diffWorkDir = false,
     controlDns = true,
     controlSniff = true,
     controlTun = false
-  } = await getAppConfig()
+  } = appConfig
+  const proxyModeEnabled = appConfig.proxyMode ?? false
   const currentProfile = await getProfile(current)
   rawProfileStr = await getProfileStr(current)
   currentProfileStr = stringifyYaml(currentProfile)
@@ -75,6 +77,10 @@ export async function generateProfile(): Promise<void> {
   }
   if (!controlTun && currentProfile.tun) {
     currentProfile.tun.enable = controledMihomoConfig.tun?.enable ?? false
+    if (!currentProfile.tun['route-exclude-address']?.length) {
+      currentProfile.tun['route-exclude-address'] =
+        controledMihomoConfig.tun?.['route-exclude-address']
+    }
     delete configToMerge.tun
   }
 
@@ -128,6 +134,15 @@ export async function generateProfile(): Promise<void> {
   }
 
   const profile = deepMerge(JSON.parse(JSON.stringify(currentProfile)), configToMerge)
+
+  const tunEnabled = profile.tun?.enable ?? false
+  if (!tunEnabled && !proxyModeEnabled) {
+    profile.port = 0
+    profile['socks-port'] = 0
+    profile['redir-port'] = 0
+    profile['tproxy-port'] = 0
+    profile['mixed-port'] = 0
+  }
 
   await cleanProfile(profile, controlDns, controlSniff, controlTun)
 

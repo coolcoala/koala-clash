@@ -104,13 +104,21 @@ const EditFileModal: React.FC<Props> = (props) => {
         <DialogFooter className="pt-0 flex justify-between sm:justify-between">
           <div className="flex items-center space-x-4">
             <label className="flex items-center gap-2 text-sm">
-              <Switch checked={isDiff} onCheckedChange={setIsDiff} />
+              <Switch
+                checked={isDiff}
+                onCheckedChange={(checked) => {
+                  setIsDiff(checked)
+                  if (!checked) setSideBySide(false)
+                }}
+              />
               {t('profile.showChanges')}
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={sideBySide} onCheckedChange={setSideBySide} />
-              {t('sider.sideBySide')}
-            </label>
+            {isDiff && (
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={sideBySide} onCheckedChange={setSideBySide} />
+                {t('sider.sideBySide')}
+              </label>
+            )}
           </div>
           <div className="flex gap-2">
             <Button

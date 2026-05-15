@@ -2,10 +2,10 @@ import { Button } from '@renderer/components/ui/button'
 import { Card, CardContent } from '@renderer/components/ui/card'
 import { cn } from '@renderer/lib/utils'
 import { mihomoUnfixedProxy } from '@renderer/utils/ipc'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@renderer/components/ui/spinner'
-import { MapPin } from 'lucide-react'
+import { Gauge, MapPin } from 'lucide-react'
 
 interface Props {
   mutateProxies: () => void
@@ -15,6 +15,7 @@ interface Props {
   group: ControllerMixedGroup
   onSelect: (group: string, proxy: string) => void
   selected: boolean
+  isGroupDelaying?: boolean
 }
 
 function delayColorClass(delay: number): string {
@@ -24,9 +25,9 @@ function delayColorClass(delay: number): string {
   return 'text-warning'
 }
 
-const ProxyItem: React.FC<Props> = (props) => {
+const ProxyItem: React.FC<Props> = React.memo((props) => {
   const { t } = useTranslation()
-  const { mutateProxies, proxyDisplayLayout, group, proxy, selected, onSelect, onProxyDelay } =
+  const { mutateProxies, proxyDisplayLayout, group, proxy, selected, onSelect, onProxyDelay, isGroupDelaying } =
     props
 
   const delay = useMemo(() => {
@@ -37,10 +38,34 @@ const ProxyItem: React.FC<Props> = (props) => {
   }, [proxy])
 
   const [loading, setLoading] = useState(false)
+  const [waitingForNewDelay, setWaitingForNewDelay] = useState(false)
+  const delaySnapshot = useRef(delay)
 
-  function delayText(d: number): string {
-    if (d === -1) return t('proxies.delayTest')
-    if (d === 0) return t('proxies.timeout')
+  useEffect(() => {
+    if (isGroupDelaying) {
+      delaySnapshot.current = delay
+      setWaitingForNewDelay(true)
+    }
+  }, [isGroupDelaying])
+
+  useEffect(() => {
+    if (waitingForNewDelay && delay !== delaySnapshot.current) {
+      setWaitingForNewDelay(false)
+    }
+  }, [delay, waitingForNewDelay])
+
+  useEffect(() => {
+    if (waitingForNewDelay && !isGroupDelaying) {
+      const timer = setTimeout(() => setWaitingForNewDelay(false), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [waitingForNewDelay, isGroupDelaying])
+
+  const showLoading = loading || isGroupDelaying || waitingForNewDelay
+
+  function delayContent(d: number): React.ReactNode {
+    if (d === -1) return <Gauge className="size-3.5" />
+    if (d === 0) return '–'
     return d.toString()
   }
 
@@ -60,7 +85,7 @@ const ProxyItem: React.FC<Props> = (props) => {
     <Card
       onClick={() => onSelect(group.name, proxy.name)}
       className={cn(
-        'w-full gap-0 py-0 cursor-pointer transition-all duration-150 relative overflow-hidden',
+        'w-full gap-0 py-0 rounded-lg cursor-pointer transition-all duration-150 relative overflow-hidden',
         fixed
           ? 'bg-amber-500/8 hover:bg-amber-500/12 border-amber-500/40 shadow-sm shadow-amber-500/10'
           : selected
@@ -68,7 +93,7 @@ const ProxyItem: React.FC<Props> = (props) => {
             : 'hover:bg-accent/50'
       )}
     >
-      <CardContent className="pl-4 pr-3 py-2">
+      <CardContent className="pl-4 pr-4 py-2">
         <div
           className={`flex ${proxyDisplayLayout === 'double' ? 'gap-1' : 'justify-between items-center'}`}
         >
@@ -102,19 +127,19 @@ const ProxyItem: React.FC<Props> = (props) => {
                 <Button
                   variant="ghost"
                   title={proxy.type}
-                  disabled={loading}
+                  disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()
                     onDelay()
                   }}
                   className={cn(
-                    'h-7 px-1.5 text-xs font-medium whitespace-nowrap',
+                    'h-7 w-8 min-w-8 px-0 text-xs font-medium cursor-pointer',
                     delayColorClass(delay)
                   )}
                 >
-                  <span className="relative inline-flex items-center justify-center">
-                    {loading && <Spinner className="size-3 absolute" />}
-                    <span className={cn(loading && 'invisible')}>{delayText(delay)}</span>
+                  <span className="relative inline-flex items-center justify-center w-full">
+                    {showLoading && <Spinner className="size-3 absolute" />}
+                    <span className={cn(showLoading && 'invisible')}>{delayContent(delay)}</span>
                   </span>
                 </Button>
               </div>
@@ -149,19 +174,19 @@ const ProxyItem: React.FC<Props> = (props) => {
                 <Button
                   variant="ghost"
                   title={proxy.type}
-                  disabled={loading}
+                  disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()
                     onDelay()
                   }}
                   className={cn(
-                    'h-7 px-1.5 text-xs font-medium whitespace-nowrap',
+                    'h-7 w-8 min-w-8 px-0 text-xs font-medium cursor-pointer',
                     delayColorClass(delay)
                   )}
                 >
-                  <span className="relative inline-flex items-center justify-center">
-                    {loading && <Spinner className="size-3 absolute" />}
-                    <span className={cn(loading && 'invisible')}>{delayText(delay)}</span>
+                  <span className="relative inline-flex items-center justify-center w-full">
+                    {showLoading && <Spinner className="size-3 absolute" />}
+                    <span className={cn(showLoading && 'invisible')}>{delayContent(delay)}</span>
                   </span>
                 </Button>
               </div>
@@ -171,6 +196,8 @@ const ProxyItem: React.FC<Props> = (props) => {
       </CardContent>
     </Card>
   )
-}
+})
+
+ProxyItem.displayName = 'ProxyItem'
 
 export default ProxyItem
