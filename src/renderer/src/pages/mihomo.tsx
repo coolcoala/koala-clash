@@ -220,6 +220,14 @@ const Mihomo: React.FC = () => {
     ...extraUnGrantButtons
   ]
 
+  const logLevelOptions: { value: LogLevel; label: string }[] = [
+    { value: 'silent', label: t('pages.mihomo.silent') },
+    { value: 'error', label: t('pages.mihomo.error') },
+    { value: 'warning', label: t('pages.mihomo.warning') },
+    { value: 'info', label: t('pages.mihomo.info') },
+    { value: 'debug', label: t('pages.mihomo.debug') }
+  ]
+
   return (
     <BasePage title={t('pages.mihomo.title')}>
       {showGrantConfirm && (
@@ -418,21 +426,33 @@ const Mihomo: React.FC = () => {
           />
         </SettingItem>
         <SettingItem title={t('pages.mihomo.logLevel')}>
-          <Select
-            value={logLevel}
-            onValueChange={(value) => onChangeNeedRestart({ 'log-level': value as LogLevel })}
-          >
-            <SelectTrigger size="sm" className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="silent">{t('pages.mihomo.silent')}</SelectItem>
-              <SelectItem value="error">{t('pages.mihomo.error')}</SelectItem>
-              <SelectItem value="warning">{t('pages.mihomo.warning')}</SelectItem>
-              <SelectItem value="info">{t('pages.mihomo.info')}</SelectItem>
-              <SelectItem value="debug">{t('pages.mihomo.debug')}</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Скрытые копии всех вариантов задают ширину по самому длинному из них */}
+          <div className="grid">
+            {logLevelOptions.map((option) => (
+              <span
+                key={option.value}
+                aria-hidden
+                className="col-start-1 row-start-1 h-0 overflow-hidden border border-transparent pl-3 pr-9 text-sm whitespace-nowrap invisible"
+              >
+                {option.label}
+              </span>
+            ))}
+            <Select
+              value={logLevel}
+              onValueChange={(value) => onChangeNeedRestart({ 'log-level': value as LogLevel })}
+            >
+              <SelectTrigger size="sm" className="col-start-1 row-start-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {logLevelOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </SettingItem>
       </SettingCard>
       <PortSetting />
