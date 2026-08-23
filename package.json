@@ -1,6 +1,6 @@
 {
   "name": "koala-clash",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Koala Clash",
   "main": "./out/main/index.js",
   "author": "xishang0128, co-author: coolcoala",
