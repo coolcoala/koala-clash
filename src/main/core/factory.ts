@@ -21,6 +21,14 @@ let runtimeConfigStr: string,
   currentProfileStr: string,
   runtimeConfig: MihomoConfig
 
+const LOG_LEVELS: readonly LogLevel[] = ['silent', 'error', 'warning', 'info', 'debug']
+
+const STDOUT_PARSEABLE_LOG_LEVELS: readonly LogLevel[] = ['info', 'debug']
+
+function isLogLevel(value: unknown): value is LogLevel {
+  return LOG_LEVELS.includes(value as LogLevel)
+}
+
 // 辅助函数：处理带偏移量的规则
 function processRulesWithOffset(ruleStrings: string[], currentRules: string[], isAppend = false) {
   const normalRules: string[] = []
@@ -52,7 +60,7 @@ function processRulesWithOffset(ruleStrings: string[], currentRules: string[], i
   return { normalRules, insertRules: rules }
 }
 
-export async function generateProfile(): Promise<void> {
+export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   const { current } = await getProfileConfig()
   const appConfig = await getAppConfig()
   const {
@@ -68,6 +76,9 @@ export async function generateProfile(): Promise<void> {
   const controledMihomoConfig = await getControledMihomoConfig()
 
   const configToMerge = JSON.parse(JSON.stringify(controledMihomoConfig))
+  if (isLogLevel(currentProfile['log-level'])) {
+    delete configToMerge['log-level']
+  }
   if (!controlDns && currentProfile.dns) {
     delete configToMerge.dns
     delete configToMerge.hosts
@@ -134,6 +145,7 @@ export async function generateProfile(): Promise<void> {
   }
 
   const profile = deepMerge(JSON.parse(JSON.stringify(currentProfile)), configToMerge)
+  const logLevel = isLogLevel(profile['log-level']) ? profile['log-level'] : 'info'
 
   const tunEnabled = profile.tun?.enable ?? false
   if (!tunEnabled && !proxyModeEnabled) {
@@ -155,6 +167,7 @@ export async function generateProfile(): Promise<void> {
     diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work'),
     runtimeConfigStr
   )
+  return { logLevel }
 }
 
 async function cleanProfile(
@@ -163,7 +176,7 @@ async function cleanProfile(
   controlSniff: boolean,
   controlTun: boolean
 ): Promise<void> {
-  if (!['info', 'debug'].includes(profile['log-level'])) {
+  if (!STDOUT_PARSEABLE_LOG_LEVELS.includes(profile['log-level'])) {
     profile['log-level'] = 'info'
   }
 

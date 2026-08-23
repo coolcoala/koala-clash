@@ -27,7 +27,7 @@ import {
   stopMihomoTraffic,
   stopMihomoLogs,
   stopMihomoMemory,
-  patchMihomoConfig,
+  applyLogLevel,
   mihomoGroups
 } from './mihomoApi'
 import { readFile, rm, writeFile } from 'fs/promises'
@@ -103,7 +103,6 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     disableNftables = false,
     safePaths = []
   } = await getAppConfig()
-  const { 'log-level': logLevel } = await getControledMihomoConfig()
   const { current } = await getProfileConfig()
   const { tun } = await getControledMihomoConfig()
 
@@ -118,7 +117,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     throw error
   }
 
-  await generateProfile()
+  const { logLevel } = await generateProfile()
   await checkProfile()
   await stopCore()
   if (tun?.enable && autoSetDNSMode !== 'none') {
@@ -250,9 +249,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
                     mainWindow?.webContents.send('groupsUpdated')
                     mainWindow?.webContents.send('rulesUpdated')
                   }),
-                  new Promise((r) => setTimeout(r, 100)).then(() =>
-                    patchMihomoConfig({ 'log-level': logLevel })
-                  )
+                  new Promise((r) => setTimeout(r, 100)).then(() => applyLogLevel(logLevel))
                 ]).then(() => resolve())
               }
             }
@@ -265,7 +262,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
         ])
         await startMihomoTraffic()
         await startMihomoConnections()
-        await startMihomoLogs()
+        startMihomoLogs(logLevel)
         await startMihomoMemory()
         retry = 10
       }

@@ -64,7 +64,7 @@ export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): 
     controledMihomoConfig.hosts = patchToMerge.hosts
   }
   controledMihomoConfig = deepMerge(controledMihomoConfig, patchToMerge)
-  await generateProfile()
+  const { logLevel } = await generateProfile()
   await writeFile(controledMihomoConfigPath(), stringifyYaml(controledMihomoConfig), 'utf-8')
 
   const currentTunEnabled = controledMihomoConfig.tun?.enable ?? false
@@ -78,8 +78,10 @@ export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): 
   }
 
   try {
-    const { patchMihomoConfig } = await import('../core/mihomoApi')
-    await patchMihomoConfig(patch as Partial<ControllerConfigs>)
+    const { patchMihomoConfig, applyLogLevel } = await import('../core/mihomoApi')
+    const { 'log-level': patchedLogLevel, ...rest } = patch as Partial<ControllerConfigs>
+    if (Object.keys(rest).length) await patchMihomoConfig(rest)
+    if (patchedLogLevel !== undefined) await applyLogLevel(logLevel)
   } catch {
     // running core may not be ready; changes will apply on next restart/reload
   }

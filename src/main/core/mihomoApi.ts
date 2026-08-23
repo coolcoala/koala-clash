@@ -17,6 +17,7 @@ let mihomoMemoryWs: WebSocket | null = null
 let memoryRetry = 10
 let mihomoLogsWs: WebSocket | null = null
 let logsRetry = 10
+let mihomoLogsLevel: LogLevel = 'info'
 let mihomoConnectionsWs: WebSocket | null = null
 let connectionsRetry = 10
 
@@ -242,7 +243,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { generateProfile } = await import('./factory')
   const { getProfileConfig } = await import('../config')
   const { resetProviderTracking } = await import('./manager')
-  await generateProfile()
+  const { logLevel } = await generateProfile()
   const { current } = await getProfileConfig()
   const { diffWorkDir = false } = await getAppConfig()
   const { mihomoWorkConfigPath } = await import('../utils/dirs')
@@ -250,6 +251,7 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   await resetProviderTracking()
   const instance = await getAxios()
   await instance.put('/configs?force=true', { path: configPath })
+  await applyLogLevel(logLevel)
 }
 
 export const startMihomoTraffic = async (): Promise<void> => {
@@ -346,8 +348,9 @@ const mihomoMemory = async (): Promise<void> => {
   }
 }
 
-export const startMihomoLogs = async (): Promise<void> => {
-  await mihomoLogs()
+export const startMihomoLogs = (level: LogLevel): void => {
+  mihomoLogsLevel = level
+  mihomoLogs()
 }
 
 export const stopMihomoLogs = (): void => {
@@ -360,10 +363,18 @@ export const stopMihomoLogs = (): void => {
   }
 }
 
-const mihomoLogs = async (): Promise<void> => {
-  const { 'log-level': logLevel = 'info' } = await getControledMihomoConfig()
+export const applyLogLevel = async (level: LogLevel): Promise<void> => {
+  if (level !== (await getRuntimeConfig())?.['log-level']) {
+    await patchMihomoConfig({ 'log-level': level })
+  }
+  if (mihomoLogsWs && level !== mihomoLogsLevel) {
+    stopMihomoLogs()
+    startMihomoLogs(level)
+  }
+}
 
-  mihomoLogsWs = new WebSocket(`ws+unix:${mihomoIpcPath()}:/logs?level=${logLevel}`)
+const mihomoLogs = (): void => {
+  mihomoLogsWs = new WebSocket(`ws+unix:${mihomoIpcPath()}:/logs?level=${mihomoLogsLevel}`)
 
   mihomoLogsWs.onmessage = (e): void => {
     const data = e.data as string
