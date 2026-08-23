@@ -15,6 +15,8 @@ interface Props {
   setIsDetailModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   close: (id: string) => void
   visibleColumns: Set<string>
+  /** Rendered below the header row when there is nothing to show. */
+  emptyState?: React.ReactNode
   onColumnWidthChange?: (widths: Record<string, number>) => void
   onSortChange?: (column: string | null, direction: 'asc' | 'desc') => void
   initialColumnWidths?: Record<string, number>
@@ -203,6 +205,7 @@ const ConnectionTable: React.FC<Props> = ({
   setIsDetailModalOpen,
   close,
   visibleColumns,
+  emptyState,
   onColumnWidthChange,
   onSortChange,
   initialColumnWidths,
@@ -472,11 +475,15 @@ const ConnectionTable: React.FC<Props> = ({
             ))}
           </tbody>
         </table>
-        {sortedConnections.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
-            {t('connections.table.noData')}
-          </div>
-        )}
+        {sortedConnections.length === 0 &&
+          (emptyState ? (
+            /* Sits below the h-10 sticky header, so subtract it to avoid an extra scrollbar. */
+            <div className="h-[calc(100%-2.5rem)]">{emptyState}</div>
+          ) : (
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
+              {t('connections.table.noData')}
+            </div>
+          ))}
       </div>
     </div>
   )

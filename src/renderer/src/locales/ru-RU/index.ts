@@ -234,7 +234,19 @@ export default {
       unknownProcess: 'Неизвестный',
       classicView: 'Классический вид',
       processView: 'По процессам',
-      connectionListMode: 'Режим отображения соединений'
+      connectionListMode: 'Режим отображения соединений',
+      emptyActiveTitle: 'Нет активных подключений',
+      emptyActiveDescription:
+        'Сейчас через прокси ничего не идёт. Новые подключения появятся здесь, как только приложение начнёт передавать трафик.',
+      emptyClosedTitle: 'Нет закрытых подключений',
+      emptyClosedDescription: 'Здесь будут храниться завершённые и закрытые подключения.',
+      emptyProcessesTitle: 'Подключений пока нет',
+      emptyProcessesDescription:
+        'Приложения, которые ходят через прокси, появятся здесь с группировкой по процессам.',
+      emptyFilterTitle: 'Ничего не найдено',
+      emptyFilterDescription: 'Измените запрос или сбросьте фильтр, чтобы увидеть всё снова.',
+      clearFilter: 'Сбросить фильтр',
+      showClosed: 'Показать закрытые'
     },
     logs: {
       title: 'Логи',

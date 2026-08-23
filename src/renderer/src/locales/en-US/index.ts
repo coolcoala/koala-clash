@@ -232,7 +232,19 @@ export default {
       unknownProcess: 'Unknown',
       classicView: 'Classic view',
       processView: 'By process',
-      connectionListMode: 'Connections display mode'
+      connectionListMode: 'Connections display mode',
+      emptyActiveTitle: 'No active connections',
+      emptyActiveDescription:
+        'Nothing is going through the proxy right now. New connections will show up here as soon as an app starts sending traffic.',
+      emptyClosedTitle: 'No closed connections',
+      emptyClosedDescription: 'Connections that finish or get closed will be kept here.',
+      emptyProcessesTitle: 'No connections yet',
+      emptyProcessesDescription:
+        'Apps that go through the proxy will appear here grouped by process.',
+      emptyFilterTitle: 'Nothing matches the filter',
+      emptyFilterDescription: 'Try a different query or clear the filter to see everything again.',
+      clearFilter: 'Clear filter',
+      showClosed: 'Show closed'
     },
     logs: {
       title: 'Real-time Logs',

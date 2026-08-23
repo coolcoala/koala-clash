@@ -305,7 +305,17 @@ export default {
       unknownProcess: '未知',
       classicView: '经典视图',
       processView: '按进程',
-      connectionListMode: '连接显示模式'
+      connectionListMode: '连接显示模式',
+      emptyActiveTitle: '暂无活动连接',
+      emptyActiveDescription: '当前没有流量经过代理。应用开始联网后，新连接会显示在这里。',
+      emptyClosedTitle: '暂无已关闭连接',
+      emptyClosedDescription: '已结束或被关闭的连接会保留在这里。',
+      emptyProcessesTitle: '暂无连接',
+      emptyProcessesDescription: '经过代理的应用会按进程分组显示在这里。',
+      emptyFilterTitle: '没有匹配的结果',
+      emptyFilterDescription: '换个关键词，或清除筛选条件查看全部内容。',
+      clearFilter: '清除筛选',
+      showClosed: '查看已关闭'
     },
     logs: {
       title: '实时日志',

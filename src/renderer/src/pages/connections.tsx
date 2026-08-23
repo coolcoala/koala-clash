@@ -28,25 +28,30 @@ import { calcTraffic } from '@renderer/utils/calc'
 import ConnectionItem from '@renderer/components/connections/connection-item'
 import ConnectionTable from '@renderer/components/connections/connection-table'
 import ProcessItem, { ProcessGroup } from '@renderer/components/connections/process-item'
+import ConnectionsEmpty from '@renderer/components/connections/connections-empty'
 import { Virtuoso } from 'react-virtuoso'
 import dayjs from 'dayjs'
 import ConnectionDetailModal from '@renderer/components/connections/connection-detail-modal'
 import ConnectionSettingModal from '@renderer/components/connections/connection-setting-modal'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { includesIgnoreCase } from '@renderer/utils/includes'
-import { useIconsStore, useProcessAppName } from '@renderer/store/icons-store'
+import { useIconsStore, useProcessAppName, useProcessIcon } from '@renderer/store/icons-store'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useTranslation } from 'react-i18next'
 import {
+  AppWindow,
   ArrowDownNarrowWide,
   ArrowDownWideNarrow,
   ArrowLeft,
+  History,
   Pause,
   Play,
+  SearchX,
   SlidersHorizontal,
   Table2,
   TableOfContents,
   Trash2,
+  Unplug,
   X
 } from 'lucide-react'
 
@@ -398,6 +403,19 @@ const Connections: React.FC = () => {
 
   const iconEnabled = displayIcon && findProcessMode !== 'off'
 
+  // Whether we are in the process list view (level 1) or connections view (level 2)
+  // In classic mode, we never show the process list
+  const isClassicMode = connectionListMode === 'classic'
+  const isProcessListView = !isClassicMode && selectedProcess === null
+  // Inside a process drill-down every row belongs to the same app, so the row
+  // drops the icon and the "process →" prefix; the app is identified in the header instead.
+  const isProcessDetailView = !isClassicMode && selectedProcess !== null
+
+  const selectedProcessIcon = useProcessIcon(
+    selectedProcess || '',
+    iconEnabled && isProcessDetailView
+  )
+
   const renderConnectionItem = useCallback(
     (i: number, connection: ControllerConnectionDetail) => {
       return (
@@ -406,6 +424,7 @@ const Connections: React.FC = () => {
           setIsDetailModalOpen={setIsDetailModalOpen}
           displayIcon={iconEnabled}
           displayAppName={displayAppName}
+          showProcess={!isProcessDetailView}
           close={closeConnection}
           index={i}
           key={connection.id}
@@ -413,7 +432,7 @@ const Connections: React.FC = () => {
         />
       )
     },
-    [iconEnabled, displayAppName, closeConnection]
+    [iconEnabled, displayAppName, isProcessDetailView, closeConnection]
   )
 
   const renderProcessItem = useCallback(
@@ -431,20 +450,77 @@ const Connections: React.FC = () => {
     [iconEnabled, displayAppName, handleProcessClick]
   )
 
-  // Whether we are in the process list view (level 1) or connections view (level 2)
-  // In classic mode, we never show the process list
-  const isClassicMode = connectionListMode === 'classic'
-  const isProcessListView = !isClassicMode && selectedProcess === null
+  const handleClearFilter = useCallback(() => setFilter(''), [])
+
+  const availableClosedCount = isClassicMode ? closedConnections.length : processClosedCount
+
+  const filterEmptyState = (
+    <ConnectionsEmpty
+      icon={SearchX}
+      title={t('pages.connections.emptyFilterTitle')}
+      description={t('pages.connections.emptyFilterDescription')}
+      action={{ label: t('pages.connections.clearFilter'), onClick: handleClearFilter }}
+    />
+  )
+
+  const processesEmptyState =
+    filter !== '' ? (
+      filterEmptyState
+    ) : (
+      <ConnectionsEmpty
+        icon={AppWindow}
+        title={t('pages.connections.emptyProcessesTitle')}
+        description={t('pages.connections.emptyProcessesDescription')}
+      />
+    )
+
+  const connectionsEmptyState =
+    filter !== '' ? (
+      filterEmptyState
+    ) : tab === 'active' ? (
+      <ConnectionsEmpty
+        icon={Unplug}
+        title={t('pages.connections.emptyActiveTitle')}
+        description={t('pages.connections.emptyActiveDescription')}
+        // Opening an app that only has history lands on an empty "active" tab —
+        // offer the way out instead of leaving a dead end.
+        action={
+          availableClosedCount > 0
+            ? { label: t('pages.connections.showClosed'), onClick: () => setTab('closed') }
+            : undefined
+        }
+      />
+    ) : (
+      <ConnectionsEmpty
+        icon={History}
+        title={t('pages.connections.emptyClosedTitle')}
+        description={t('pages.connections.emptyClosedDescription')}
+      />
+    )
+
+  const title = isProcessDetailView ? (
+    <div className="flex min-w-0 items-center gap-2">
+      {iconEnabled &&
+        (selectedProcessIcon ? (
+          <img src={selectedProcessIcon} alt="" className="size-6 shrink-0 rounded-md" />
+        ) : (
+          <div className="size-6 shrink-0 rounded-md bg-muted flex items-center justify-center">
+            <span className="text-[10px] font-semibold leading-none text-muted-foreground">
+              {selectedProcessName.slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+        ))}
+      <span className="truncate max-w-[38vw]" title={selectedProcessName}>
+        {selectedProcessName}
+      </span>
+    </div>
+  ) : (
+    t('pages.connections.title')
+  )
 
   return (
     <BasePage
-      title={
-        isProcessListView
-          ? t('pages.connections.title')
-          : isClassicMode
-            ? t('pages.connections.title')
-            : selectedProcessName
-      }
+      title={title}
       header={
         <div className="flex items-center gap-1">
           <div className="flex h-8 items-center gap-1 whitespace-nowrap">
@@ -688,19 +764,28 @@ const Connections: React.FC = () => {
       </div>
       <div className="h-[calc(100vh-106px)] mt-px mb-2">
         {isProcessListView ? (
-          <Virtuoso
-            data={filteredProcessGroups}
-            itemContent={renderProcessItem}
-            initialItemCount={Math.min(filteredProcessGroups.length, 15)}
-          />
+          filteredProcessGroups.length === 0 ? (
+            processesEmptyState
+          ) : (
+            <Virtuoso
+              data={filteredProcessGroups}
+              itemContent={renderProcessItem}
+              initialItemCount={Math.min(filteredProcessGroups.length, 15)}
+            />
+          )
         ) : viewMode === 'list' ? (
-          <Virtuoso
-            data={filteredConnections}
-            itemContent={renderConnectionItem}
-            initialItemCount={Math.min(filteredConnections.length, 15)}
-          />
+          filteredConnections.length === 0 ? (
+            connectionsEmptyState
+          ) : (
+            <Virtuoso
+              data={filteredConnections}
+              itemContent={renderConnectionItem}
+              initialItemCount={Math.min(filteredConnections.length, 15)}
+            />
+          )
         ) : (
           <ConnectionTable
+            emptyState={connectionsEmptyState}
             connections={filteredConnections}
             setSelected={setSelected}
             setIsDetailModalOpen={setIsDetailModalOpen}
