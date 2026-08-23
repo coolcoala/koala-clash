@@ -133,6 +133,7 @@ interface ProfileItem {
   logo?: string
   supportUrl?: string
   globalMode?: boolean
+  expandProxyGroups?: boolean
   customCss?: string
 }
 

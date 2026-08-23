@@ -60,6 +60,7 @@ export async function changeCurrentProfile(id: string): Promise<void> {
     await setProfileConfig(config)
   }
   await enforceGlobalModeRestriction(id)
+  await applyProfileExpandProxyGroups(id)
   const profile = await getProfileItem(id)
   await patchAppConfig({ customTheme: profile?.customCss || 'default.css' })
   mainWindow?.webContents.send('appConfigUpdated')
@@ -98,9 +99,20 @@ export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> 
     await changeCurrentProfile(newItem.id)
   } else if (config.current === newItem.id) {
     await enforceGlobalModeRestriction(newItem.id)
+    await applyProfileExpandProxyGroups(newItem.id)
     await patchAppConfig({ customTheme: newItem.customCss || 'default.css' })
     mainWindow?.webContents.send('appConfigUpdated')
   }
+}
+
+// The `expand-proxy-groups` header lets a subscription force the corresponding app setting on
+// (or explicitly off). Profiles without the header leave the user's own choice untouched.
+async function applyProfileExpandProxyGroups(id: string): Promise<void> {
+  const profile = await getProfileItem(id)
+  if (profile?.expandProxyGroups === undefined) return
+  const { expandProxyGroups } = await getAppConfig()
+  if (expandProxyGroups === profile.expandProxyGroups) return
+  await patchAppConfig({ expandProxyGroups: profile.expandProxyGroups })
 }
 
 async function enforceGlobalModeRestriction(id: string): Promise<void> {
@@ -323,6 +335,12 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
       )
       if (globalModeKey) {
         newItem.globalMode = headers[globalModeKey].toLowerCase() !== 'false'
+      }
+      const expandProxyGroupsKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('expand-proxy-groups')
+      )
+      if (expandProxyGroupsKey) {
+        newItem.expandProxyGroups = String(headers[expandProxyGroupsKey]).toLowerCase() !== 'false'
       }
       const announceKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('announce')
