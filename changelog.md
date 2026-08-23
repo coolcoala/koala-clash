@@ -1,3 +1,11 @@
+## 1.4.0
+
+- fixed bug with proxy providers
+- added new headers: expand-proxy-groups, profile-web-page-name
+- minor ui fixes
+- added alert about expiring subscription
+- new bugs :)
+
 ## 1.3.1
 
 - fixed system proxy
