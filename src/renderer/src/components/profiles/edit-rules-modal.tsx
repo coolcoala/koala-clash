@@ -59,6 +59,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpToLine,
   CheckIcon,
@@ -79,7 +80,12 @@ import React, {
   useRef
 } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { getProfileStr, setRuleStr, getRuleStr, mihomoHotReloadConfig } from '@renderer/utils/ipc'
+import {
+  getProfileParseStr,
+  setRuleStr,
+  getRuleStr,
+  mihomoHotReloadConfig
+} from '@renderer/utils/ipc'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useTranslation } from 'react-i18next'
 import yaml from 'js-yaml'
@@ -212,6 +218,142 @@ const parseRuleStringToItem = (ruleStr: string): RuleItem => {
     additionalParams: additionalParamsRaw.filter(Boolean),
     offset: offset && offset > 0 ? offset : undefined
   }
+}
+
+const toRuleStrings = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+    : []
+
+const parseProfileRules = (parsed: unknown): RuleItem[] => {
+  if (!parsed || typeof parsed !== 'object') return []
+  return toRuleStrings((parsed as Record<string, unknown>).rules).map(parseRuleStringToItem)
+}
+
+const builtinProxyTargets = ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE']
+
+const collectProxyGroups = (parsed: unknown): string[] => {
+  const groups: string[] = []
+
+  if (parsed && typeof parsed === 'object') {
+    const collectNames = (value: unknown): void => {
+      if (!Array.isArray(value)) return
+      value.forEach((entry) => {
+        const name = (entry as Record<string, unknown> | null)?.['name']
+        if (typeof name === 'string' && name) groups.push(name)
+      })
+    }
+
+    collectNames((parsed as Record<string, unknown>)['proxy-groups'])
+    collectNames((parsed as Record<string, unknown>)['proxies'])
+  }
+
+  groups.push(...builtinProxyTargets)
+  return [...new Set(groups)]
+}
+
+interface RuleOverrides {
+  prepend?: unknown
+  append?: unknown
+  delete?: unknown
+}
+
+interface RuleEditorState {
+  rules: RuleItem[]
+  prependRules: Set<number>
+  appendRules: Set<number>
+  deletedRules: Set<number>
+}
+
+// 按位置插入规则，并同步已插入规则的下标
+const insertRulesAtPositions = (
+  rulesToProcess: RuleItem[],
+  allRules: RuleItem[],
+  positionCalculator: (rule: RuleItem, currentRules: RuleItem[]) => number
+): { updatedRules: RuleItem[]; ruleIndices: Set<number> } => {
+  const updatedRules = [...allRules]
+  const ruleIndices = new Set<number>()
+
+  rulesToProcess.forEach((rule) => {
+    const targetPosition = positionCalculator(rule, updatedRules)
+    const actualPosition = Math.min(targetPosition, updatedRules.length)
+    updatedRules.splice(actualPosition, 0, rule)
+
+    const newRuleIndices = new Set<number>()
+    ruleIndices.forEach((idx) => {
+      newRuleIndices.add(idx >= actualPosition ? idx + 1 : idx)
+    })
+    newRuleIndices.add(actualPosition)
+
+    ruleIndices.clear()
+    newRuleIndices.forEach((idx) => ruleIndices.add(idx))
+  })
+
+  return { updatedRules, ruleIndices }
+}
+
+const applyRuleOverrides = (
+  initialRules: RuleItem[],
+  ruleData: RuleOverrides | null | undefined
+): RuleEditorState => {
+  let rules = [...initialRules]
+  const prependRules = new Set<number>()
+  const appendRules = new Set<number>()
+  const deletedRules = new Set<number>()
+
+  if (!ruleData || typeof ruleData !== 'object') {
+    return { rules, prependRules, appendRules, deletedRules }
+  }
+
+  const prependItems = toRuleStrings(ruleData.prepend).map(parseRuleStringToItem)
+  if (prependItems.length > 0) {
+    let prependInsertCount = 0
+    const { updatedRules, ruleIndices } = insertRulesAtPositions(
+      prependItems,
+      rules,
+      (rule, currentRules) => {
+        if (rule.offset !== undefined && rule.offset < currentRules.length) {
+          return rule.offset
+        }
+        return prependInsertCount++
+      }
+    )
+    rules = updatedRules
+    ruleIndices.forEach((index) => prependRules.add(index))
+  }
+
+  const appendItems = toRuleStrings(ruleData.append).map(parseRuleStringToItem)
+  if (appendItems.length > 0) {
+    const { updatedRules, ruleIndices } = insertRulesAtPositions(
+      appendItems,
+      rules,
+      (rule, currentRules) =>
+        rule.offset !== undefined
+          ? Math.max(0, currentRules.length - rule.offset)
+          : currentRules.length
+    )
+    rules = updatedRules
+    ruleIndices.forEach((index) => appendRules.add(index))
+  }
+
+  toRuleStrings(ruleData.delete)
+    .map(parseRuleStringToItem)
+    .forEach((deleteRule) => {
+      const matchedIndex = rules.findIndex(
+        (rule) =>
+          rule.type === deleteRule.type &&
+          rule.payload === deleteRule.payload &&
+          rule.proxy === deleteRule.proxy &&
+          JSON.stringify(rule.additionalParams || []) ===
+            JSON.stringify(deleteRule.additionalParams || [])
+      )
+
+      if (matchedIndex !== -1) {
+        deletedRules.add(matchedIndex)
+      }
+    })
+
+  return { rules, prependRules, appendRules, deletedRules }
 }
 
 const domainValidator = (value: string): boolean => {
@@ -1019,6 +1161,9 @@ const EditRulesModal: React.FC<Props> = (props) => {
   )
   const [isYamlMode, setIsYamlMode] = useState(false)
   const [yamlContent, setYamlContent] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [rawRuleContent, setRawRuleContent] = useState('')
+  const loadErrorToastRef = useRef<string | null>(null)
   const { t } = useTranslation()
 
   const ruleIndexMap = useMemo(() => {
@@ -1068,222 +1213,52 @@ const EditRulesModal: React.FC<Props> = (props) => {
     [prependRules, appendRules]
   )
 
-  // 解析规则字符串
-  const parseRuleString = useCallback((ruleStr: string): RuleItem => {
-    return parseRuleStringToItem(ruleStr)
-  }, [])
-
-  // 处理前置规则位置
-  const processRulesWithPositions = useCallback(
-    (
-      rulesToProcess: RuleItem[],
-      allRules: RuleItem[],
-      positionCalculator: (rule: RuleItem, currentRules: RuleItem[]) => number
-    ): { updatedRules: RuleItem[]; ruleIndices: Set<number> } => {
-      const updatedRules = [...allRules]
-      const ruleIndices = new Set<number>()
-
-      rulesToProcess.forEach((rule) => {
-        const targetPosition = positionCalculator(rule, updatedRules)
-        const actualPosition = Math.min(targetPosition, updatedRules.length)
-        updatedRules.splice(actualPosition, 0, rule)
-
-        const newRuleIndices = new Set<number>()
-        ruleIndices.forEach((idx) => {
-          if (idx >= actualPosition) {
-            newRuleIndices.add(idx + 1)
-          } else {
-            newRuleIndices.add(idx)
-          }
-        })
-        newRuleIndices.add(actualPosition)
-
-        ruleIndices.clear()
-        newRuleIndices.forEach((idx) => ruleIndices.add(idx))
-      })
-
-      return { updatedRules, ruleIndices }
-    },
-    []
-  )
-
-  // 处理后置规则位置
-  const processAppendRulesWithPositions = useCallback(
-    (
-      rulesToProcess: RuleItem[],
-      allRules: RuleItem[],
-      positionCalculator: (rule: RuleItem, currentRules: RuleItem[]) => number
-    ): { updatedRules: RuleItem[]; ruleIndices: Set<number> } => {
-      const updatedRules = [...allRules]
-      const ruleIndices = new Set<number>()
-
-      rulesToProcess.forEach((rule) => {
-        const targetPosition = positionCalculator(rule, updatedRules)
-        const actualPosition = Math.min(targetPosition, updatedRules.length)
-        updatedRules.splice(actualPosition, 0, rule)
-
-        const newRuleIndices = new Set<number>()
-        ruleIndices.forEach((idx) => {
-          if (idx >= actualPosition) {
-            newRuleIndices.add(idx + 1)
-          } else {
-            newRuleIndices.add(idx)
-          }
-        })
-        newRuleIndices.add(actualPosition)
-
-        ruleIndices.clear()
-        newRuleIndices.forEach((idx) => ruleIndices.add(idx))
-      })
-
-      return { updatedRules, ruleIndices }
-    },
-    []
-  )
-
   useEffect(() => {
     const loadContent = async (): Promise<void> => {
       setIsLoading(true)
+      setLoadError(null)
+
+      let initialRules: RuleItem[] = []
+      let failure: string | null = null
       try {
-        const content = await getProfileStr(id)
+        const content = await getProfileParseStr(id)
         setProfileContent(content)
 
-        const parsed = yaml.load(content) as Record<string, unknown> | undefined
-        let initialRules: RuleItem[] = []
-
-        if (parsed && parsed.rules && Array.isArray(parsed.rules)) {
-          initialRules = parsed.rules.map((rule: string) => parseRuleStringToItem(rule))
-        }
-
-        if (parsed) {
-          const groups: string[] = []
-
-          if (Array.isArray(parsed['proxy-groups'])) {
-            groups.push(
-              ...((parsed['proxy-groups'] as Array<Record<string, unknown>>)
-                .map((group) =>
-                  group && typeof group['name'] === 'string' ? (group['name'] as string) : ''
-                )
-                .filter(Boolean) as string[])
-            )
-          }
-
-          if (Array.isArray(parsed['proxies'])) {
-            groups.push(
-              ...((parsed['proxies'] as Array<Record<string, unknown>>)
-                .map((proxy) =>
-                  proxy && typeof proxy['name'] === 'string' ? (proxy['name'] as string) : ''
-                )
-                .filter(Boolean) as string[])
-            )
-          }
-
-          groups.push('DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE')
-          setProxyGroups([...new Set(groups)])
-        }
-
-        try {
-          const ruleContent = await getRuleStr(id)
-          const ruleData = yaml.load(ruleContent) as {
-            prepend?: string[]
-            append?: string[]
-            delete?: string[]
-          }
-
-          if (ruleData) {
-            let allRules = [...initialRules]
-            const newPrependRules = new Set<number>()
-            const newAppendRules = new Set<number>()
-            const newDeletedRules = new Set<number>()
-
-            if (ruleData.prepend && Array.isArray(ruleData.prepend)) {
-              const prependRuleItems: RuleItem[] = []
-              ruleData.prepend.forEach((ruleStr: string) => {
-                prependRuleItems.push(parseRuleString(ruleStr))
-              })
-
-              let prependInsertCount = 0
-              const { updatedRules, ruleIndices } = processRulesWithPositions(
-                prependRuleItems,
-                allRules,
-                (rule, currentRules) => {
-                  if (rule.offset !== undefined && rule.offset < currentRules.length) {
-                    return rule.offset
-                  }
-                  return prependInsertCount++
-                }
-              )
-
-              allRules = updatedRules
-              ruleIndices.forEach((index) => newPrependRules.add(index))
-            }
-
-            if (ruleData.append && Array.isArray(ruleData.append)) {
-              const appendRuleItems: RuleItem[] = []
-              ruleData.append.forEach((ruleStr: string) => {
-                appendRuleItems.push(parseRuleString(ruleStr))
-              })
-
-              const { updatedRules, ruleIndices } = processAppendRulesWithPositions(
-                appendRuleItems,
-                allRules,
-                (rule, currentRules) => {
-                  if (rule.offset !== undefined) {
-                    return Math.max(0, currentRules.length - rule.offset)
-                  }
-                  return currentRules.length
-                }
-              )
-
-              allRules = updatedRules
-              ruleIndices.forEach((index) => newAppendRules.add(index))
-            }
-
-            if (ruleData.delete && Array.isArray(ruleData.delete)) {
-              const deleteRules = ruleData.delete.map((ruleStr: string) => {
-                return parseRuleString(ruleStr)
-              })
-
-              deleteRules.forEach((deleteRule) => {
-                const matchedIndex = allRules.findIndex(
-                  (rule) =>
-                    rule.type === deleteRule.type &&
-                    rule.payload === deleteRule.payload &&
-                    rule.proxy === deleteRule.proxy &&
-                    JSON.stringify(rule.additionalParams || []) ===
-                      JSON.stringify(deleteRule.additionalParams || [])
-                )
-
-                if (matchedIndex !== -1) {
-                  newDeletedRules.add(matchedIndex)
-                }
-              })
-            }
-
-            setPrependRules(newPrependRules)
-            setAppendRules(newAppendRules)
-            setDeletedRules(newDeletedRules)
-            setRules(allRules)
-          } else {
-            setRules(initialRules)
-            setPrependRules(new Set())
-            setAppendRules(new Set())
-            setDeletedRules(new Set())
-          }
-        } catch {
-          setRules(initialRules)
-          setPrependRules(new Set())
-          setAppendRules(new Set())
-          setDeletedRules(new Set())
-        }
-      } catch {
-        // 解析配置文件失败，静默处理
-      } finally {
-        setIsLoading(false)
+        const parsed = yaml.load(content)
+        initialRules = parseProfileRules(parsed)
+        setProxyGroups(collectProxyGroups(parsed))
+      } catch (e) {
+        failure = e instanceof Error ? e.message : String(e)
+        setProfileContent('')
+        setProxyGroups([...builtinProxyTargets])
       }
+
+      let overrides: RuleOverrides | null = null
+      try {
+        const ruleContent = await getRuleStr(id)
+        setRawRuleContent(ruleContent)
+        overrides = (yaml.load(ruleContent) as RuleOverrides | null) ?? null
+      } catch (e) {
+        failure = failure ?? (e instanceof Error ? e.message : String(e))
+      }
+
+      const state = applyRuleOverrides(initialRules, overrides)
+      setRules(state.rules)
+      setPrependRules(state.prependRules)
+      setAppendRules(state.appendRules)
+      setDeletedRules(state.deletedRules)
+      setLoadError(failure)
+      setIsLoading(false)
     }
     loadContent()
-  }, [id, parseRuleString, processRulesWithPositions, processAppendRulesWithPositions])
+  }, [id])
+
+  useEffect(() => {
+    if (loadError && loadErrorToastRef.current !== loadError) {
+      loadErrorToastRef.current = loadError
+      toast.error(`${t('profile.editRules.loadError')}: ${loadError}`)
+    }
+  }, [loadError, t])
 
   const validateRulePayload = useCallback((ruleType: string, payload: string): boolean => {
     if (ruleType === 'MATCH') {
@@ -1391,83 +1366,14 @@ const EditRulesModal: React.FC<Props> = (props) => {
   const applyYamlToVisualState = useCallback(
     (yamlStr: string): boolean => {
       try {
-        const ruleData = yaml.load(yamlStr) as {
-          prepend?: string[]
-          append?: string[]
-          delete?: string[]
-        } | null
+        const ruleData = yaml.load(yamlStr) as RuleOverrides | null
+        const initialRules = parseProfileRules(yaml.load(profileContent))
+        const state = applyRuleOverrides(initialRules, ruleData)
 
-        const parsed = yaml.load(profileContent) as Record<string, unknown> | undefined
-        let initialRules: RuleItem[] = []
-        if (parsed && parsed.rules && Array.isArray(parsed.rules)) {
-          initialRules = parsed.rules.map((rule: string) => parseRuleStringToItem(rule))
-        }
-
-        if (ruleData && typeof ruleData === 'object') {
-          let allRules = [...initialRules]
-          const newPrependRules = new Set<number>()
-          const newAppendRules = new Set<number>()
-          const newDeletedRules = new Set<number>()
-
-          if (ruleData.prepend && Array.isArray(ruleData.prepend)) {
-            let prependInsertCount = 0
-            const { updatedRules, ruleIndices } = processRulesWithPositions(
-              ruleData.prepend.map((s) => parseRuleStringToItem(s)),
-              allRules,
-              (rule, currentRules) => {
-                if (rule.offset !== undefined && rule.offset < currentRules.length) {
-                  return rule.offset
-                }
-                return prependInsertCount++
-              }
-            )
-            allRules = updatedRules
-            ruleIndices.forEach((index) => newPrependRules.add(index))
-          }
-
-          if (ruleData.append && Array.isArray(ruleData.append)) {
-            const { updatedRules, ruleIndices } = processAppendRulesWithPositions(
-              ruleData.append.map((s) => parseRuleStringToItem(s)),
-              allRules,
-              (rule, currentRules) => {
-                if (rule.offset !== undefined) {
-                  return Math.max(0, currentRules.length - rule.offset)
-                }
-                return currentRules.length
-              }
-            )
-            allRules = updatedRules
-            ruleIndices.forEach((index) => newAppendRules.add(index))
-          }
-
-          if (ruleData.delete && Array.isArray(ruleData.delete)) {
-            ruleData.delete
-              .map((s) => parseRuleStringToItem(s))
-              .forEach((deleteRule) => {
-                const matchedIndex = allRules.findIndex(
-                  (rule) =>
-                    rule.type === deleteRule.type &&
-                    rule.payload === deleteRule.payload &&
-                    rule.proxy === deleteRule.proxy &&
-                    JSON.stringify(rule.additionalParams || []) ===
-                      JSON.stringify(deleteRule.additionalParams || [])
-                )
-                if (matchedIndex !== -1) {
-                  newDeletedRules.add(matchedIndex)
-                }
-              })
-          }
-
-          setPrependRules(newPrependRules)
-          setAppendRules(newAppendRules)
-          setDeletedRules(newDeletedRules)
-          setRules(allRules)
-        } else {
-          setRules(initialRules)
-          setPrependRules(new Set())
-          setAppendRules(new Set())
-          setDeletedRules(new Set())
-        }
+        setRules(state.rules)
+        setPrependRules(state.prependRules)
+        setAppendRules(state.appendRules)
+        setDeletedRules(state.deletedRules)
         return true
       } catch (e) {
         toast.error(
@@ -1476,19 +1382,26 @@ const EditRulesModal: React.FC<Props> = (props) => {
         return false
       }
     },
-    [profileContent, processRulesWithPositions, processAppendRulesWithPositions, t]
+    [profileContent, t]
   )
 
   const handleToggleYamlMode = useCallback(() => {
     if (!isYamlMode) {
-      setYamlContent(serializeToYaml())
+      setYamlContent(loadError ? rawRuleContent : serializeToYaml())
       setIsYamlMode(true)
     } else {
       if (applyYamlToVisualState(yamlContent)) {
         setIsYamlMode(false)
       }
     }
-  }, [isYamlMode, serializeToYaml, applyYamlToVisualState, yamlContent])
+  }, [
+    isYamlMode,
+    serializeToYaml,
+    applyYamlToVisualState,
+    yamlContent,
+    loadError,
+    rawRuleContent
+  ])
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     try {
@@ -1496,6 +1409,11 @@ const EditRulesModal: React.FC<Props> = (props) => {
         yaml.load(yamlContent)
         await setRuleStr(id, yamlContent)
         return true
+      }
+
+      if (loadError) {
+        toast.error(t('profile.editRules.saveBlocked'))
+        return false
       }
 
       const ruleYaml = serializeToYaml()
@@ -1507,7 +1425,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
       )
       return false
     }
-  }, [isYamlMode, yamlContent, serializeToYaml, id, t])
+  }, [isYamlMode, yamlContent, serializeToYaml, id, loadError, t])
 
   const handleRuleTypeChange = (selected: string): void => {
     const noResolveSupported = isRuleSupportsNoResolve(selected)
@@ -1883,6 +1801,16 @@ const EditRulesModal: React.FC<Props> = (props) => {
             </Button>
           </div>
         </DialogHeader>
+        {loadError && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+            <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" />
+            <div className="min-w-0 text-xs space-y-0.5">
+              <p className="font-medium text-destructive">{t('profile.editRules.loadError')}</p>
+              <p className="text-muted-foreground break-words font-mono">{loadError}</p>
+              <p className="text-muted-foreground">{t('profile.editRules.loadErrorHint')}</p>
+            </div>
+          </div>
+        )}
         <div className="h-full overflow-hidden">
           {isYamlMode ? (
             <div className="h-full">
@@ -2071,7 +1999,9 @@ const EditRulesModal: React.FC<Props> = (props) => {
                   <Button
                     className="flex-1"
                     onClick={() => handleAddRule('prepend')}
-                    disabled={isAddRuleDisabled(newRule, validateRulePayload)}
+                    disabled={
+                      isLoading || !!loadError || isAddRuleDisabled(newRule, validateRulePayload)
+                    }
                   >
                     <ArrowUpToLine className="size-4" />
                     {t('profile.editRules.addRulePrepend')}
@@ -2080,7 +2010,9 @@ const EditRulesModal: React.FC<Props> = (props) => {
                     className="flex-1"
                     variant="outline"
                     onClick={() => handleAddRule('append')}
-                    disabled={isAddRuleDisabled(newRule, validateRulePayload)}
+                    disabled={
+                      isLoading || !!loadError || isAddRuleDisabled(newRule, validateRulePayload)
+                    }
                   >
                     <ArrowDownToLine className="size-4" />
                     {t('profile.editRules.addRuleAppend')}
@@ -2207,6 +2139,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
           </DialogClose>
           <Button
             size="sm"
+            disabled={isLoading || (!!loadError && !isYamlMode)}
             onClick={async () => {
               const saved = await handleSave()
               if (saved) {

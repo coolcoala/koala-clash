@@ -716,6 +716,10 @@ export default {
       noRules: 'No rules',
       noMatchingRules: 'No matching rules',
       saveError: 'Error saving rules',
+      loadError: 'Failed to load rules',
+      loadErrorHint:
+        'Saving is disabled so your existing rules are not overwritten. Use the YAML editor to fix the file manually.',
+      saveBlocked: 'Cannot save: rules failed to load',
       noResolve: 'Skip DNS resolution (no-resolve)',
       src: 'Match source IP (src)',
       delete: 'Delete rule',

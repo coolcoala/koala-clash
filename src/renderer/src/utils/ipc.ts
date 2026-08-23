@@ -174,6 +174,10 @@ export async function getProfileStr(id: string): Promise<string> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getProfileStr', id))
 }
 
+export async function getProfileParseStr(id: string): Promise<string> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getProfileParseStr', id))
+}
+
 export async function getFileStr(id: string): Promise<string> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getFileStr', id))
 }

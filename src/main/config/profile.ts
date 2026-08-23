@@ -481,6 +481,11 @@ export async function setFileStr(path: string, content: string): Promise<void> {
 }
 
 export async function getRuleStr(id: string): Promise<string> {
+  // 规则文件不存在属于正常情况（尚未添加自定义规则），不应作为错误抛出，
+  // 否则渲染层无法区分「没有规则」和「读取失败」
+  if (!existsSync(rulePath(id))) {
+    return ''
+  }
   return await readFile(rulePath(id), 'utf-8')
 }
 
