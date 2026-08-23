@@ -56,6 +56,10 @@ const groupTypeIcon: Record<string, React.ReactNode> = {
   Relay: <Route className="size-4" />
 }
 
+function getProviderName(proxy: ControllerProxiesDetail | ControllerGroupDetail): string | undefined {
+  return 'provider-name' in proxy ? proxy['provider-name'] : undefined
+}
+
 const Proxies: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
@@ -182,8 +186,11 @@ const Proxies: React.FC = () => {
   )
 
   const onProxyDelay = useCallback(
-    async (proxy: string, url?: string): Promise<ControllerProxiesDelay> => {
-      return await mihomoProxyDelay(proxy, url)
+    async (
+      proxy: ControllerProxiesDetail | ControllerGroupDetail,
+      url?: string
+    ): Promise<ControllerProxiesDelay> => {
+      return await mihomoProxyDelay(proxy.name, url, getProviderName(proxy))
     },
     []
   )
@@ -223,7 +230,7 @@ const Proxies: React.FC = () => {
       for (const proxy of allProxies[index]) {
         const promise = Promise.resolve().then(async () => {
           try {
-            await mihomoProxyDelay(proxy.name, groups[index].testUrl)
+            await mihomoProxyDelay(proxy.name, groups[index].testUrl, getProviderName(proxy))
           } catch {
             // ignore
           } finally {

@@ -9,7 +9,10 @@ import { Gauge, MapPin } from 'lucide-react'
 
 interface Props {
   mutateProxies: () => void
-  onProxyDelay: (proxy: string, url?: string) => Promise<ControllerProxiesDelay>
+  onProxyDelay: (
+    proxy: ControllerProxiesDetail | ControllerGroupDetail,
+    url?: string
+  ) => Promise<ControllerProxiesDelay>
   proxyDisplayLayout: 'hidden' | 'single' | 'double'
   proxy: ControllerProxiesDetail | ControllerGroupDetail
   group: ControllerMixedGroup
@@ -71,7 +74,7 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
 
   const onDelay = (): void => {
     setLoading(true)
-    onProxyDelay(proxy.name, group.testUrl).finally(() => {
+    onProxyDelay(proxy, group.testUrl).finally(() => {
       mutateProxies()
       setLoading(false)
     })
