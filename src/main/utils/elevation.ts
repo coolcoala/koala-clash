@@ -1,8 +1,24 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { patchAppConfig } from '../config/app'
 import { t } from './i18n'
 
 const execFilePromise = promisify(execFile)
+
+/**
+ * Argument the app is relaunched with when the user dismisses the UAC prompt.
+ * It suppresses the elevation attempt for that run, before the refusal is persisted.
+ */
+export const ELEVATION_DECLINED_ARG = 'elevation-declined'
+
+/**
+ * Remember that the user refused to elevate, so the request is not repeated on every launch,
+ * and fall back to a setup that works without admin rights: system proxy instead of TUN.
+ * Elevation can still be requested later from the core settings page.
+ */
+export async function declineElevation(): Promise<void> {
+  await patchAppConfig({ elevationDeclined: true, mainSwitchMode: 'sysproxy' })
+}
 
 let isAdminCached: boolean | null = null
 

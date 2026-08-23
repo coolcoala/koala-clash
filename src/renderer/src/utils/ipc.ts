@@ -242,6 +242,10 @@ export async function restartAsAdmin(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('restartAsAdmin'))
 }
 
+export async function declineElevation(): Promise<void> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('declineElevation'))
+}
+
 export async function deleteElevateTask(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('deleteElevateTask'))
 }

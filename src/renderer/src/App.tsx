@@ -9,6 +9,7 @@ import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
   applyTheme,
   checkUpdate,
+  declineElevation,
   needsFirstRunAdmin,
   restartAsAdmin,
   setNativeTheme
@@ -93,6 +94,7 @@ const App: React.FC = () => {
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [showProfileInstallConfirm, setShowProfileInstallConfirm] = useState(false)
   const [showAdminRequired, setShowAdminRequired] = useState(false)
+  const adminRestartRequestedRef = useRef(false)
   const profileInstallConfirmedRef = useRef(false)
   const [profileInstallData, setProfileInstallData] = useState<{
     url: string
@@ -226,12 +228,20 @@ const App: React.FC = () => {
             </div>
           }
           confirmText={t('modal.restartAsAdmin')}
+          cancelText={t('modal.continueWithoutAdmin')}
           onChange={(open) => {
             if (!open) {
               setShowAdminRequired(false)
+              // Dismissing the dialog means the user declines: remember it so the app stops
+              // asking on every launch and falls back to system proxy only.
+              if (!adminRestartRequestedRef.current) {
+                declineElevation().catch(() => {})
+              }
+              adminRestartRequestedRef.current = false
             }
           }}
           onConfirm={async () => {
+            adminRestartRequestedRef.current = true
             await restartAsAdmin()
           }}
           className="guide-admin-required-modal"

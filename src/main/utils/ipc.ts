@@ -91,6 +91,7 @@ import {
   closeMainWindow,
   mainWindow,
   needsFirstRunAdmin,
+  setNeedsFirstRunAdmin,
   setNotQuitDialog,
   showError,
   showMainWindow,
@@ -104,6 +105,8 @@ import {
   resolveThemes,
   writeTheme
 } from '../resolve/theme'
+import { declineElevation, ELEVATION_DECLINED_ARG } from './elevation'
+import { safeSend } from './safeSend'
 import { logDir } from './dirs'
 import path from 'path'
 import v8 from 'v8'
@@ -323,17 +326,35 @@ export function registerIpcMainHandlers(): void {
     return mainWindow?.isMaximized() ?? false
   })
   ipcMain.handle('needsFirstRunAdmin', () => needsFirstRunAdmin)
+  ipcMain.handle('declineElevation', () =>
+    ipcErrorWrapper(async () => {
+      await declineElevation()
+      setNeedsFirstRunAdmin(false)
+      safeSend(mainWindow, 'appConfigUpdated')
+    })()
+  )
   ipcMain.handle('restartAsAdmin', async () => {
     if (process.platform !== 'win32') return
-    const { exec } = await import('child_process')
-    const exePath = process.execPath
-    const args = process.argv.slice(1)
-    const escapedExePath = exePath.replace(/'/g, "''")
-    const argsString = args.map((a) => a.replace(/'/g, "''")).join("' '")
-    const command = args.length > 0
-      ? `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -ArgumentList '${argsString}' -Verb RunAs"`
-      : `powershell -NoProfile -Command "Start-Process -FilePath '${escapedExePath}' -Verb RunAs"`
-    exec(command, { windowsHide: true })
+    const { spawn } = await import('child_process')
+    const quote = (value: string): string => `'${value.replace(/'/g, "''")}'`
+    const exePath = quote(process.execPath)
+    const args = process.argv.slice(1).filter((arg) => arg !== ELEVATION_DECLINED_ARG)
+    const argList = args.length > 0 ? ` -ArgumentList ${args.map(quote).join(',')}` : ''
+    // Relaunching only after this instance is gone keeps the elevated one from losing the
+    // single-instance lock to it. If the UAC prompt is dismissed (users without admin rights
+    // get a credential prompt they cannot answer), come back unelevated instead of vanishing.
+    const script = [
+      `Wait-Process -Id ${process.pid} -Timeout 30 -ErrorAction SilentlyContinue`,
+      `try { Start-Process -FilePath ${exePath}${argList} -Verb RunAs -ErrorAction Stop }`,
+      `catch { Start-Process -FilePath ${exePath} -ArgumentList ${quote(ELEVATION_DECLINED_ARG)} }`
+    ].join('; ')
+    // The attempt itself clears a previous refusal; a dismissed prompt records it again.
+    await patchAppConfig({ elevationDeclined: false }).catch(() => {})
+    spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    }).unref()
     setNotQuitDialog()
     app.quit()
   })

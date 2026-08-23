@@ -237,7 +237,9 @@ const Mihomo: React.FC = () => {
           description={t('pages.mihomo.confirmUseTaskScheduleDesc')}
           onConfirm={async () => {
             await patchAppConfig({
-              corePermissionMode: pendingPermissionMode as 'elevated' | 'service'
+              corePermissionMode: pendingPermissionMode as 'elevated' | 'service',
+              // Asking for the task schedule again overrides an earlier refusal to elevate
+              elevationDeclined: false
             })
             await notDialogQuit()
           }}

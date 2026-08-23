@@ -496,8 +496,9 @@ export default {
     updateNow: '立即更新',
     adminRequired: '需要管理员权限',
     adminRequiredDesc:
-      '应用需要以管理员身份运行一次以设置任务计划。设置完成后，应用将自动以提升的权限启动。',
-    restartAsAdmin: '以管理员身份重启'
+      'TUN 模式需要以管理员身份运行一次以设置任务计划。若没有管理员权限，应用将继续通过系统代理工作，并且不会再次询问——之后可在内核设置中手动授予权限。',
+    restartAsAdmin: '以管理员身份重启',
+    continueWithoutAdmin: '不使用管理员权限继续'
   },
 
   settings: {

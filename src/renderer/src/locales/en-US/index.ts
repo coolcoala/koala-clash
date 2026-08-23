@@ -430,8 +430,9 @@ export default {
     updateNow: 'Update Now',
     adminRequired: 'Administrator Rights Required',
     adminRequiredDesc:
-      'For the application to work correctly, it needs to be run as administrator once to set up the task scheduler. After this, the application will start with elevated privileges automatically.',
-    restartAsAdmin: 'Restart as Administrator'
+      'TUN mode needs the application to be run as administrator once to set up the task scheduler. Without those rights the application keeps working through the system proxy and will not ask again — you can grant them later in the core settings.',
+    restartAsAdmin: 'Restart as Administrator',
+    continueWithoutAdmin: 'Continue without administrator rights'
   },
 
   settings: {

@@ -18,12 +18,17 @@ import { existsSync, writeFileSync } from 'fs'
 import { exePath, taskDir } from './utils/dirs'
 import { showFloatingWindow } from './resolve/floatingWindow'
 import { getAppConfigSync } from './config/app'
+import { declineElevation, ELEVATION_DECLINED_ARG } from './utils/elevation'
 import { t } from './utils/i18n'
 
 
 let quitTimeout: NodeJS.Timeout | null = null
 export let mainWindow: BrowserWindow | null = null
 export let needsFirstRunAdmin = false
+
+export function setNeedsFirstRunAdmin(value: boolean): void {
+  needsFirstRunAdmin = value
+}
 
 /**
  * Show error to the user via renderer toast notification.
@@ -73,10 +78,16 @@ async function scheduleLightweightMode(): Promise<void> {
 
 const syncConfig = getAppConfigSync()
 
+// Set when the previous instance relaunched us after the user dismissed the UAC prompt:
+// the refusal is not in the config yet, so honour it from the command line for this run.
+const elevationDeclinedByArg = process.argv.includes(ELEVATION_DECLINED_ARG)
+
 if (
   process.platform === 'win32' &&
   !is.dev &&
   !process.argv.includes('noadmin') &&
+  !elevationDeclinedByArg &&
+  !syncConfig.elevationDeclined &&
   syncConfig.corePermissionMode !== 'service'
 ) {
   try {
@@ -292,6 +303,9 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
   const appConfig = await getAppConfig()
+  if (elevationDeclinedByArg && !appConfig.elevationDeclined) {
+    await declineElevation()
+  }
   const { showFloatingWindow: showFloating = false, disableTray = false } = appConfig
   registerIpcMainHandlers()
 
