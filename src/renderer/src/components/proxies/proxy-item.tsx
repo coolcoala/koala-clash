@@ -58,10 +58,9 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
   }, [delay, waitingForNewDelay])
 
   useEffect(() => {
-    if (waitingForNewDelay && !isGroupDelaying) {
-      const timer = setTimeout(() => setWaitingForNewDelay(false), 2000)
-      return () => clearTimeout(timer)
-    }
+    if (!waitingForNewDelay || isGroupDelaying) return undefined
+    const timer = setTimeout(() => setWaitingForNewDelay(false), 2000)
+    return () => clearTimeout(timer)
   }, [waitingForNewDelay, isGroupDelaying])
 
   const showLoading = loading || isGroupDelaying || waitingForNewDelay
