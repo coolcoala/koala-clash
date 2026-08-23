@@ -19,7 +19,9 @@ import {
   Globe,
   ArrowUp,
   ArrowDown,
-  RefreshCcw
+  RefreshCcw,
+  CalendarClock,
+  CreditCard
 } from 'lucide-react'
 import { SiTelegram } from 'react-icons/si'
 import EditInfoModal from '@renderer/components/profiles/edit-info-modal'
@@ -34,6 +36,9 @@ function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 1 ? 1 : 0)} ${units[i]}`
 }
+
+// Days left at which the stats block is replaced by the renewal notice
+const EXPIRY_WARNING_DAYS = 3
 
 // Module-level variable: persists across component mounts/unmounts
 let connectionStartTime: number | null = null
@@ -161,8 +166,36 @@ const Home: React.FC = () => {
   const expireTimestamp = subscription?.expire ?? 0
   const expireDate =
     expireTimestamp > 0 ? dayjs.unix(expireTimestamp).format('L') : t('pages.home.never')
-  const daysRemaining =
-    expireTimestamp > 0 ? Math.max(0, dayjs.unix(expireTimestamp).diff(dayjs(), 'day')) : 0
+
+  // Re-evaluate the countdown while the window stays open so the notice appears on time
+  const [expiryTick, setExpiryTick] = useState(0)
+  useEffect(() => {
+    if (expireTimestamp <= 0) return undefined
+    const interval = setInterval(() => setExpiryTick((n) => n + 1), 60_000)
+    return () => clearInterval(interval)
+  }, [expireTimestamp])
+
+  const { daysRemaining, isExpired } = useMemo(() => {
+    if (expireTimestamp <= 0) return { daysRemaining: 0, isExpired: false }
+    const expiresAt = dayjs.unix(expireTimestamp)
+    return {
+      daysRemaining: Math.max(0, expiresAt.diff(dayjs(), 'day')),
+      isExpired: expiresAt.isBefore(dayjs())
+    }
+  }, [expireTimestamp, expiryTick])
+
+  const showExpiryNotice = expireTimestamp > 0 && daysRemaining <= EXPIRY_WARNING_DAYS
+  const renewAction =
+    currentProfile?.homeName && currentProfile?.home
+      ? { url: currentProfile.home, label: currentProfile.homeName }
+      : currentProfile?.supportUrl
+        ? { url: currentProfile.supportUrl, label: t('pages.home.renewSubscription') }
+        : null
+  const expiryTitle = isExpired
+    ? t('pages.home.subscriptionExpired')
+    : daysRemaining === 0
+      ? t('pages.home.subscriptionExpiringToday')
+      : t('pages.home.subscriptionExpiring', { count: daysRemaining })
 
   const firstGroup = groups?.[0]
   const supportUrl = currentProfile?.supportUrl
@@ -300,28 +333,63 @@ const Home: React.FC = () => {
               )}
             </div>
           )}
-          {/* Subscription info */}
-          {subscription && (
-            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center rounded-2xl border border-stroke bg-card/50 backdrop-blur-xl p-1">
-              <div className="flex flex-col items-center py-2 px-1">
-                <span className="text-sm text-foreground">{t('pages.home.trafficRemaining')}</span>
-                <span className="font-bold text-base mt-0.5">
-                  {trafficTotal > 0 ? formatBytes(trafficRemaining) : <InfinityIcon />}
-                </span>
+          {/* Subscription expiry notice — replaces the stats block near the end of the period */}
+          {subscription && showExpiryNotice ? (
+            <div
+              role="status"
+              className="rounded-2xl border border-stroke bg-card/50 backdrop-blur-xl p-4"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="flex items-center justify-center gap-2.5">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+                    <CalendarClock className="size-5" aria-hidden />
+                  </div>
+                  <p className="text-base font-semibold leading-snug text-destructive">
+                    {expiryTitle}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground text-balance">
+                  {isExpired
+                    ? t('pages.home.subscriptionExpiredHint')
+                    : t('pages.home.subscriptionExpiringHint', { date: expireDate })}
+                </p>
               </div>
-              <div className="h-8 w-px bg-stroke" />
-              <div className="flex flex-col items-center py-2 px-1">
-                <span className="text-sm text-foreground">{t('pages.home.daysRemaining')}</span>
-                <span className="text-base font-bold mt-0.5">
-                  {expireTimestamp > 0 ? daysRemaining : <InfinityIcon />}
-                </span>
-              </div>
-              <div className="h-8 w-px bg-stroke" />
-              <div className="flex flex-col items-center py-2 px-1">
-                <span className="text-sm text-foreground">{t('pages.home.expires')}</span>
-                <span className="text-base font-bold mt-0.5">{expireDate}</span>
-              </div>
+              {renewAction && (
+                <button
+                  type="button"
+                  onClick={() => open(renewAction.url)}
+                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-stroke-power-on bg-gradient-start-power-on/50 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-gradient-start-power-on/40 active:scale-[0.99] cursor-pointer"
+                >
+                  <CreditCard className="size-4 shrink-0" aria-hidden />
+                  <span className="truncate">{renewAction.label}</span>
+                </button>
+              )}
             </div>
+          ) : (
+            subscription && (
+              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center rounded-2xl border border-stroke bg-card/50 backdrop-blur-xl p-1">
+                <div className="flex flex-col items-center py-2 px-1">
+                  <span className="text-sm text-foreground">
+                    {t('pages.home.trafficRemaining')}
+                  </span>
+                  <span className="font-bold text-base mt-0.5">
+                    {trafficTotal > 0 ? formatBytes(trafficRemaining) : <InfinityIcon />}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-stroke" />
+                <div className="flex flex-col items-center py-2 px-1">
+                  <span className="text-sm text-foreground">{t('pages.home.daysRemaining')}</span>
+                  <span className="text-base font-bold mt-0.5">
+                    {expireTimestamp > 0 ? daysRemaining : <InfinityIcon />}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-stroke" />
+                <div className="flex flex-col items-center py-2 px-1">
+                  <span className="text-sm text-foreground">{t('pages.home.expires')}</span>
+                  <span className="text-base font-bold mt-0.5">{expireDate}</span>
+                </div>
+              </div>
+            )
           )}
 
           {/* Connection button */}

@@ -276,6 +276,15 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
       if (homeKey) {
         newItem.home = headers[homeKey]
       }
+      const homeNameKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('profile-web-page-name')
+      )
+      if (homeNameKey) {
+        const homeNameValue = headers[homeNameKey]
+        newItem.homeName = homeNameValue.startsWith('base64:')
+          ? Buffer.from(homeNameValue.slice(7), 'base64').toString('utf-8')
+          : homeNameValue
+      }
       const intervalKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('profile-update-interval')
       )
