@@ -26,27 +26,7 @@ const FloatingApp: React.FC = () => {
     return 5
   }, [upload, download])
 
-  const [rotation, setRotation] = useState(0)
-
-  useEffect(() => {
-    if (!spinFloatingIcon) return
-
-    let animationFrameId: number
-    const animate = (): void => {
-      setRotation((prev) => {
-        if (prev === 360) {
-          return 0
-        }
-        return prev + spinSpeed
-      })
-      animationFrameId = requestAnimationFrame(animate)
-    }
-
-    animationFrameId = requestAnimationFrame(animate)
-    return (): void => {
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [spinSpeed, spinFloatingIcon])
+  const spinDuration = spinFloatingIcon && spinSpeed > 0 ? 6 / spinSpeed : null
 
   useEffect(() => {
     window.electron.ipcRenderer.on('mihomoTraffic', async (_e, info: ControllerTraffic) => {
@@ -71,11 +51,8 @@ const FloatingApp: React.FC = () => {
               triggerMainWindow()
             }}
             style={
-              spinFloatingIcon
-                ? {
-                    transform: `rotate(${rotation}deg)`,
-                    transition: 'transform 0.1s linear'
-                  }
+              spinDuration
+                ? { animation: `floating-icon-spin ${spinDuration}s linear infinite` }
                 : {}
             }
             className={`app-nodrag cursor-pointer floating-thumb ${tunEnabled ? 'bg-gradient-end-power-on' : proxyModeEnabled ? 'bg-primary' : 'bg-muted'} hover:opacity-80 rounded-full h-[calc(100%-4px)] aspect-square`}

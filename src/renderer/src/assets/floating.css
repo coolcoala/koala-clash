@@ -56,6 +56,12 @@
   }
 }
 
+@keyframes floating-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .floating-text {
   font-family:
     'Microsoft YaHei',
