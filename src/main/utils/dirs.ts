@@ -6,6 +6,7 @@ import { execSync } from 'child_process'
 import { getAppConfigSync } from '../config/app'
 import { checkCorePermissionSync } from '../core/manager'
 import { t } from './i18n'
+import { userScopedSocketPath } from './userScopedSocketPath'
 
 export const homeDir = app.getPath('home')
 
@@ -61,14 +62,15 @@ export function mihomoIpcPath(): string {
   if (process.platform === 'win32') {
     return '\\\\.\\pipe\\Koala-Clash\\mihomo'
   }
+  const uid = process.platform === 'darwin' ? process.getuid?.() : undefined
   const { core = 'mihomo' } = getAppConfigSync()
   if (core === 'system') {
-    return '/tmp/koala-clash-mihomo-external.sock'
+    return userScopedSocketPath('koala-clash-mihomo-external', uid)
   }
   if (!checkCorePermissionSync(core as 'mihomo' | 'mihomo-alpha')) {
-    return '/tmp/koala-clash-mihomo-api-noperm.sock'
+    return userScopedSocketPath('koala-clash-mihomo-api-noperm', uid)
   }
-  return '/tmp/koala-clash-mihomo-api.sock'
+  return userScopedSocketPath('koala-clash-mihomo-api', uid)
 }
 
 export function serviceIpcPath(): string {
