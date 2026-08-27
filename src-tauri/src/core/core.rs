@@ -54,6 +54,14 @@ impl fmt::Display for RunningMode {
 
 use crate::config::IVerge;
 
+#[cfg(any(target_os = "macos", test))]
+fn is_current_config_safe_path_error(error: &str, config_path: &str) -> bool {
+    error
+        .split_once("path is not subpath of home directory or SAFE_PATHS:")
+        .and_then(|(_, paths)| paths.split_once("allowed paths:"))
+        .is_some_and(|(rejected_path, _)| rejected_path.trim() == config_path)
+}
+
 impl CoreManager {
     /// 检查文件是否为脚本文件
     fn is_script_file(&self, path: &str) -> Result<bool> {
@@ -501,9 +509,9 @@ impl CoreManager {
             let msg = e.to_string();
             logging_error!(Type::Core, true, "{}", msg);
             msg
-        });
+        })?;
         match MihomoManager::global()
-            .put_configs_force(run_path_str?)
+            .put_configs_force(run_path_str)
             .await
         {
             Ok(_) => {
@@ -513,6 +521,29 @@ impl CoreManager {
             }
             Err(e) => {
                 let msg = e.to_string();
+
+                #[cfg(target_os = "macos")]
+                {
+                    let running = self.running.lock().await;
+                    if *running == RunningMode::Service
+                        && is_current_config_safe_path_error(&msg, run_path_str)
+                    {
+                        logging!(
+                            info,
+                            Type::Core,
+                            true,
+                            "Service belongs to another macOS account; restarting it with the current config"
+                        );
+                        if service::start_with_existing_service(&path_buf)
+                            .await
+                            .is_ok()
+                        {
+                            Config::runtime().apply();
+                            return Ok(());
+                        }
+                    }
+                }
+
                 Config::runtime().discard();
                 logging_error!(Type::Core, true, "Failed to update configuration: {}", msg);
                 Err(msg)
@@ -1278,5 +1309,36 @@ impl CoreManager {
         self.put_configs_force(run_path).await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_current_config_safe_path_error;
+
+    #[test]
+    fn only_current_config_safe_path_error_requires_service_handoff() {
+        let config = "/fixtures/account-a/work/config.yaml";
+        let foreign_workdir_error = "path is not subpath of home directory or SAFE_PATHS: /fixtures/account-a/work/config.yaml allowed paths: [/fixtures/account-b/work]";
+        let unrelated_path_error = "path is not subpath of home directory or SAFE_PATHS: /tmp/external-ui allowed paths: [/fixtures/account-b/work]";
+        let prefix_collision_error = "path is not subpath of home directory or SAFE_PATHS: /fixtures/account-a/work/config.yaml.bak allowed paths: [/fixtures/account-b/work]";
+        let path_only_in_allowed_paths = "path is not subpath of home directory or SAFE_PATHS: /tmp/external-ui allowed paths: [/fixtures/account-a/work/config.yaml]";
+
+        assert!(is_current_config_safe_path_error(
+            foreign_workdir_error,
+            config
+        ));
+        assert!(!is_current_config_safe_path_error(
+            unrelated_path_error,
+            config
+        ));
+        assert!(!is_current_config_safe_path_error(
+            prefix_collision_error,
+            config
+        ));
+        assert!(!is_current_config_safe_path_error(
+            path_only_in_allowed_paths,
+            config
+        ));
     }
 }
