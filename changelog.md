@@ -1,3 +1,7 @@
+## 1.4.1
+
+- hotfix
+
 ## 1.4.0
 
 - fixed bug with proxy providers

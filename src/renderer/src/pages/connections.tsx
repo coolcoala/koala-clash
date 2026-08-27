@@ -767,21 +767,13 @@ const Connections: React.FC = () => {
           filteredProcessGroups.length === 0 ? (
             processesEmptyState
           ) : (
-            <Virtuoso
-              data={filteredProcessGroups}
-              itemContent={renderProcessItem}
-              initialItemCount={Math.min(filteredProcessGroups.length, 15)}
-            />
+            <Virtuoso data={filteredProcessGroups} itemContent={renderProcessItem} />
           )
         ) : viewMode === 'list' ? (
           filteredConnections.length === 0 ? (
             connectionsEmptyState
           ) : (
-            <Virtuoso
-              data={filteredConnections}
-              itemContent={renderConnectionItem}
-              initialItemCount={Math.min(filteredConnections.length, 15)}
-            />
+            <Virtuoso data={filteredConnections} itemContent={renderConnectionItem} />
           )
         ) : (
           <ConnectionTable
