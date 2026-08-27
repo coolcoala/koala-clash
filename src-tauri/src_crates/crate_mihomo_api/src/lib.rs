@@ -47,24 +47,7 @@ impl MihomoManager {
                         .map_err(|e| e.to_string())?
                 }
             }
-            Method::PUT => {
-                let status = client_response.status();
-                let body = client_response.text().await.map_err(|e| e.to_string())?;
-                if !status.is_success() {
-                    if let Some(message) = serde_json::from_str::<Value>(&body)
-                        .ok()
-                        .and_then(|json| json["message"].as_str().map(str::to_owned))
-                    {
-                        return Err(message);
-                    }
-                    return Err(if body.is_empty() {
-                        status.to_string()
-                    } else {
-                        body
-                    });
-                }
-                json!(body)
-            }
+            Method::PUT => json!(client_response.text().await.map_err(|e| e.to_string())?),
             _ => client_response
                 .json::<serde_json::Value>()
                 .await
