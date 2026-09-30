@@ -1,0 +1,106 @@
+---
+title: Settings
+description: What the app and core settings contain.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+**Settings** open from the bottom of the side menu. The sections are listed below in order. For
+everyday use you do not need to change most of them.
+
+<Aside>
+  Some items are hidden so they do not get changed by accident: **Disable GPU Acceleration**, **Theme**,
+  **Clear Cache**. To show them, click **App Version** at the bottom of the settings 7 times.
+</Aside>
+
+## Connection modes
+
+| Setting | What it does |
+| --- | --- |
+| **Main Switch** | What the home screen button turns on: **TUN Mode** or **Proxy Mode**. See [Connecting](../connecting/#connect-button). |
+| **Virtual Network Interface** | Opens **Virtual Network Interface Settings**: the stack, DNS hijack, excluded networks and other TUN options. |
+| **Proxy Mode** | Opens **System Proxy Settings**: **Manual** or **PAC** mode, and the **Proxy Bypass List** — addresses that skip the proxy. |
+
+## General
+
+| Setting | What it does |
+| --- | --- |
+| **Auto Start** | Start the app with the system. |
+| **Silent Start** | Start minimized to the tray, without the main window. |
+| **Auto Check Updates** | Tell you about new versions. |
+| **Disable GPU Acceleration** (hidden) | May help if the window flickers or the app crashes. Needs a restart. |
+
+Below is the interface **Language**: English, Russian or Chinese.
+
+## Appearance
+
+| Setting | What it does |
+| --- | --- |
+| **Show Floating Window** | A small indicator on top of other windows. If the app crashes, turn on **Disable GPU Acceleration**. |
+| **Rotate floating icon based on network speed** | The icon spins faster at higher speeds. |
+| **Disable tray icon** | Remove the tray icon. |
+| **Show node info in tray menu** | The current server in the tray menu. Not on Linux. |
+| **Show Dock icon** | macOS only. |
+| **Always on top** | Keep the main window on top. |
+| **Use system title bar** | The system window frame instead of the built-in one. |
+| **Background Color** | **Auto**, **Dark** or **Light** theme. |
+| **Theme** (hidden) | The app's look, see below. |
+
+### Themes
+
+- **Pull Theme** downloads ready-made themes from a shared catalog.
+- **Import Theme** adds a theme CSS file from disk.
+- **Edit Theme** opens the selected theme's CSS in the editor.
+
+A provider can send its own theme with the subscription through the
+[`custom-css` header](../../providers/headers/). It is on while that profile is active and turns off
+when you switch to another one.
+
+## More settings
+
+| Setting | What it does |
+| --- | --- |
+| **Auto enter light mode** | Unload the interface some time after the window is closed to save memory. **Light mode behavior**: keep only the core or close only the interface. |
+| **Take over DNS settings**, **Take over domain sniffing settings** | Apply the app's DNS and sniffing settings on top of the subscription. When off, the subscription's settings are used. |
+| **Separate Work Directory per Profile** | Avoids conflicts when groups have the same names in different profiles. |
+| **Hot reload config on profile switch** | Apply a profile without restarting the core. |
+| **Stop core on disconnect** | Stop the core when the network is gone and start it again when it returns. |
+| **Direct mode on specific WiFi SSID** | On the listed Wi-Fi networks, for example at home, traffic goes directly. |
+| **Core process priority** | Windows only. The core process priority in the system. |
+
+## Shortcuts
+
+**Shortcut Settings** let you set global shortcuts: toggle the window or the floating window, toggle
+**Proxy Mode** or the **Virtual Network Interface**, switch to rule, global or direct mode, restart the
+app and quit while keeping the core. Click a field and press the combination.
+
+## Actions
+
+| Action | What it does |
+| --- | --- |
+| **Open Guide** | Show the interactive tour again. |
+| **Check for Updates** | Check for a new version manually. |
+| **Reset App** | Delete all settings and profiles. Cannot be undone. |
+| **Clear Cache** (hidden) | Clear the interface cache. |
+| **Quit Keep Core** | Close the app but leave the core running in the background. |
+| **Quit Application** | Quit completely. |
+
+The **Mihomo Version** and **App Version** are shown at the bottom. The gear button next to the Mihomo
+version opens the core settings.
+
+## Core settings
+
+| Setting | What it does |
+| --- | --- |
+| **Core Version** | **Built-in Stable**, **Built-in Preview** or **Use System Core**. **Upgrade core** updates the selected one. |
+| **Running Mode** | How the core gets TUN permissions: **Task Schedule** on Windows or **Authorized Run** on macOS and Linux, or **System Service**. |
+| **Task Status**, **Authorization Status** | Whether permissions are granted. **Manage** lets you grant or revoke them. |
+| **Log Level** | How detailed the [logs](../connections-logs/#logs) are. |
+| **Log Retention Days** | How many days to keep log files. |
+| **Port Settings** | **Mixed Port** (`7897` by default) — an HTTP and SOCKS proxy for programs you configure by hand. **Allow LAN Connection** lets other devices on your network use the proxy. |
+| **Controller Settings** | The core's external API and web panel. |
+
+<Aside type="caution">
+  Only change core settings if you know what you are doing: wrong values can keep the core from
+  starting. **Reset App** brings everything back.
+</Aside>

@@ -1,7 +1,7 @@
 {
   "name": "koala-clash-docs",
   "type": "module",
-  "version": "1.1.0",
+  "version": "1.4.1",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -10,19 +10,20 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.38.3",
+    "@astrojs/starlight": "^0.42.4",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
     "@lorenzo_lewis/starlight-utils": "^0.3.2",
-    "astro": "^6.1.6",
-    "astro-auto-import": "^0.5.1",
-    "sharp": "^0.34.5",
-    "starlight-github-alerts": "^0.2.0",
+    "astro": "^7.3.5",
+    "astro-auto-import": "^0.6.0",
+    "sharp": "^0.35.5",
+    "starlight-github-alerts": "^0.5.0",
     "starlight-kbd": "^0.4.0",
-    "starlight-links-validator": "^0.23.0",
-    "starlight-package-managers": "^0.12.0",
-    "starlight-scroll-to-top": "^1.0.1",
+    "starlight-links-validator": "^0.26.0",
+    "starlight-package-managers": "^0.13.0",
+    "starlight-scroll-to-top": "^2.0.0",
     "starlight-showcases": "^0.3.2",
-    "starlight-sidebar-topics": "^0.7.1",
-    "starlight-sidebar-topics-dropdown": "^0.6.0",
-    "starlight-theme-galaxy": "^0.8.0"
+    "starlight-sidebar-topics": "^0.9.0",
+    "starlight-sidebar-topics-dropdown": "^0.7.0"
   }
 }

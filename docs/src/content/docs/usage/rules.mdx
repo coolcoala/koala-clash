@@ -1,0 +1,108 @@
+---
+title: Routing rules
+description: How to send a website, game or program through the proxy or around it.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+## How rules work
+
+Koala Clash does not have to send all traffic through the proxy. For every connection, rules decide
+where it goes:
+
+- to a **proxy group** — through a server;
+- to `DIRECT` — directly, as without a VPN;
+- to `REJECT` — the connection is blocked.
+
+Rules are checked top to bottom, and the first match wins. The main rules come with the subscription,
+and you can add your own on top.
+
+The current rule list is on the **Rules** page in the side menu. The **Filter** field searches it.
+
+## Add your own rule
+
+<Steps>
+
+1. Open **Rules** and press the **Edit Rules** pencil in the header. The same editor is in the profile
+   menu **⋮** → **Edit Rules**.
+
+2. Choose the **Rule Type** and enter the **Rule Payload** — a domain, process name, IP and so on.
+
+3. In the **Proxy** field choose where the traffic goes: a proxy group, `DIRECT` or `REJECT`. A new rule
+   points to `DIRECT` by default — change it if you need the proxy.
+
+4. Press **Add Rule to Beginning** so the rule fires before the subscription's rules. **Add Rule to
+   End** puts it after them.
+
+5. Save the changes.
+
+</Steps>
+
+<Aside type="caution" title="Choose a group, not a specific server">
+  If a rule points to a specific server, for example “Frankfurt 2”, the configuration breaks when that
+  server disappears from the subscription. Point rules to a proxy group and switch servers inside it.
+</Aside>
+
+## Common cases
+
+| What you need | Type | Payload | Proxy |
+| --- | --- | --- | --- |
+| A website through the proxy | `DOMAIN-SUFFIX` | `example.com` | a proxy group |
+| A game or program through the proxy | `PROCESS-NAME` | `game.exe` | a proxy group |
+| A program around the proxy | `PROCESS-NAME` | `discord.exe` | `DIRECT` |
+| A subnet around the proxy | `IP-CIDR` | `192.168.0.0/16` | `DIRECT` |
+
+`DOMAIN-SUFFIX` covers the domain and all its subdomains, `DOMAIN` only the exact address.
+
+You can find a game's or program's process name in Task Manager (the Details tab) or on the
+[Connections](../connections-logs/) tab: it shows which process opened a connection and which rule
+matched it.
+
+## Rule types
+
+The editor supports all Mihomo rule types. These are the ones you will need most:
+
+| Type | Matches when |
+| --- | --- |
+| `DOMAIN` | the domain matches exactly |
+| `DOMAIN-SUFFIX` | the domain or one of its subdomains |
+| `DOMAIN-KEYWORD` | the domain contains a word |
+| `DOMAIN-REGEX` | the domain matches a regular expression |
+| `GEOSITE` | the domain is in a GeoSite category, e.g. `youtube` |
+| `GEOIP` | the IP address is in a country, e.g. `US` |
+| `IP-CIDR`, `IP-CIDR6` | the destination IP is in a subnet |
+| `DST-PORT` | the destination port |
+| `PROCESS-NAME`, `PROCESS-PATH` | the process name or path |
+| `NETWORK` | the protocol: `tcp` or `udp` |
+| `RULE-SET` | a match in an external rule set |
+| `AND`, `OR`, `NOT` | a logical combination of other rules |
+| `MATCH` | everything else, goes last |
+
+See the [Mihomo documentation](https://wiki.metacubex.one/en/config/rules/) for the full list and syntax.
+
+IP rules have the **Skip DNS resolution (no-resolve)** and **Match source IP (src)** options.
+
+## Where your rules are stored
+
+Your rules are stored separately from the subscription, in the profile's rule file, and are applied on
+top of it every time the core starts. That is why **updating the subscription does not remove them**.
+
+You can also turn off a rule that comes with the subscription with **Delete rule**: it goes to the
+deleted list, and **Restore rule** brings it back.
+
+The **YAML Editor** mode edits the same file as text:
+
+```yaml
+prepend: # at the beginning, before the subscription's rules
+  - DOMAIN-SUFFIX,example.com,Proxy
+  - PROCESS-NAME,discord.exe,DIRECT
+append: # at the end, after the subscription's rules
+  - IP-CIDR,10.0.0.0/8,DIRECT
+delete: # subscription rules to remove
+  - GEOSITE,category-ads-all,REJECT
+```
+
+<Aside>
+  **Edit File** in the profile menu changes the subscription config itself — such edits are overwritten
+  by the next update. Use the rule editor for rules.
+</Aside>

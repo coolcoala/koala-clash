@@ -1,0 +1,74 @@
+---
+import type { StarlightRouteData } from '@astrojs/starlight/route-data';
+
+type SidebarEntry = StarlightRouteData['sidebar'][number];
+
+/** Label of the sidebar group that holds the current page — shown as the kicker above the title. */
+function currentGroup(entries: SidebarEntry[], parent?: string): string | undefined {
+	for (const entry of entries) {
+		if (entry.type === 'link' && entry.isCurrent) return parent;
+		if (entry.type === 'group') {
+			const found = currentGroup(entry.entries, entry.label);
+			if (found) return found;
+		}
+	}
+}
+
+const { entry, sidebar } = Astro.locals.starlightRoute;
+const kicker = currentGroup(sidebar);
+const { title, description } = entry.data;
+---
+
+<div class="page-title">
+	{kicker && <span class="kicker">{kicker}</span>}
+	<h1 id="_top">{title}</h1>
+	{description && <p class="subtitle">{description}</p>}
+</div>
+
+<style>
+	/* The title panel is a faint glass band over the map, like the cards in the app. */
+	:global(.content-panel:has(.page-title)) {
+		background-color: color-mix(in oklab, var(--kc-card) 14%, transparent);
+	}
+
+	.page-title {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+		padding-block: 1.5rem 1rem;
+	}
+
+	/* small uppercase eyebrow */
+	.kicker {
+		font-size: var(--sl-text-2xs);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--kc-brand-text);
+	}
+
+	h1 {
+		font-size: var(--sl-text-h1);
+		line-height: 1.1;
+		font-weight: 800;
+		letter-spacing: -0.03em;
+		color: var(--kc-ink);
+		/* long Russian words don't fit a phone line at full size */
+		hyphens: auto;
+		overflow-wrap: break-word;
+	}
+
+	.subtitle {
+		max-width: 40rem;
+		font-size: var(--sl-text-lg);
+		line-height: 1.55;
+		color: var(--kc-muted-foreground);
+	}
+
+	@media (min-width: 50em) {
+		.kicker {
+			font-size: var(--sl-text-sm);
+		}
+	}
+</style>

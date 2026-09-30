@@ -1,0 +1,100 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import Segmented from './Segmented.astro';
+
+const t = Astro.locals.t;
+const options = [
+	{ value: 'auto', icon: 'laptop', label: t('themeSelect.auto') },
+	{ value: 'light', icon: 'sun', label: t('themeSelect.light') },
+	{ value: 'dark', icon: 'moon', label: t('themeSelect.dark') },
+] as const;
+---
+
+<kc-theme-select>
+	<Segmented label={t('themeSelect.accessibleLabel')}>
+		{
+			options.map(({ value, icon, label }) => (
+				<button type="button" data-theme-value={value} aria-pressed="false" aria-label={label} title={label}>
+					<Icon name={icon} />
+				</button>
+			))
+		}
+	</Segmented>
+</kc-theme-select>
+
+{/* Inlined so the saved choice is marked before first paint. */}
+<script is:inline>
+	(() => {
+		let theme = '';
+		try {
+			theme = localStorage.getItem('starlight-theme') || '';
+		} catch {}
+		const current = theme === 'light' || theme === 'dark' ? theme : 'auto';
+		document.querySelectorAll('kc-theme-select [data-theme-value]').forEach((button) => {
+			button.setAttribute('aria-pressed', String(button.dataset.themeValue === current));
+		});
+	})();
+</script>
+
+<script>
+	type Theme = 'auto' | 'dark' | 'light';
+
+	/** Same key and values as Starlight’s own theme picker, so its pre-paint script keeps working. */
+	const storageKey = 'starlight-theme';
+
+	const parseTheme = (theme: unknown): Theme =>
+		theme === 'dark' || theme === 'light' ? theme : 'auto';
+
+	function loadTheme(): Theme {
+		try {
+			return parseTheme(localStorage.getItem(storageKey));
+		} catch {
+			return 'auto';
+		}
+	}
+
+	function storeTheme(theme: Theme): void {
+		try {
+			localStorage.setItem(storageKey, theme === 'auto' ? '' : theme);
+		} catch {
+			// storage can be unavailable (private mode) — the choice just won't persist
+		}
+	}
+
+	const preferredScheme = (): 'dark' | 'light' =>
+		matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+
+	/** Swaps the palette in one frame — otherwise every transitioning element fades on its own schedule. */
+	function applyTheme(theme: Theme): void {
+		const pause = document.createElement('style');
+		pause.textContent = '*,*::before,*::after{transition:none!important}';
+		document.head.append(pause);
+
+		document.documentElement.dataset.theme = theme === 'auto' ? preferredScheme() : theme;
+		document.querySelectorAll<HTMLElement>('kc-theme-select [data-theme-value]').forEach((button) => {
+			button.setAttribute('aria-pressed', String(button.dataset.themeValue === theme));
+		});
+
+		// Force a style flush with transitions off, then restore them.
+		void getComputedStyle(document.documentElement).color;
+		requestAnimationFrame(() => pause.remove());
+	}
+
+	matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+		if (loadTheme() === 'auto') applyTheme('auto');
+	});
+
+	class ThemeSelect extends HTMLElement {
+		constructor() {
+			super();
+			this.querySelectorAll<HTMLButtonElement>('[data-theme-value]').forEach((button) => {
+				button.addEventListener('click', () => {
+					const theme = parseTheme(button.dataset.themeValue);
+					storeTheme(theme);
+					applyTheme(theme);
+				});
+			});
+		}
+	}
+	customElements.define('kc-theme-select', ThemeSelect);
+</script>

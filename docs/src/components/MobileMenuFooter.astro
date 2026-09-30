@@ -1,0 +1,47 @@
+---
+import SocialIcons from '@astrojs/starlight/components/SocialIcons.astro';
+import LanguageSelect from './LanguageSelect.astro';
+import ThemeSelect from './ThemeSelect.astro';
+---
+
+<div class="mobile-preferences">
+	<div class="row">
+		<ThemeSelect />
+		<LanguageSelect />
+		<div class="social-icons">
+			<SocialIcons />
+		</div>
+	</div>
+</div>
+
+<style>
+	.mobile-preferences {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		border-top: 1px solid var(--kc-border);
+		padding-block: 1.25rem 1.5rem;
+	}
+
+	.row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.social-icons {
+		display: flex;
+		margin-inline-start: auto;
+		gap: 1rem;
+		align-items: center;
+	}
+
+	.social-icons :global(a) {
+		color: var(--kc-muted-foreground);
+	}
+
+	.social-icons:empty {
+		display: none;
+	}
+</style>

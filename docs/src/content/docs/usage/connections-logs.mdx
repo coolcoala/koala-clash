@@ -1,0 +1,63 @@
+---
+title: Connections and logs
+description: How to see where traffic goes and find core errors.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+## Connections
+
+The **Connections** tab shows every connection that went through the core: where it went, which rule
+matched and which server it used. It is the main tool when one website or program does not behave as
+it should.
+
+- **Active** and **Closed** — tabs with current and finished connections.
+- **By process** (the default) groups connections by program, **Classic view** shows one list. Change
+  the mode in **Connection settings** — the gear button in the header.
+- **Filter** searches by host, process and other fields.
+- **Pause** freezes the list, **Resume** updates it again.
+- **Close all connections** drops the current connections — useful after switching servers.
+
+Click a connection to open **Connection Details**. The most useful fields there:
+
+| Field | What it shows |
+| --- | --- |
+| **Host**, **Sniff Host** | The domain the connection went to. |
+| **Rule** | Which rule matched. |
+| **Proxy Chain** | Which group and server the traffic went through, or `DIRECT`. |
+| **Process Name** | Which program opened the connection. |
+
+### A website or program goes the wrong way
+
+<Steps>
+
+1. Open **Connections** and type the website address or program name into **Filter**.
+
+2. Open the website or start the program.
+
+3. Check the **Proxy Chain** of its connections: `DIRECT` means the traffic bypasses the proxy.
+
+4. Add [your own rule](../rules/) for that domain or process.
+
+</Steps>
+
+Websites load images and video from other domains. If a website only partly loads, look through all of
+its connections and add rules for the ones that go through `DIRECT`.
+
+## Logs
+
+The **Logs** tab shows core messages in real time: server connection errors, DNS problems,
+configuration warnings.
+
+- **Filter** searches message text.
+- The auto-scroll button in the header: while it is off, the log stream pauses so lines do not run away
+  while you read them.
+- **Clear logs** empties the list.
+
+Log detail is set in the [core settings](../settings/#core-settings) → **Log Level**. Use `info` or
+`debug` for troubleshooting; `warning` is enough for everyday use.
+
+<Aside type="tip" title="Sending logs to support">
+  Logs are also written to files. Open them from the tray: **Open Directory** → **Log Directory** — and
+  attach the file you need to your request.
+</Aside>

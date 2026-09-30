@@ -1,0 +1,110 @@
+---
+title: Adding a subscription
+description: How to import the link from your provider, update the subscription and switch between profiles.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A subscription is a link from your provider that the app uses to download its configuration: the
+server list, groups and rules. In Koala Clash every subscription becomes a **profile**.
+
+<Aside type="caution">
+  The subscription link is your personal access key. Do not publish it or send it to strangers: every
+  device that uses it may take a slot in your device limit.
+</Aside>
+
+## How to add one
+
+<Tabs>
+<TabItem label="Website button">
+
+If your provider's account page has an “Add to Koala Clash” button, press it. The app opens and shows
+the **Confirm import subscription config?** dialog with the name and the link. Make sure the link
+points to your service and confirm the import.
+
+</TabItem>
+<TabItem label="Link">
+
+<Steps>
+
+1. Copy the subscription link from your provider's account page.
+
+2. Open **Profile Management** in the side menu and press **+** in the header. If you have no
+   profiles yet, the home screen shows an **Add Profile** button.
+
+3. Press **Paste from clipboard** or paste the link into the field yourself.
+
+4. Press **Save**. The app downloads the subscription and makes it active.
+
+</Steps>
+
+</TabItem>
+<TabItem label="File">
+
+If you have a ready Mihomo config (`.yaml`), drop it onto the **Profile Management** page, or choose
+**Profile type** → **Local** → **Select file** in the add form. **Create empty** gives you a profile
+to fill in by hand.
+
+A local profile is never updated from the network.
+
+</TabItem>
+</Tabs>
+
+### Advanced settings
+
+The add form has an **Advanced settings** block. Usually you do not need to touch it.
+
+| Setting | What it does |
+| --- | --- |
+| **Custom UA** | Your own `User-Agent` for the subscription request. Defaults to `koala-clash/<version>`. |
+| **Verify subscription format** | Rejects the response if it is not a Mihomo config. |
+| **Update via proxy** | Download the subscription through the already running core. |
+| **Auto update** | Update the subscription automatically. |
+| **Update Interval (minutes)** | How often to update. Locked when the provider sets the interval. |
+
+## Updating the subscription
+
+The server list, rules, traffic left and expiry date only arrive with an update. Update the
+subscription after paying or changing plans, and whenever something stops working.
+
+- **Home screen** — the update button next to the profile name.
+- **Profile Management** — the update button on the profile card, or **Update all profiles** in the header.
+
+With auto update on, the app does this by itself on the interval.
+
+<Aside type="tip">
+  If updating does not help, delete the profile and add the subscription again.
+</Aside>
+
+## Several profiles
+
+The active profile is highlighted on the **Profile Management** page. Click another profile's card to
+switch to it. You can also switch from the tray: the **Profiles** item.
+
+Every card has a **⋮** menu:
+
+| Item | What it does |
+| --- | --- |
+| **Homepage**, **Support** | Links from the provider, if it sent them. |
+| **Edit Info** | Name, link and [advanced settings](#advanced-settings). |
+| **Edit File** | The profile config. Changes are overwritten by the next subscription update. |
+| **Edit Rules** | [Your own rules](../rules/) on top of the subscription — they survive updates. |
+| **Open File** | Open the config in an external editor. |
+| **Delete** | Delete the profile. |
+
+## If the subscription does not get added
+
+**“Device limit exceeded”.** The subscription is already used on the maximum number of devices.
+Remove an extra device in your provider account or contact support — the button is right in the error
+dialog. The subscription is not added or updated in this case.
+
+**“Subscription format error”.** The link returned something other than a config, for example a web
+page. Check that you copied the subscription link and not the account page link.
+
+**“This subscription already exists”.** A subscription with this link is already added — update the
+existing profile instead.
+
+**“Network connection reset or timed out” or a certificate error.** Check your internet connection. If
+the provider is blocked, turn on **Update via proxy** in the profile settings.
+
+For other problems see the [FAQ](../../help/faq/).

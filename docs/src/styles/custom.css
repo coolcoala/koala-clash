@@ -1,52 +1,710 @@
-/* Dark mode colors. */
+/*
+ * Koala Clash theme.
+ * Colors and background mirror the desktop app:
+ *   src/renderer/src/assets/main.css  — color tokens (`:root` = light, `.dark` = dark)
+ *   src/renderer/src/App.tsx          — window color + world map at 65% opacity,
+ *                                       sharp on the home page, blurred elsewhere
+ *   build/icon.png                    — the slate-blue brand accent
+ * UI elements (header toggles, sidebar pills, page title, hero, cards) follow TeamDominant/wiki.
+ *
+ * Starlight is dark by default (`:root`) and switches to light with `[data-theme='light']`.
+ * This file is unlayered, so it wins over Starlight's layered styles, including their
+ * `[data-theme='light']` blocks: theme-specific values live only in the two token blocks below.
+ */
+
+/* ----------------------------------------------------------------- tokens -- */
+
+/* Dark: app `.dark` */
 :root {
-	--sl-color-accent-low: #17303b;
-	--sl-color-accent: #388fc9;
-	--sl-color-accent-high: #c8efff;
-	--sl-color-white: #f5f9ff;
-	--sl-color-gray-1: #dde6f5;
-	--sl-color-gray-2: #b7c5da;
-	--sl-color-gray-3: #8598b3;
-	--sl-color-gray-4: #5c7090;
-	--sl-color-gray-5: #334762;
-	--sl-color-gray-6: #18273c;
-	--sl-color-black: #07111d;
+	--kc-radius: 0.875rem;
+	--kc-font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+	--kc-font-heading: 'Manrope Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+	--kc-bg: #080f16;
+	--kc-ink: oklch(0.985 0 0);
+	--kc-foreground: oklch(0.93 0.01 256);
+	--kc-text: oklch(0.86 0.015 256);
+	--kc-muted-foreground: oklch(0.708 0.015 256);
+	--kc-card: oklch(0.419 0.0614 255.88);
+	--kc-accent: oklch(0.4289 0.0562 254.61);
+	--kc-stroke: oklch(0.4903 0.0593 255.8);
+
+	/* translucent layers over the map (app: bg-card/50 backdrop-blur-xl) */
+	--kc-border: color-mix(in oklab, var(--kc-stroke) 55%, transparent);
+	--kc-panel: color-mix(in oklab, var(--kc-card) 35%, transparent);
+	--kc-glass: color-mix(in oklab, var(--kc-card) 50%, transparent);
+	--kc-muted: color-mix(in oklab, var(--kc-card) 40%, transparent);
+	/* solid, for code and dialogs */
+	--kc-surface: color-mix(in oklab, var(--kc-bg) 70%, var(--kc-card));
+
+	/* slate blue of the app icon */
+	--kc-brand: oklch(0.5 0.07 250);
+	--kc-brand-high: oklch(0.58 0.065 245);
+	--kc-brand-foreground: oklch(0.985 0 0);
+	--kc-brand-soft: oklch(0.32 0.05 252);
+	--kc-brand-text: oklch(0.8 0.075 245);
+
+	/* aside accents: app success / warning / destructive */
+	--kc-note: var(--kc-brand-text);
+	--kc-tip: oklch(0.8 0.15 150);
+	--kc-caution: oklch(0.84 0.13 80);
+	--kc-danger: oklch(0.75 0.16 22);
+
+	/* hard offset "sticker" shadows */
+	--kc-shadow-hard: oklch(0 0 0 / 0.55);
+	--kc-shadow-sticker: 2px 3px 0 0 var(--kc-shadow-hard);
+
+	--sl-color-white: var(--kc-ink);
+	--sl-color-gray-1: var(--kc-foreground);
+	--sl-color-gray-2: var(--kc-text);
+	--sl-color-gray-3: var(--kc-muted-foreground);
+	--sl-color-gray-4: oklch(0.6 0.03 256);
+	--sl-color-gray-5: var(--kc-stroke);
+	--sl-color-gray-6: oklch(0.3 0.045 256);
+	--sl-color-gray-7: oklch(0.22 0.03 256);
+	--sl-color-black: var(--kc-bg);
 }
-/* Light mode colors. */
+
+/* Light: app `:root` */
 :root[data-theme='light'] {
-	--sl-color-accent-low: #d8e7ef;
-	--sl-color-accent: #2a749f;
-	--sl-color-accent-high: #173547;
-	--sl-color-white: #09111b;
-	--sl-color-gray-1: #162338;
-	--sl-color-gray-2: #334865;
-	--sl-color-gray-3: #5c7393;
-	--sl-color-gray-4: #869ab6;
-	--sl-color-gray-5: #c2d0e0;
-	--sl-color-gray-6: #eaf1f9;
-	--sl-color-gray-7: #f6f9fd;
-	--sl-color-black: #ffffff;
+	--kc-bg: #c5d4f1;
+	--kc-ink: oklch(0.145 0 0);
+	--kc-foreground: oklch(0.2 0.012 256);
+	--kc-text: oklch(0.28 0.018 256);
+	/* the app's oklch(0.556 0 0) is too faint on the blue window color */
+	--kc-muted-foreground: oklch(0.45 0.015 256);
+	--kc-card: oklch(0.9851 0 0);
+	--kc-accent: oklch(0.985 0 0);
+	--kc-stroke: oklch(0.985 0 0);
+
+	--kc-border: color-mix(in oklab, var(--kc-stroke) 80%, transparent);
+	--kc-panel: color-mix(in oklab, var(--kc-card) 45%, transparent);
+	--kc-glass: color-mix(in oklab, var(--kc-card) 50%, transparent);
+	--kc-muted: color-mix(in oklab, var(--kc-card) 55%, transparent);
+	--kc-surface: color-mix(in oklab, var(--kc-bg) 25%, var(--kc-card));
+
+	--kc-brand: oklch(0.45 0.065 250);
+	--kc-brand-high: oklch(0.53 0.065 245);
+	--kc-brand-soft: oklch(0.9 0.03 250);
+	--kc-brand-text: oklch(0.42 0.075 250);
+
+	--kc-note: var(--kc-brand-text);
+	--kc-tip: oklch(0.45 0.12 150);
+	--kc-caution: oklch(0.5 0.11 70);
+	--kc-danger: oklch(0.52 0.19 25);
+
+	--kc-shadow-hard: var(--kc-ink);
+
+	--sl-color-gray-4: oklch(0.58 0.025 256);
+	--sl-color-gray-5: oklch(0.75 0.03 256);
+	--sl-color-gray-6: oklch(0.88 0.025 256);
+	--sl-color-gray-7: oklch(0.95 0.012 256);
 }
 
-/* Fix button text color */
-.sl-link-button.primary {
-	color: black !important;
-}
-.sl-link-button.primary * {
-	color: black !important;
+/* ------------------------------------------------- Starlight palette mapping -- */
+
+:root {
+	--sl-font: var(--kc-font-sans);
+
+	--sl-color-accent-low: var(--kc-brand-soft);
+	--sl-color-accent: var(--kc-brand);
+	--sl-color-accent-high: var(--kc-brand-text);
+
+	--sl-color-text: var(--kc-text);
+	--sl-color-text-accent: var(--kc-brand-text);
+	--sl-color-text-invert: var(--kc-brand-foreground);
+	--sl-color-bg: var(--kc-bg);
+	--sl-color-bg-accent: var(--kc-brand);
+	--sl-color-bg-nav: var(--kc-panel);
+	--sl-color-bg-sidebar: var(--kc-panel);
+	--sl-color-bg-inline-code: var(--kc-muted);
+	--sl-color-hairline-light: var(--kc-border);
+	--sl-color-hairline: var(--kc-border);
+	--sl-color-hairline-shade: var(--kc-border);
+	--sl-color-backdrop-overlay: oklch(0 0 0 / 0.5);
+
+	--sl-text-h1: 2.25rem;
+	--sl-text-h2: 1.625rem;
+	--sl-text-h3: 1.3125rem;
+	--sl-text-h4: 1.125rem;
+	--sl-line-height: 1.7;
+	--sl-line-height-headings: 1.15;
+
+	--sl-nav-height: 4rem;
+	--sl-menu-button-size: 2.25rem;
+
+	/* app scrollbars */
+	scrollbar-color: #c0c1c550 transparent;
 }
 
-/* Fix splash page overflow */
-html[data-has-hero] {
-	overflow-y: hidden;
+:root[data-theme='light'] {
+	scrollbar-color: #c0c1c58f transparent;
 }
 
-html[data-has-hero] body {
-	overflow-y: hidden;
-	max-height: 100vh;
+@media (min-width: 50em) {
+	:root {
+		--sl-text-h1: 3rem;
+		--sl-text-h2: 1.875rem;
+		--sl-text-h3: 1.375rem;
+		--sl-text-h4: 1.125rem;
+	}
 }
 
-.page[data-has-hero] {
-	max-height: 100vh;
-	overflow-y: hidden;
+/* ------------------------------------------------------------- background -- */
+
+html {
+	background-color: var(--kc-bg);
+}
+
+body {
+	background: transparent;
+	font-feature-settings: 'cv11', 'ss01';
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* The app's world map: blurred on inner pages, sharp on the splash page like the home screen. */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0.65;
+	background: url('../assets/background/map-dark-blur.webp') center / cover no-repeat;
+}
+
+:root[data-theme='light'] body::before {
+	background-image: url('../assets/background/map-light-blur.webp');
+}
+
+:root[data-has-hero] body::before {
+	background-image: url('../assets/background/map-dark.webp');
+}
+
+:root[data-theme='light'][data-has-hero] body::before {
+	background-image: url('../assets/background/map-light.webp');
+}
+
+/* ------------------------------------------------------------------- base -- */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--kc-font-heading);
+	text-wrap: balance;
+}
+
+p {
+	text-wrap: pretty;
+}
+
+::selection {
+	background-color: var(--kc-brand-soft);
+	color: var(--kc-ink);
+}
+
+:focus-visible {
+	outline-color: color-mix(in oklch, var(--kc-brand-text) 60%, transparent);
+}
+
+option {
+	background-color: var(--kc-surface);
+}
+
+/* ------------------------------------------------------------------ header -- */
+
+header.header {
+	-webkit-backdrop-filter: blur(24px) saturate(1.2);
+	backdrop-filter: blur(24px) saturate(1.2);
+}
+
+site-search button[data-open-modal] {
+	border-radius: 999px;
+}
+
+@media (min-width: 50rem) {
+	site-search button[data-open-modal] {
+		border-color: var(--kc-border);
+		background-color: var(--kc-muted);
+		color: var(--kc-muted-foreground);
+		padding-inline: 0.875rem 0.5rem;
+		transition: color 0.15s, border-color 0.15s;
+	}
+	site-search button[data-open-modal]:hover {
+		border-color: var(--kc-stroke);
+		color: var(--kc-ink);
+	}
+	site-search button[data-open-modal] > kbd {
+		border-radius: 999px;
+		background-color: var(--kc-surface);
+		padding-inline: 0.5rem;
+	}
+}
+
+.sl-menu-button {
+	border: 1px solid var(--kc-border);
+	background-color: var(--kc-muted);
+	color: var(--kc-ink);
+	box-shadow: none;
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+}
+
+.sl-menu-button:has(~ :popover-open) {
+	border-color: var(--kc-ink);
+	background-color: var(--kc-ink);
+	color: var(--kc-bg);
+}
+
+site-search dialog {
+	border-radius: 1.25rem;
+	border-color: var(--kc-border);
+	background-color: var(--kc-surface);
+}
+
+/* ----------------------------------------------------------------- sidebar -- */
+
+@media (min-width: 50rem) {
+	.sidebar-pane {
+		-webkit-backdrop-filter: blur(24px);
+		backdrop-filter: blur(24px);
+	}
+}
+
+.sidebar-content {
+	--sl-sidebar-item-padding-inline: 0.75rem;
+}
+
+.sidebar-content .large {
+	font-family: var(--kc-font-heading);
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	color: var(--kc-ink);
+}
+
+.sidebar-content summary {
+	border-radius: 0.75rem;
+}
+
+.sidebar-content ul ul li {
+	margin-inline-start: 0;
+	border-inline-start: 0;
+	padding-inline-start: 0;
+}
+
+.sidebar-content ul ul {
+	margin-top: 0.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.sidebar-content ul a {
+	border-radius: 0.75rem;
+	padding-block: 0.45em;
+	font-weight: 500;
+	color: var(--kc-muted-foreground);
+	transition: color 0.15s, background-color 0.15s;
+}
+
+.sidebar-content ul a:hover,
+.sidebar-content ul a:focus-visible {
+	color: var(--kc-ink);
+	background-color: var(--kc-muted);
+}
+
+/* active page: the app's selected sidebar button — accent fill with a stroke ring */
+.sidebar-content ul a[aria-current='page'],
+.sidebar-content ul a[aria-current='page']:hover,
+.sidebar-content ul a[aria-current='page']:focus {
+	font-weight: 600;
+	color: var(--kc-ink);
+	background-color: var(--kc-accent);
+	box-shadow: 0 0 0 1px var(--kc-stroke);
+}
+
+/* --------------------------------------------------------- table of contents -- */
+
+starlight-toc h2,
+mobile-starlight-toc .toggle {
+	font-family: var(--kc-font-heading);
+}
+
+starlight-toc h2 {
+	font-size: var(--sl-text-xs);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--kc-brand-text);
+}
+
+starlight-toc a {
+	color: var(--kc-muted-foreground);
+	transition: color 0.15s;
+}
+
+starlight-toc a:hover {
+	color: var(--kc-ink);
+}
+
+starlight-toc a[aria-current='true'],
+starlight-toc a[aria-current='true']:hover,
+starlight-toc a[aria-current='true']:focus {
+	color: var(--kc-ink);
+	font-weight: 600;
+}
+
+mobile-starlight-toc nav {
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+}
+
+/* ------------------------------------------------------------------ content -- */
+
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6):not(:where(.not-content *)) {
+	font-family: var(--kc-font-heading);
+	font-weight: 800;
+	letter-spacing: -0.025em;
+	color: var(--kc-ink);
+}
+
+.sl-markdown-content :is(h3, h4, h5, h6):not(:where(.not-content *)) {
+	font-weight: 700;
+	letter-spacing: -0.015em;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+	color: var(--kc-brand-text);
+	font-weight: 500;
+	text-decoration-color: color-mix(in oklch, var(--kc-brand-text) 35%, transparent);
+	text-underline-offset: 4px;
+	transition: text-decoration-color 0.15s;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+	text-decoration-color: currentColor;
+}
+
+.sl-markdown-content .sl-anchor-link {
+	font-weight: inherit;
+}
+
+.sl-markdown-content :is(ul, ol) li::marker {
+	color: var(--kc-brand-text);
+}
+
+.sl-markdown-content ol > li::marker {
+	font-family: var(--kc-font-heading);
+	font-weight: 700;
+}
+
+.sl-markdown-content strong:not(:where(.not-content *)) {
+	color: var(--kc-ink);
+}
+
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+	border: 1px solid var(--kc-border);
+	border-radius: 0.4rem;
+	padding: 0.1em 0.35em;
+	color: var(--kc-ink);
+}
+
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+	border-inline-start: 3px solid var(--kc-brand-text);
+	border-radius: 0 0.75rem 0.75rem 0;
+	background-color: var(--kc-glass);
+	padding: 0.75rem 1rem;
+}
+
+.sl-markdown-content hr:not(:where(.not-content *)) {
+	border-color: var(--kc-border);
+}
+
+.sl-markdown-content img:not(:where(.not-content *)) {
+	border-radius: var(--kc-radius);
+}
+
+/* tables: rounded glass card with a surface header row */
+.sl-markdown-content table:not(:where(.not-content *)) {
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--kc-border);
+	border-radius: calc(var(--kc-radius) * 1.4);
+	background-color: var(--kc-glass);
+}
+
+/* Starlight renders tables as scrollable blocks; on wide screens make them fill the column
+   so the header row and dividers run edge to edge. */
+@media (min-width: 50rem) {
+	.sl-markdown-content table:not(:where(.not-content *)) {
+		display: table;
+		width: 100%;
+	}
+	.sl-markdown-content tr:first-child > th:first-child {
+		border-start-start-radius: calc(var(--kc-radius) * 1.4 - 1px);
+	}
+	.sl-markdown-content tr:first-child > th:last-child {
+		border-start-end-radius: calc(var(--kc-radius) * 1.4 - 1px);
+	}
+}
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+	border: 0;
+	border-bottom: 1px solid var(--kc-border);
+	padding: 0.625rem 1rem;
+}
+
+.sl-markdown-content tr:last-child > td:not(:where(.not-content *)) {
+	border-bottom: 0;
+}
+
+/* keep header names, rule types and file names in the first column on one line */
+.sl-markdown-content td:first-child > code:not(:where(.not-content *)) {
+	white-space: nowrap;
+}
+
+.sl-markdown-content th:not(:where(.not-content *)) {
+	background-color: var(--kc-muted);
+	color: var(--kc-ink);
+	font-weight: 600;
+}
+
+.sl-markdown-content kbd:not(:where(.not-content *)) {
+	border: 1px solid var(--kc-border);
+	border-bottom-width: 2px;
+	border-radius: 0.4rem;
+	background-color: var(--kc-surface);
+	color: var(--kc-ink);
+}
+
+/* ------------------------------------------------------------------ asides -- */
+
+.starlight-aside {
+	--kc-aside-accent: var(--kc-note);
+	border: 1px solid color-mix(in oklch, var(--kc-aside-accent) 30%, transparent);
+	border-radius: calc(var(--kc-radius) * 1.4);
+	background: color-mix(in oklab, var(--kc-aside-accent) 12%, var(--kc-glass));
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+	padding: 1rem 1.25rem;
+	color: var(--kc-foreground);
+}
+
+.starlight-aside--tip {
+	--kc-aside-accent: var(--kc-tip);
+}
+
+.starlight-aside--caution {
+	--kc-aside-accent: var(--kc-caution);
+}
+
+.starlight-aside--danger {
+	--kc-aside-accent: var(--kc-danger);
+}
+
+.starlight-aside__title {
+	font-family: var(--kc-font-heading);
+	font-weight: 800;
+	color: var(--kc-aside-accent);
+}
+
+.starlight-aside__icon {
+	color: var(--kc-aside-accent);
+}
+
+.starlight-aside a {
+	color: var(--kc-ink);
+	text-decoration-color: color-mix(in oklch, var(--kc-ink) 40%, transparent);
+}
+
+/* ------------------------------------------------------------------- steps -- */
+
+/* numbered "sticker" circles */
+.sl-steps {
+	--bullet-size: 2.125rem;
+	--bullet-margin: 0.375rem;
+}
+
+.sl-steps > li::before {
+	border: 2px solid var(--kc-ink);
+	background-color: var(--kc-surface);
+	box-shadow: var(--kc-shadow-sticker);
+	color: var(--kc-ink);
+	font-family: var(--kc-font-heading);
+	font-weight: 800;
+	font-size: var(--sl-text-sm);
+	line-height: calc(var(--bullet-size) - 4px);
+}
+
+.sl-steps > li::after {
+	background-color: var(--kc-border);
+	inset-block-start: calc(var(--bullet-size) + var(--bullet-margin) + 0.25rem);
+	width: 2px;
+	inset-inline-start: calc((var(--bullet-size) - 2px) / 2);
+}
+
+/* ------------------------------------------------------------ cards & links -- */
+
+.card {
+	border: 1px solid var(--kc-stroke);
+	border-radius: calc(var(--kc-radius) * 1.8);
+	background-color: var(--kc-glass);
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+	padding: 1.5rem;
+}
+
+.card .title {
+	font-family: var(--kc-font-heading);
+	font-weight: 800;
+	letter-spacing: -0.015em;
+}
+
+.card .icon {
+	border: 2px solid var(--kc-ink);
+	border-radius: 0.75rem;
+	background-color: var(--kc-brand-soft);
+	box-shadow: var(--kc-shadow-sticker);
+	color: var(--kc-ink);
+	padding: 0.25rem;
+}
+
+/* LinkCard + prev/next pagination lift into a sticker on hover */
+.sl-link-card,
+.pagination-links a {
+	border: 1px solid var(--kc-stroke);
+	border-radius: calc(var(--kc-radius) * 1.4);
+	background-color: var(--kc-glass);
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+	box-shadow: none;
+	transition: border-color 0.2s, box-shadow 0.2s, translate 0.2s;
+}
+
+.sl-link-card:hover,
+.pagination-links a:hover {
+	border-color: var(--kc-ink);
+	background-color: var(--kc-glass);
+	box-shadow: var(--kc-shadow-sticker);
+	translate: 0 -2px;
+}
+
+.sl-link-card .title,
+.pagination-links .link-title {
+	font-family: var(--kc-font-heading);
+	font-weight: 700;
+	letter-spacing: -0.015em;
+	color: var(--kc-ink);
+}
+
+.pagination-links .link-title {
+	font-size: var(--sl-text-xl);
+}
+
+.sl-link-card .description {
+	color: var(--kc-muted-foreground);
+}
+
+.sl-link-card .icon {
+	color: var(--kc-brand-text);
+}
+
+.sl-link-card:hover .icon {
+	color: var(--kc-ink);
+}
+
+/* ---------------------------------------------------------------- buttons -- */
+
+.sl-link-button {
+	border-radius: 999px;
+	border: 1px solid transparent;
+	font-family: var(--kc-font-sans);
+	font-weight: 600;
+	transition: filter 0.15s, background-color 0.15s, border-color 0.15s, translate 0.1s;
+}
+
+.sl-link-button:active {
+	translate: 0 1px;
+}
+
+/* primary: the icon's slate gradient */
+.sl-link-button.primary,
+.sl-link-button.primary:hover {
+	background: linear-gradient(135deg, var(--kc-brand-high), var(--kc-brand));
+	border-color: var(--kc-stroke);
+	color: var(--kc-brand-foreground);
+	box-shadow: 0 6px 18px color-mix(in oklab, var(--kc-brand) 35%, transparent);
+}
+
+.sl-link-button.primary:hover {
+	filter: brightness(1.08);
+}
+
+/* secondary: the app's outline button */
+.sl-link-button.secondary {
+	background-color: var(--kc-glass);
+	border-color: var(--kc-stroke);
+	color: var(--kc-ink);
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+}
+
+.sl-link-button.secondary:hover {
+	background-color: color-mix(in oklab, var(--kc-accent) 70%, transparent);
+	color: var(--kc-ink);
+}
+
+.sl-link-button.minimal {
+	color: var(--kc-brand-text);
+}
+
+/* ------------------------------------------------------------------ badges -- */
+
+.sl-badge {
+	border-radius: 999px;
+	font-weight: 600;
+}
+
+/* -------------------------------------------------------------- page footer -- */
+
+footer.sl-flex .meta,
+footer.sl-flex .kudos {
+	color: var(--kc-muted-foreground);
+}
+
+/* ----------------------------------------------------------- scroll to top -- */
+
+:root .scroll-to-top-button {
+	width: 2.75rem;
+	height: 2.75rem;
+	right: 1.5rem;
+	bottom: 1.5rem;
+	border: 2px solid var(--kc-ink);
+	border-radius: 999px;
+	background-color: var(--kc-surface);
+	color: var(--kc-ink);
+	box-shadow: var(--kc-shadow-sticker);
+}
+
+:root .scroll-to-top-button:hover {
+	border-color: var(--kc-ink);
+	background-color: var(--kc-surface);
+	color: var(--kc-ink);
+	box-shadow: var(--kc-shadow-sticker);
+	translate: 0 -2px;
+}
+
+:root .scroll-to-top-button:active {
+	background-color: var(--kc-accent);
+	color: var(--kc-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
 }

@@ -1,0 +1,67 @@
+---
+title: Connecting
+description: The home screen, TUN and system proxy modes, the outbound mode and the tray.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Home screen
+
+From top to bottom, the home screen shows:
+
+- **Profile card** — the subscription logo and name, the update button and the provider's announcement.
+- **Subscription stats** — **Traffic left**, **Days left** and **Expires**. The ∞ sign means unlimited
+  traffic or a subscription that never expires.
+- **Connect button** — the status (**Disconnected**, **Connecting...**, **Connected**), the session
+  time and its traffic.
+- **Current server** — the selection in the first proxy group. Click it to open the
+  [proxy groups](../proxies/).
+- **Support** — the provider's support link, if it sent one.
+
+Three days before the subscription ends, the stats are replaced by a warning. If the provider sent a
+payment link, a renewal button appears under it.
+
+## Connect button
+
+The big button turns proxying on and off. What exactly it turns on is set in **Settings** →
+**Main Switch**:
+
+| Mode | How it works | When to choose it |
+| --- | --- | --- |
+| **TUN Mode** (default) | Creates a virtual network interface and captures the traffic of all apps, UDP included. | Games, messengers, programs without proxy settings — almost always. |
+| **Proxy Mode** | Sets the system proxy. Browsers and programs that respect it go through it. | When TUN is not available, for example without administrator rights. |
+
+<Aside>
+  TUN needs permissions: on Windows, one launch as administrator; on macOS and Linux, authorizing the
+  core. See [Installation](../../introduction/installation/) for details.
+</Aside>
+
+## Outbound mode
+
+The bottom of the side menu has a mode switch:
+
+- **Rules** — every connection goes where the subscription's [rules](../rules/) send it: through the
+  proxy, directly or blocked. This is the normal mode.
+- **Global** — all traffic goes through the server selected in the `GLOBAL` group.
+
+The provider can forbid global mode. Then the switch is hidden and the profile always works by rules.
+
+## Tray and floating window
+
+When you close the window, Koala Clash keeps running in the tray. From the tray menu you can:
+
+- show the window;
+- turn the connection on or off;
+- change the outbound mode and the [profile](../subscriptions/#several-profiles);
+- open the app folders, for example the **Log Directory**;
+- quit the app.
+
+The floating window is a small indicator on top of other windows; turn it on in the
+[appearance settings](../settings/#appearance). Clicking it opens the main window, right-clicking
+opens the tray menu.
+
+## Quitting
+
+Quit completely from the tray (**Quit App**) or with <kbd>Ctrl</kbd>+<kbd>Q</kbd> (<kbd>⌘</kbd>+<kbd>Q</kbd>
+on macOS). The app asks for confirmation; to quit right away, press the shortcut twice or hold it.
+Proxying stops after quitting.

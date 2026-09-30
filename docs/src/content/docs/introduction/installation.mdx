@@ -1,0 +1,91 @@
+---
+title: Installation
+description: Which file to download for Windows, macOS and Linux, and how to grant permissions for TUN mode.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+All builds are published in the [GitHub releases](https://github.com/coolcoala/koala-clash/releases/latest).
+Pick the file for your system and CPU architecture.
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+| File | Use it for |
+| --- | --- |
+| `Koala.Clash_x64-setup.exe` | Installer for regular PCs (Intel, AMD) |
+| `Koala.Clash_arm64-setup.exe` | Installer for ARM PCs (Snapdragon) |
+| `Koala.Clash_x64-portable.7z` | Portable version, no installation |
+| `Koala.Clash_arm64-portable.7z` | Portable version for ARM |
+
+Unpack the portable version into any folder. It keeps settings and profiles in the `data` folder next
+to the program, so it can live on a USB stick.
+
+### Administrator rights
+
+On first launch the app shows the **Administrator Rights Required** dialog. TUN mode needs one launch
+as administrator to register a Task Scheduler task — after that it does not ask again.
+
+- **Restart as Administrator** — recommended, TUN will work.
+- **Continue without administrator rights** — the app works through the system proxy only and will
+  not ask again. You can grant the rights later in the
+  [core settings](../../usage/settings/#core-settings): **Task Status** → **Manage**.
+
+</TabItem>
+<TabItem label="macOS">
+
+| File | Use it for |
+| --- | --- |
+| `Koala.Clash_arm64.pkg` | Macs with Apple Silicon (M1 and newer) |
+| `Koala.Clash_x64.pkg` | Intel Macs |
+
+Open the `.pkg` and follow the installer.
+
+TUN mode needs system permissions for the core. If TUN does not turn on, open the
+[core settings](../../usage/settings/#core-settings) → **Authorization Status** → **Manage** →
+**Authorize Core**. The system asks for your user password.
+
+</TabItem>
+<TabItem label="Linux">
+
+**Arch Linux and derivatives** — the [`koala-clash-bin`](https://aur.archlinux.org/packages/koala-clash-bin) AUR package:
+
+```sh
+yay -S koala-clash-bin
+```
+
+Or download a package from the release and install it with your package manager:
+
+| File | Distribution | Command |
+| --- | --- | --- |
+| `Koala.Clash_amd64.deb`, `Koala.Clash_arm64.deb` | Debian, Ubuntu, Mint | `sudo apt install ./Koala.Clash_amd64.deb` |
+| `Koala.Clash_x86_64.rpm`, `Koala.Clash_aarch64.rpm` | Fedora, openSUSE | `sudo dnf install ./Koala.Clash_x86_64.rpm` |
+| `Koala.Clash_x64.pkg.tar.xz`, `Koala.Clash_aarch64.pkg.tar.xz` | Arch without AUR | `sudo pacman -U Koala.Clash_x64.pkg.tar.xz` |
+
+TUN mode needs system permissions for the core: [core settings](../../usage/settings/#core-settings) →
+**Authorization Status** → **Manage** → **Authorize Core**.
+
+</TabItem>
+</Tabs>
+
+## First launch
+
+<Steps>
+
+1. Start Koala Clash. A short interactive tour opens — skip it with **Skip** and reopen it later in
+   the settings (**Open Guide**).
+
+2. [Add a subscription](../../usage/subscriptions/) — your provider gives you the link.
+
+3. Press the big button on the home screen — [more about connecting](../../usage/connecting/).
+
+</Steps>
+
+## Updates
+
+With **Auto Check Updates** turned on in **Settings**, the app tells you about a new version with a
+banner and an **Update Now** button. To check manually, use **Check for Updates** in the same place.
+
+<Aside type="tip">
+  Keep the app up to date: many issues are already fixed in newer versions.
+</Aside>

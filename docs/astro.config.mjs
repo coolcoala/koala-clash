@@ -8,7 +8,6 @@ import starlightSidebarTopics from "starlight-sidebar-topics";
 import starlightKbd from "starlight-kbd";
 import autoImport from "astro-auto-import";
 import starlightGitHubAlerts from "starlight-github-alerts";
-import starlightThemeGalaxy from "starlight-theme-galaxy";
 
 export default defineConfig({
   site: "https://prettyleaf.github.io",
@@ -26,10 +25,15 @@ export default defineConfig({
     }),
     starlight({
       components: {
+        Header: "./src/components/Header.astro",
+        Hero: "./src/components/Hero.astro",
+        LanguageSelect: "./src/components/LanguageSelect.astro",
+        MobileMenuFooter: "./src/components/MobileMenuFooter.astro",
+        PageTitle: "./src/components/PageTitle.astro",
         SiteTitle: "./src/components/SiteTitle.astro",
+        ThemeSelect: "./src/components/ThemeSelect.astro",
       },
       plugins: [
-        starlightThemeGalaxy(),
         starlightGitHubAlerts(),
         starlightScrollToTop({
           showTooltip: false,
@@ -45,11 +49,36 @@ export default defineConfig({
         }),
       ],
       title: "Koala Clash",
+      description:
+        "A geeked Mihomo client with features which improve the user experience",
       favicon: "/favicon.ico",
-      logo: {
-        src: "./src/assets/logo.png",
+      // Our own 404 lives in src/pages/404.astro.
+      disable404Route: true,
+      customCss: [
+        "@fontsource-variable/inter",
+        "@fontsource-variable/manrope",
+        "./src/styles/custom.css",
+      ],
+      expressiveCode: {
+        themes: ["github-dark-default", "github-light-default"],
+        styleOverrides: {
+          borderRadius: "0.875rem",
+          borderColor: "var(--kc-border)",
+          codeBackground: "var(--kc-surface)",
+          codeFontSize: "0.875rem",
+          frames: {
+            shadowColor: "transparent",
+            editorTabBarBackground: "var(--kc-muted)",
+            editorActiveTabBackground: "var(--kc-surface)",
+            editorActiveTabIndicatorTopColor: "var(--kc-brand-text)",
+            editorTabBarBorderBottomColor: "var(--kc-border)",
+            terminalTitlebarBackground: "var(--kc-muted)",
+            terminalTitlebarBorderBottomColor: "var(--kc-border)",
+            terminalBackground: "var(--kc-surface)",
+            inlineButtonBorder: "var(--kc-border)",
+          },
+        },
       },
-      customCss: ["./src/styles/custom.css"],
       defaultLocale: "root",
       locales: {
         root: {
@@ -80,6 +109,74 @@ export default defineConfig({
               label: "Overview",
               slug: "introduction/overview",
               translations: { ru: "Обзор" },
+            },
+            {
+              label: "Installation",
+              slug: "introduction/installation",
+              translations: { ru: "Установка" },
+            },
+          ],
+        },
+        {
+          label: "Using the app",
+          translations: { ru: "Использование" },
+          items: [
+            {
+              label: "Adding a subscription",
+              slug: "usage/subscriptions",
+              translations: { ru: "Добавление подписки" },
+            },
+            {
+              label: "Connecting",
+              slug: "usage/connecting",
+              translations: { ru: "Подключение" },
+            },
+            {
+              label: "Choosing a server",
+              slug: "usage/proxies",
+              translations: { ru: "Выбор сервера" },
+            },
+            {
+              label: "Routing rules",
+              slug: "usage/rules",
+              translations: { ru: "Правила маршрутизации" },
+            },
+            {
+              label: "Connections and logs",
+              slug: "usage/connections-logs",
+              translations: { ru: "Подключения и логи" },
+            },
+            {
+              label: "Settings",
+              slug: "usage/settings",
+              translations: { ru: "Настройки" },
+            },
+          ],
+        },
+        {
+          label: "For providers",
+          translations: { ru: "Для провайдеров" },
+          items: [
+            {
+              label: "Subscription headers",
+              slug: "providers/headers",
+              translations: { ru: "Заголовки подписки" },
+            },
+            {
+              label: "Import links",
+              slug: "providers/deep-links",
+              translations: { ru: "Ссылки для импорта" },
+            },
+          ],
+        },
+        {
+          label: "Help",
+          translations: { ru: "Помощь" },
+          items: [
+            {
+              label: "FAQ",
+              slug: "help/faq",
+              translations: { ru: "Частые вопросы" },
             },
           ],
         },

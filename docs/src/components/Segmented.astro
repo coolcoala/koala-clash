@@ -1,0 +1,76 @@
+---
+/** Pill-shaped group of toggles (theme, language). */
+interface Props {
+	label: string;
+	class?: string;
+}
+
+const { label, class: className } = Astro.props;
+---
+
+<div role="group" aria-label={label} class:list={['segmented', className]}>
+	<slot />
+</div>
+
+<style>
+	.segmented {
+		display: inline-flex;
+		flex-shrink: 0;
+		border: 1px solid var(--kc-border);
+		border-radius: 999px;
+		background-color: var(--kc-muted);
+		padding: 0.125rem;
+	}
+
+	.segmented > :global(*) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 1.75rem;
+		padding-inline: 0.625rem;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--kc-muted-foreground);
+		font: inherit;
+		font-size: var(--sl-text-2xs);
+		font-weight: 600;
+		line-height: 1;
+		text-decoration: none;
+		cursor: pointer;
+		transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
+	}
+
+	.segmented > :global(*:hover) {
+		color: var(--kc-ink);
+	}
+
+	.segmented > :global(*:focus-visible) {
+		outline: 3px solid color-mix(in oklch, var(--kc-brand) 50%, transparent);
+		outline-offset: 0;
+	}
+
+	/* active item: the app's selected sidebar button — accent fill with a stroke ring */
+	.segmented > :global(:is([aria-pressed='true'], [aria-current='page'])) {
+		background-color: var(--kc-accent);
+		color: var(--kc-ink);
+		box-shadow: 0 0 0 1px var(--kc-stroke);
+	}
+
+	.segmented :global(svg) {
+		width: 0.875rem;
+		height: 0.875rem;
+	}
+
+	/* touch-friendly size inside the mobile menu */
+	:global(.mobile-preferences) .segmented > :global(*) {
+		height: 2.25rem;
+		padding-inline: 0.875rem;
+		font-size: var(--sl-text-sm);
+	}
+
+	:global(.mobile-preferences) .segmented :global(svg) {
+		width: 1rem;
+		height: 1rem;
+	}
+</style>

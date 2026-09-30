@@ -1,0 +1,120 @@
+---
+title: FAQ
+description: What to do when the connection does not work, a server cannot be chosen or the app does not start.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+## If nothing works
+
+Go through the steps in order — most issues are solved by the first three.
+
+<Steps>
+
+1. **Update the subscription** — with the button next to the profile name on the home screen. The
+   server list, rules and expiry date only arrive with an update.
+
+2. **Check the subscription** — the home screen should not show an expiry warning, and the traffic
+   should not be used up. If the app mentions the device limit, remove an extra device at your provider.
+
+3. **Switch the server** — in the [proxy groups](../../usage/proxies/), run the delay test and pick a
+   server that answers.
+
+4. **Update the app** — **Settings** → **Check for Updates**.
+
+5. **Restart** the app completely (<kbd>Ctrl</kbd>+<kbd>Q</kbd> and start it again), then the computer.
+
+6. **Remove what gets in the way**: other VPNs, Zapret and similar tools, internet “boosters”,
+   third-party antiviruses.
+
+</Steps>
+
+Nothing helped — contact your provider's support (the **Support** link on the home screen). Include
+your system, the app version, the server, your internet provider, and attach the
+[logs](../../usage/connections-logs/#logs).
+
+## Connection
+
+### The connect button does not turn on
+
+Most likely the core has no permissions for TUN mode. On Windows allow one launch as administrator; on
+macOS and Linux authorize the core. See [Installation](../../introduction/installation/) for how.
+
+If you cannot grant permissions, switch **Settings** → **Main Switch** to **Proxy Mode**.
+
+### Connected, but websites do not open
+
+Update the subscription and switch the server. If that does not help, check the
+[logs](../../usage/connections-logs/#logs): they show whether the server answers.
+
+### Telegram does not connect
+
+Open the proxy settings in Telegram itself and turn the built-in proxy off — it conflicts with the VPN.
+
+### A website fails in just one browser
+
+Turn off “Secure DNS” in the browser settings (in Chrome: **Settings** → **Privacy and security**) and
+restart the browser.
+
+### IPv6 errors in the logs on Windows
+
+Disable IPv6 in the network adapter properties (untick “Internet Protocol Version 6”), and on the router
+too if it is enabled there. Then restart Koala Clash.
+
+## Servers and rules
+
+### The selected server keeps switching back
+
+Another program that also intercepts traffic gets in the way: a second VPN, Telegram's built-in proxy,
+Zapret. Turn it off and restart Koala Clash.
+
+### One website, game or program does not work
+
+Its traffic most likely bypasses the proxy. Find its connections on the
+[Connections](../../usage/connections-logs/#a-website-or-program-goes-the-wrong-way) tab and add
+[your own rule](../../usage/rules/).
+
+### Everything stopped working after I added a rule
+
+Most likely the rule points to a specific server instead of a group. When the server list changes, the
+configuration breaks. Open the rule editor, choose a proxy group in the rule and update the subscription.
+
+### My rules are gone
+
+Rules from the [rule editor](../../usage/rules/) are stored separately and survive subscription updates.
+Changes made with **Edit File** are overwritten by every update — move them to the rule editor.
+
+## Subscription
+
+### It shows 0 days although the subscription is paid
+
+Update the subscription — the expiry date only arrives with an update.
+
+### “Device limit exceeded”
+
+The subscription is already used on the maximum number of devices. Remove an extra device in your
+provider account or contact support — the button is in the error dialog. If you moved to Koala Clash
+from another app, delete the subscription from the old one, or it keeps taking a slot.
+
+### The subscription does not get added
+
+See the [errors section](../../usage/subscriptions/#if-the-subscription-does-not-get-added) of the
+subscription page.
+
+## The app
+
+### The app does not start or the core crashes
+
+- Check your third-party antivirus: it can block the core. Add Koala Clash to its exclusions.
+- In the [core settings](../../usage/settings/#core-settings), choose the **Built-in Stable** core.
+- If the window flickers or crashes, turn on the hidden **Disable GPU Acceleration** setting — see
+  [Settings](../../usage/settings/) for how to show it.
+
+### How to start from scratch
+
+**Settings** → **Reset App** deletes all settings and profiles. Add the subscription again afterwards.
+
+<Aside type="caution">
+  A reset cannot be undone. Save your rules if you need them: you can copy them in the rule editor's
+  **YAML Editor** mode.
+</Aside>

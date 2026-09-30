@@ -1,0 +1,72 @@
+---
+title: Import links
+description: How to add an “Add to Koala Clash” button to your account page.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Koala Clash registers itself as the handler for `koala-clash://` links. A button with such a link on
+your account page opens the app and adds the subscription — the user does not have to copy anything.
+
+## Format
+
+```text
+koala-clash://install-config?url=<subscription link>&name=<name>
+```
+
+| Parameter | Required | What it is |
+| --- | --- | --- |
+| `url` | yes | The subscription link, encoded with `encodeURIComponent`. |
+| `name` | no | The profile name shown in the confirmation dialog. |
+
+The app also accepts the `clash://` and `mihomo://` schemes with the same format. Other clients may
+claim them, so use `koala-clash://` for an “Add to Koala Clash” button.
+
+## Example
+
+```html
+<a href="koala-clash://install-config?url=https%3A%2F%2Fexample.com%2Fsub%2Ftoken&name=My%20VPN">
+  Add to Koala Clash
+</a>
+```
+
+Building the link in JavaScript:
+
+```js
+const link =
+	'koala-clash://install-config?url=' +
+	encodeURIComponent(subscriptionUrl) +
+	'&name=' +
+	encodeURIComponent('My VPN');
+```
+
+## What happens after the click
+
+<Steps>
+
+1. The system opens Koala Clash or switches to the running instance.
+
+2. The app shows the **Confirm import subscription config?** dialog with the name and the link. If
+   `name` is not passed, the app sends a `HEAD` request to the link and takes the name from
+   [`profile-title`](../headers/) or `content-disposition`.
+
+3. After confirmation the app downloads the subscription with a regular request — with the
+   [device headers](../headers/#what-the-app-sends) — and adds the profile. A new profile becomes
+   active right away.
+
+</Steps>
+
+## Errors
+
+| Situation | What the user sees |
+| --- | --- |
+| No `url` in the link | “Missing parameter: url” |
+| A subscription with this `url` is already added | “This subscription already exists” |
+| The panel answered with a device limit header | The “Device limit exceeded” dialog with a button to `support-url` |
+| The panel returned something other than a Mihomo config | “Subscription format error…” |
+
+<Aside type="tip">
+  If the button does not open the app, Koala Clash is not installed or the system does not know about
+  the link handler. Keep a “Copy link” button next to it — the subscription can be
+  [added manually](../../usage/subscriptions/).
+</Aside>

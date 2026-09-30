@@ -1,0 +1,60 @@
+---
+title: Choosing a server
+description: Proxy groups, picking a server and the delay test.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The subscription's servers are organized into **proxy groups**. The provider decides which groups
+exist and what they are called: usually there is a main group for choosing a country and separate
+groups for individual services.
+
+## How to change the server
+
+<Steps>
+
+1. Open **Proxy Groups** in the side menu, or click the current server on the home screen.
+
+2. Click a group to expand its server list.
+
+3. Press **Delay test** on the group and pick a server with lower latency.
+
+</Steps>
+
+Your choice is kept between launches. **Locate current node** scrolls the list to the selected server.
+
+### Group types
+
+Every group has a type icon:
+
+- **Manual selection** (cursor icon) — you choose the server.
+- **Automatic** (lightning icon) — the group switches to the server with the lowest latency by itself.
+  You usually do not need to pick anything in it.
+
+## Delay test
+
+Latency is shown in milliseconds: lower is better. **Timeout** means the server did not answer in time —
+pick another one.
+
+Latency is how fast the server answers, not the download speed. If a server with good latency is slow,
+try the next one.
+
+## Proxy group settings
+
+The gear button in the page header:
+
+| Setting | What it does |
+| --- | --- |
+| **Proxy Node Display Columns** | How many servers per row. |
+| **Node Sort Method** | Default, by delay or by name. |
+| **Proxy Group Details**, **Proxy Node Details** | How much information the cards show. |
+| **Disconnect on Node Switch** | Close current connections when you switch servers, so they move to the new one right away. |
+| **Expand Groups by Default** | Open the page with groups expanded. |
+| **Delay Test URL** | The address used to measure latency. Defaults to `https://www.gstatic.com/generate_204`. |
+| **Delay Test Concurrency** | How many servers to test at once. Defaults to 50. |
+| **Delay Test Timeout** | How long to wait for an answer, in milliseconds. Defaults to 5000. |
+
+<Aside type="tip" title="The server keeps switching back">
+  Most likely another program that also intercepts traffic gets in the way: a second VPN, Telegram's
+  built-in proxy, Zapret. Turn it off and restart Koala Clash.
+</Aside>

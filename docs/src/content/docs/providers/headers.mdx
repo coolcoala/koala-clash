@@ -1,0 +1,79 @@
+---
+title: Subscription headers
+description: Which HTTP headers Koala Clash sends to the panel and which ones it reads from the response.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+When a subscription is added or updated, Koala Clash sends a `GET` request to its link. The request
+tells the panel about the device, and besides the config itself the app reads service headers from
+the response: profile name, traffic, expiry, an announcement, support and payment links.
+
+## What the app sends
+
+| Header | Value |
+| --- | --- |
+| `User-Agent` | `koala-clash/<version>`, e.g. `koala-clash/1.4.1`. Users can set their own in the profile settings. |
+| `x-hwid` | Device ID: 16 hex characters, SHA-256 of the system machine ID. |
+| `x-device-os` | `Windows`, `macOS` or `Linux`. |
+| `x-ver-os` | OS version, e.g. `24H2`, `15.3` or `Ubuntu 24.04`. |
+| `x-device-model` | Device model, e.g. `Mac14,2 (M2)`. |
+
+<Aside>
+  For this `User-Agent` the panel must return a Mihomo (Clash Meta) config in YAML. A response with
+  `Content-Type: text/html` or `text/xml` is rejected as a format error.
+</Aside>
+
+## What the app reads from the response
+
+Header names are case-insensitive. Headers are only read from a successful (`2xx`) response.
+
+| Header | Effect |
+| --- | --- |
+| `profile-title` | Profile name. |
+| `content-disposition` | Fallback name (`filename=`) when there is no `profile-title`. |
+| `subscription-userinfo` | Traffic and expiry: `upload=…; download=…; total=…; expire=…` — bytes and a Unix time in seconds. `total=0` is shown as unlimited; without `expire` the subscription never expires. |
+| `profile-update-interval` | Auto-update interval in **hours**. The user cannot change it: the field is locked with a “managed remotely” hint. |
+| `profile-logo` | Image URL. The logo is shown next to the profile name on Home and in the profile list. |
+| `announce` | Announcement under the profile name on Home. `\n` is a line break. |
+| `support-url` | The “Support” link at the bottom of Home and in the profile menu. `t.me` and `tg:` links get a Telegram icon. |
+| `profile-web-page-url` | The “Homepage” item in the profile menu. |
+| `profile-web-page-name` | Label of the renewal button (together with `profile-web-page-url`). |
+| `global-mode` | `false` hides global mode in the app and the tray and switches the profile to rule mode. |
+| `expand-proxy-groups` | `true` / `false` — turns the “Expand Groups by Default” setting on or off. |
+| `custom-css` | URL of a CSS theme. The theme is downloaded and applied while the profile is active. |
+| `x-hwid-limit`, `x-hwid-max-devices-reached` | `true` means the device limit is reached: the subscription is not added or updated, and the app shows a “Device limit exceeded” dialog with a button to `support-url`. |
+
+`profile-title`, `profile-web-page-name` and `announce` can be Base64-encoded with a `base64:` prefix —
+handy for non-Latin text and emoji.
+
+## Renewal button
+
+When 3 days or fewer are left, Home replaces the stats with a warning and a button:
+
+- if `profile-web-page-url` and `profile-web-page-name` are set, the button has that label and opens
+  `profile-web-page-url`;
+- otherwise, if `support-url` is set, a “Pay” button opens it;
+- with neither, there is no button.
+
+## Example response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/yaml; charset=utf-8
+profile-title: My VPN
+subscription-userinfo: upload=1073741824; download=5368709120; total=107374182400; expire=1798761600
+profile-update-interval: 12
+profile-logo: https://example.com/logo.png
+announce: Maintenance on Friday\nfrom 02:00 to 03:00 UTC
+support-url: https://t.me/example_support
+profile-web-page-url: https://example.com/account
+profile-web-page-name: Renew
+global-mode: false
+```
+
+<Aside type="caution">
+  When a subscription is imported with a [button on a website](../deep-links/) (`koala-clash://install-config?url=…`),
+  the confirmation dialog fetches the name with a plain `HEAD` request, without the device headers.
+  If the panel does not answer `HEAD`, pass the name in the link's `name` parameter.
+</Aside>
