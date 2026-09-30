@@ -1,0 +1,90 @@
+---
+title: Themes
+description: How to change the app's look and make your own theme from the template.
+---
+
+import { Aside, Code, LinkButton, Steps } from '@astrojs/starlight/components';
+import template from '../../../../public/themes/template.en.css?raw';
+
+A theme is a CSS file that Koala Clash applies on top of the default look in the main and floating
+windows. One theme can set colors for both the light and the dark mode.
+
+## How to apply a theme
+
+### From the provider
+
+A provider can send a theme with the subscription through the [`custom-css`](../../providers/headers/)
+header — it contains a link to a CSS file. The app downloads the file and applies the theme while that
+profile is active. The file is downloaded again on every subscription update, so the provider's changes
+reach users by themselves. In the theme list it is named after the file name in the link.
+
+### Manually
+
+Choosing a theme is a hidden setting. Click **App Version** at the bottom of **Settings** 7 times, and
+a **Theme** item appears in **Appearance Settings**:
+
+- **Import Theme** — add a CSS file from disk;
+- **Pull Theme** — download ready-made themes from a shared catalog;
+- **Edit Theme** — open the selected theme's CSS in the built-in editor;
+- **Default** in the list — go back to the standard look.
+
+The theme's name in the list comes from the first line of the file if it is a comment like
+`/* My theme */`. Otherwise the file name is shown.
+
+<Aside type="caution">
+  The theme is tied to the profile. When you switch profiles, and on every update of the active profile
+  including auto update, the app sets the profile's `custom-css` theme or **Default**. A manually chosen
+  theme only lasts until the next update.
+</Aside>
+
+## Template
+
+A working template to start your own theme from. It is commented in detail: what every variable and
+every rule changes.
+
+<LinkButton href="/themes/template.en.css" icon="download" iconPlacement="start" download="template.css">
+	Download template.css
+</LinkButton>
+
+<Code code={template} lang="css" title="template.css" />
+
+## Making your own theme
+
+<Steps>
+
+1. Download the template and change the colors in the first two blocks: `html:not(.dark)` is the light
+   theme, `html.dark` the dark one. The rules below usually need no changes: they take their colors
+   from these variables.
+
+2. For your own picture instead of the map in the background, set it in `--koala-custom-background`,
+   for example `url('https://example.com/bg.jpg') center / cover`. Block 4 of the template hides the
+   map — delete it if you want the map back.
+
+3. Put the name on the first line: `/* My theme */`.
+
+4. Import the file in the app and check both modes: **Background Color** → **Light** and **Dark**.
+   Look at the home screen, proxy groups, settings and dialogs.
+
+5. To give the theme to users, publish the file at a stable link and send it in the `custom-css` header.
+
+</Steps>
+
+## Main variables
+
+| Variable | What it colors |
+| --- | --- |
+| `--card` | Cards, select fields and popups. |
+| `--border` | Card and field borders, turned-off switches. |
+| `--foreground`, `--muted-foreground` | Main and secondary text. |
+| `--primary` | The accent: checked checkboxes, turned-on switches. |
+| `--success` | Good latency, the selected server. |
+| `--stroke-power-on`, `--gradient-start-power-on`, `--gradient-end-power-on` | The connect button while on. |
+| `--stroke-power-off`, `--gradient-start-power-off`, `--gradient-end-power-off` | The connect button while off. |
+| `--koala-custom-background` | The window background. |
+| `--koala-custom-card-shadow` | Card shadows. |
+| `--koala-custom-selected-background` | The selected server card. |
+
+<Aside>
+  The template's rules find elements by interface classes. If a new app version changes the markup,
+  some rules may stop working — check your theme after updates.
+</Aside>

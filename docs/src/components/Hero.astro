@@ -6,8 +6,14 @@ import { LinkButton } from '@astrojs/starlight/components';
  * Splash-page hero. Wrap a word of `hero.title` in `<span class="accent">…</span>`
  * to get the brand color and the hand-drawn underline.
  */
-const { data } = Astro.locals.starlightRoute.entry;
+const { entry, siteTitleHref } = Astro.locals.starlightRoute;
+const { data } = entry;
 const { title = data.title, tagline, image, actions = [] } = data.hero || {};
+
+// Only the locale home pages show the map sharp (see custom.css); other splash pages such as 404
+// keep it blurred like every inner page.
+const normalizePath = (path: string) => path.replace(/index\.html$/, '').replace(/\/?$/, '/');
+const isHome = normalizePath(Astro.url.pathname) === normalizePath(siteTitleHref);
 
 const imageAttrs = {
 	loading: 'eager' as const,
@@ -32,7 +38,7 @@ if (image) {
 }
 ---
 
-<div class="hero">
+<div class="hero" data-home={isHome ? '' : undefined}>
 	{
 		image && (
 			<div class="art">

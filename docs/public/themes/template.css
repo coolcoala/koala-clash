@@ -1,0 +1,198 @@
+/*
+  Тема для Koala Clash.
+
+  Цвета светлой и тёмной темы находятся в первых двух блоках.
+  Ниже - правила для фона, карточек, списка серверов и настроек.
+
+  Значения с -- в начале - общие настройки цвета и теней.
+  var(--card), например, берёт цвет из настройки --card.
+  Изменение такого цвета может затронуть сразу несколько экранов.
+
+  !important нужен, чтобы эти настройки перекрывали обычные стили клиента.
+  html:not(.dark) работает в светлой теме, html.dark - в тёмной.
+  html:is(.dark, :not(.dark)) применяется в обеих темах.
+
+  Этот файл можно подключать через custom-css так же, как версию без комментариев.
+*/
+
+/* 1. Светлая тема.
+   Здесь можно поменять цвета, не затрагивая тёмную тему. */
+html:not(.dark) {
+  /* Фон карточек и полей выбора - белый. */
+  --card: #ffffff !important;
+  /* Рамки карточек и полей. Этот же цвет у выключенных переключателей. */
+  --border: #cbd5e1 !important;
+  /* Основной текст - тёмный. */
+  --foreground: #0f172a !important;
+  /* Менее заметный текст: подписи, описания, тип сервера. */
+  --muted-foreground: #475569 !important;
+  /* Рамки элементов, которые используют input, например чекбоксов. */
+  --input: #cbd5e1 !important;
+  /* Зелёный акцент: отмеченные чекбоксы и другие элементы с цветом primary. */
+  --primary: #10b981 !important;
+  /* Хорошая задержка сервера и другие успешные состояния. Также рамка и текст выбранного сервера. */
+  --success: #2563eb !important;
+  /* Рамка кнопки, когда VPN включён. Этот цвет используют и некоторые индикаторы. */
+  --stroke-power-on: #059669 !important;
+  /* Первый цвет перехода на включённой кнопке - ярко-зелёный. */
+  --gradient-start-power-on: #10b981 !important;
+  /* Второй цвет этого перехода - тёмно-зелёный. */
+  --gradient-end-power-on: #047857 !important;
+  /* Рамка кнопки, когда VPN выключен. */
+  --stroke-power-off: #9f1239 !important;
+  /* Первый цвет перехода на выключенной кнопке - малиновый. */
+  --gradient-start-power-off: #be123c !important;
+  /* Второй цвет этого перехода - бордовый. */
+  --gradient-end-power-off: #881337 !important;
+  /* Общий фон окна - светлый серо-голубой. */
+  --koala-custom-background: #e2e8f0;
+  /* Тень карточки: 4 px вниз, размытие 12 px. Последнее число - сила тени: 0.08 означает 8% непрозрачности. */
+  --koala-custom-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Светло-голубой фон карточки выбранного сервера. */
+  --koala-custom-selected-background: #e0f2fe;
+}
+
+/* 2. Тёмная тема.
+   Те же настройки, но для тёмного оформления. */
+html.dark {
+  /* Фон карточек и полей выбора - почти чёрный. */
+  --card: #12151c !important;
+  /* Тёмные рамки карточек и полей. Этот же цвет у выключенных переключателей. */
+  --border: #1e2532 !important;
+  /* Основной текст - белый. */
+  --foreground: #ffffff !important;
+  /* Серо-голубой текст подписей, описаний и типа сервера. */
+  --muted-foreground: #94a3b8 !important;
+  /* Синий акцент: отмеченные чекбоксы и другие элементы с цветом primary. */
+  --primary: #3b82f6 !important;
+  /* Хорошая задержка сервера и другие успешные состояния. Также рамка и текст выбранного сервера. */
+  --success: #3b82f6 !important;
+  /* Светло-синяя рамка включённой кнопки. Этот цвет используют и некоторые индикаторы. */
+  --stroke-power-on: #60a5fa !important;
+  /* Первый цвет перехода на включённой кнопке - синий. */
+  --gradient-start-power-on: #3b82f6 !important;
+  /* Второй цвет этого перехода - тёмно-синий. */
+  --gradient-end-power-on: #1d4ed8 !important;
+  /* Бордовая рамка выключенной кнопки. */
+  --stroke-power-off: #881337 !important;
+  /* Первый цвет перехода на выключенной кнопке - бордовый. */
+  --gradient-start-power-off: #9f1239 !important;
+  /* Второй цвет этого перехода - тёмно-бордовый. */
+  --gradient-end-power-off: #4c0519 !important;
+  /* Сверху фон чуть светлее. На первых 5% высоты он переходит в почти чёрный и дальше не меняется. */
+  --koala-custom-background: linear-gradient(to bottom, #0d1520 0%, #05080c 5%, #05080c 100%);
+  /* Тень карточки: 4 px вниз, размытие 20 px, чёрный цвет с непрозрачностью 40%. */
+  --koala-custom-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  /* Тёмный серо-синий фон карточки выбранного сервера. */
+  --koala-custom-selected-background: #1e293b;
+}
+
+/* 3. Настройки, одинаковые для обеих тем. */
+html:is(.dark, :not(.dark)) {
+  /* Белый текст там, где клиент использует success-foreground. */
+  --success-foreground: #ffffff !important;
+  /* Фон всплывающих панелей, которые используют popover. Берётся из --card; отдельные меню могут использовать другие цвета. */
+  --popover: var(--card) !important;
+}
+
+/* 4. Карта на фоне приложения.
+   Скрывает картинку карты. Чтобы вернуть её, удалите этот блок.
+   Правило скрывает все картинки с классом pointer-events-none,
+   поэтому оно затронет и другие такие картинки, если они появятся в клиенте. */
+img.pointer-events-none {
+  display: none !important;
+}
+
+/* 5. Фон окна.
+   Применяет фон из --koala-custom-background: светлый однотонный
+   или тёмный с небольшим переходом цвета сверху. */
+html:is(.dark, :not(.dark)) .relative.w-full.h-screen {
+  background: var(--koala-custom-background) !important;
+}
+
+/* 6. Карточки и подсказки при первом запуске.
+   Задаёт фон, цвет рамки и тень.
+
+   [data-slot="card"] находит карточки приложения.
+   .bg-card находит элементы с этим классом; один только bg-card/50 не подходит.
+   .driver-popover - окно подсказки, которое объясняет работу клиента.
+
+   Для изменения цвета и тени правьте --card, --border
+   и --koala-custom-card-shadow в нужной теме. */
+html:is(.dark, :not(.dark)) :is(.bg-card, [data-slot="card"], .driver-popover) {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--koala-custom-card-shadow) !important;
+}
+
+/* 7. Выбранный сервер в списке.
+   Меняет фон и рамку его карточки.
+   Фон берётся из --koala-custom-selected-background, рамка - из --success.
+
+   Правило узнаёт карточку по классам оформления.
+   Если такие же классы есть у карточки на другой странице,
+   она тоже получит эти цвета. */
+html:is(.dark, :not(.dark)) [data-slot="card"]:is(.border-primary, [class*="bg-primary"]) {
+  background-color: var(--koala-custom-selected-background) !important;
+  border-color: var(--success) !important;
+}
+
+/* Текст внутри выбранной карточки.
+   Название, описание, задержка и иконки, которые берут цвет из текста,
+   окрашиваются в --success.
+
+   Из-за этого задержка выбранного сервера будет одного цвета
+   даже тогда, когда у остальных серверов она жёлтая или красная. */
+html:is(.dark, :not(.dark)) [data-slot="card"]:is(.border-primary, [class*="bg-primary"]) * {
+  color: var(--success) !important;
+}
+
+/* 8. Поля с выбором значения, например в настройках.
+   Делает фон поля сплошным, задаёт рамку толщиной 1 px и цвет текста.
+   Цвета берутся из --card, --border и --foreground.
+   Оформление открытого списка вариантов этот блок не меняет. */
+html:is(.dark, :not(.dark)) button[role="combobox"],
+html:is(.dark, :not(.dark)) select,
+html:is(.dark, :not(.dark)) [data-slot="select-trigger"] {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* В светлой теме поля выбора не становятся полупрозрачными.
+   Это касается и отключённых полей: они выглядят так же ярко,
+   но нажать на них по-прежнему нельзя. */
+html:not(.dark) button[role="combobox"],
+html:not(.dark) select,
+html:not(.dark) [data-slot="select-trigger"] {
+  opacity: 1 !important;
+}
+
+/* 9. Текст в светлой теме.
+   Задаёт основной тёмный цвет текста страницы.
+   Элементы с собственным цветом могут сохранить его.
+
+   Текст с классом text-primary тоже становится тёмным,
+   хотя сам акцент --primary остаётся зелёным. */
+html:not(.dark) body,
+html:not(.dark) .text-primary {
+  color: var(--foreground) !important;
+}
+
+/* 10. Выключенные переключатели в настройках.
+   Цвет полоски за бегунком берётся из --border.
+   Цвет самого бегунка и размер переключателя здесь не меняются. */
+html:is(.dark, :not(.dark)) button[role="switch"][data-state="unchecked"] {
+  background-color: var(--border) !important;
+}
+
+/* Включённые переключатели.
+   Цвет под градиентом берётся из --primary.
+   Сам градиент остаётся поверх него: для его изменения правьте
+   --gradient-start-power-on и --gradient-end-power-on.
+
+   Главная кнопка подключения оформляется отдельно, через цвета power-on
+   и power-off в начале файла. */
+html:is(.dark, :not(.dark)) button[role="switch"][data-state="checked"] {
+  background-color: var(--primary) !important;
+}

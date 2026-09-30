@@ -151,6 +151,11 @@ export default defineConfig({
               slug: "usage/settings",
               translations: { ru: "Настройки" },
             },
+            {
+              label: "Themes",
+              slug: "usage/themes",
+              translations: { ru: "Темы" },
+            },
           ],
         },
         {
@@ -177,6 +182,17 @@ export default defineConfig({
               label: "FAQ",
               slug: "help/faq",
               translations: { ru: "Частые вопросы" },
+            },
+          ],
+        },
+        {
+          label: "Project",
+          translations: { ru: "Проект" },
+          items: [
+            {
+              label: "Contributors",
+              slug: "project/contributors",
+              translations: { ru: "Контрибьюторы" },
             },
           ],
         },

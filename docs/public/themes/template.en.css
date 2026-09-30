@@ -1,0 +1,198 @@
+/*
+  A theme for Koala Clash.
+
+  The light and dark theme colors are in the first two blocks.
+  Below them are the rules for the background, cards, server list and settings.
+
+  Names starting with -- are shared color and shadow settings.
+  var(--card), for example, takes its color from the --card setting.
+  Changing such a color can affect several screens at once.
+
+  !important is needed so these settings win over the client's regular styles.
+  html:not(.dark) works in the light theme, html.dark in the dark one.
+  html:is(.dark, :not(.dark)) applies in both themes.
+
+  This file can be served through custom-css just like a version without comments.
+*/
+
+/* 1. Light theme.
+   Change colors here without touching the dark theme. */
+html:not(.dark) {
+  /* Background of cards and select fields - white. */
+  --card: #ffffff !important;
+  /* Borders of cards and fields. Turned-off switches use the same color. */
+  --border: #cbd5e1 !important;
+  /* Main text - dark. */
+  --foreground: #0f172a !important;
+  /* Less prominent text: labels, descriptions, server type. */
+  --muted-foreground: #475569 !important;
+  /* Borders of elements that use input, such as checkboxes. */
+  --input: #cbd5e1 !important;
+  /* Green accent: checked checkboxes and other elements colored with primary. */
+  --primary: #10b981 !important;
+  /* Good server latency and other success states. Also the border and text of the selected server. */
+  --success: #2563eb !important;
+  /* Border of the button while the VPN is on. Some indicators use this color too. */
+  --stroke-power-on: #059669 !important;
+  /* First color of the gradient on the button while on - bright green. */
+  --gradient-start-power-on: #10b981 !important;
+  /* Second color of that gradient - dark green. */
+  --gradient-end-power-on: #047857 !important;
+  /* Border of the button while the VPN is off. */
+  --stroke-power-off: #9f1239 !important;
+  /* First color of the gradient on the button while off - crimson. */
+  --gradient-start-power-off: #be123c !important;
+  /* Second color of that gradient - burgundy. */
+  --gradient-end-power-off: #881337 !important;
+  /* Window background - light grey-blue. */
+  --koala-custom-background: #e2e8f0;
+  /* Card shadow: 4 px down, 12 px blur. The last number is the strength: 0.08 means 8% opacity. */
+  --koala-custom-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Light blue background of the selected server card. */
+  --koala-custom-selected-background: #e0f2fe;
+}
+
+/* 2. Dark theme.
+   The same settings for the dark look. */
+html.dark {
+  /* Background of cards and select fields - almost black. */
+  --card: #12151c !important;
+  /* Dark borders of cards and fields. Turned-off switches use the same color. */
+  --border: #1e2532 !important;
+  /* Main text - white. */
+  --foreground: #ffffff !important;
+  /* Grey-blue text of labels, descriptions and server type. */
+  --muted-foreground: #94a3b8 !important;
+  /* Blue accent: checked checkboxes and other elements colored with primary. */
+  --primary: #3b82f6 !important;
+  /* Good server latency and other success states. Also the border and text of the selected server. */
+  --success: #3b82f6 !important;
+  /* Light blue border of the button while on. Some indicators use this color too. */
+  --stroke-power-on: #60a5fa !important;
+  /* First color of the gradient on the button while on - blue. */
+  --gradient-start-power-on: #3b82f6 !important;
+  /* Second color of that gradient - dark blue. */
+  --gradient-end-power-on: #1d4ed8 !important;
+  /* Burgundy border of the button while off. */
+  --stroke-power-off: #881337 !important;
+  /* First color of the gradient on the button while off - burgundy. */
+  --gradient-start-power-off: #9f1239 !important;
+  /* Second color of that gradient - dark burgundy. */
+  --gradient-end-power-off: #4c0519 !important;
+  /* Slightly lighter at the top. Over the first 5% of the height it fades to almost black and stays there. */
+  --koala-custom-background: linear-gradient(to bottom, #0d1520 0%, #05080c 5%, #05080c 100%);
+  /* Card shadow: 4 px down, 20 px blur, black at 40% opacity. */
+  --koala-custom-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  /* Dark grey-blue background of the selected server card. */
+  --koala-custom-selected-background: #1e293b;
+}
+
+/* 3. Settings shared by both themes. */
+html:is(.dark, :not(.dark)) {
+  /* White text where the client uses success-foreground. */
+  --success-foreground: #ffffff !important;
+  /* Background of popups that use popover. Taken from --card; some menus may use other colors. */
+  --popover: var(--card) !important;
+}
+
+/* 4. The map behind the app.
+   Hides the map image. Delete this block to bring it back.
+   The rule hides every image with the pointer-events-none class,
+   so it also affects other such images if they appear in the client. */
+img.pointer-events-none {
+  display: none !important;
+}
+
+/* 5. Window background.
+   Applies the background from --koala-custom-background: a plain light one
+   or a dark one with a small color fade at the top. */
+html:is(.dark, :not(.dark)) .relative.w-full.h-screen {
+  background: var(--koala-custom-background) !important;
+}
+
+/* 6. Cards and first-launch hints.
+   Sets the background, border color and shadow.
+
+   [data-slot="card"] finds the app's cards.
+   .bg-card finds elements with that class; bg-card/50 alone does not match.
+   .driver-popover is the hint popup that explains how the client works.
+
+   To change the color and shadow, edit --card, --border
+   and --koala-custom-card-shadow in the theme you need. */
+html:is(.dark, :not(.dark)) :is(.bg-card, [data-slot="card"], .driver-popover) {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--koala-custom-card-shadow) !important;
+}
+
+/* 7. The selected server in the list.
+   Changes the background and border of its card.
+   The background comes from --koala-custom-selected-background, the border from --success.
+
+   The rule recognizes the card by its styling classes.
+   If a card on another page has the same classes,
+   it gets these colors too. */
+html:is(.dark, :not(.dark)) [data-slot="card"]:is(.border-primary, [class*="bg-primary"]) {
+  background-color: var(--koala-custom-selected-background) !important;
+  border-color: var(--success) !important;
+}
+
+/* Text inside the selected card.
+   The name, description, latency and icons that take their color from the text
+   are colored with --success.
+
+   Because of this, the selected server's latency has the same color
+   even when other servers show yellow or red latency. */
+html:is(.dark, :not(.dark)) [data-slot="card"]:is(.border-primary, [class*="bg-primary"]) * {
+  color: var(--success) !important;
+}
+
+/* 8. Select fields, for example in the settings.
+   Makes the field background solid and sets a 1 px border and the text color.
+   Colors come from --card, --border and --foreground.
+   This block does not change the look of the opened option list. */
+html:is(.dark, :not(.dark)) button[role="combobox"],
+html:is(.dark, :not(.dark)) select,
+html:is(.dark, :not(.dark)) [data-slot="select-trigger"] {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* In the light theme select fields do not become translucent.
+   This includes disabled fields: they look just as bright,
+   but still cannot be clicked. */
+html:not(.dark) button[role="combobox"],
+html:not(.dark) select,
+html:not(.dark) [data-slot="select-trigger"] {
+  opacity: 1 !important;
+}
+
+/* 9. Text in the light theme.
+   Sets the main dark text color of the page.
+   Elements with their own color may keep it.
+
+   Text with the text-primary class also becomes dark,
+   although the --primary accent itself stays green. */
+html:not(.dark) body,
+html:not(.dark) .text-primary {
+  color: var(--foreground) !important;
+}
+
+/* 10. Turned-off switches in the settings.
+   The color of the track behind the knob comes from --border.
+   The knob color and the switch size are not changed here. */
+html:is(.dark, :not(.dark)) button[role="switch"][data-state="unchecked"] {
+  background-color: var(--border) !important;
+}
+
+/* Turned-on switches.
+   The color under the gradient comes from --primary.
+   The gradient itself stays on top: to change it, edit
+   --gradient-start-power-on and --gradient-end-power-on.
+
+   The main connect button is styled separately, with the power-on
+   and power-off colors at the top of the file. */
+html:is(.dark, :not(.dark)) button[role="switch"][data-state="checked"] {
+  background-color: var(--primary) !important;
+}

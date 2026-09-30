@@ -1,0 +1,44 @@
+---
+title: Контрибьюторы
+description: Люди, которые делают Koala Clash, и как присоединиться к ним.
+---
+
+import { Card, CardGrid, LinkButton } from '@astrojs/starlight/components';
+import ContributorList from '../../../../components/ContributorList.astro';
+
+Koala Clash — проект с открытым исходным кодом. Это все, кто вносил изменения в
+[репозиторий приложения](https://github.com/coolcoala/koala-clash). Спасибо за каждый вклад, большой и
+маленький.
+
+<ContributorList githubRepo="coolcoala/koala-clash" />
+
+Koala Clash основан на [Sparkle](https://github.com/xishang0128/sparkle) — спасибо
+[xishang0128](https://github.com/xishang0128) и всем, кто работал над ним.
+
+## Стать одним из нас
+
+<CardGrid>
+	<Card title="Сообщить об ошибке" icon="warning">
+		Нашли баг или не хватает функции — откройте
+		[issue на GitHub](https://github.com/coolcoala/koala-clash/issues). Приложите версию приложения,
+		систему и [логи](../../usage/connections-logs/#логи).
+	</Card>
+	<Card title="Код" icon="github">
+		Pull request'ы принимаются в [coolcoala/koala-clash](https://github.com/coolcoala/koala-clash).
+		Как собрать приложение локально — в README репозитория.
+	</Card>
+	<Card title="Переводы" icon="translate">
+		Строки интерфейса лежат в `src/renderer/src/locales`. Поправьте перевод или добавьте новый язык.
+	</Card>
+	<Card title="Документация" icon="pencil">
+		Внизу каждой страницы есть ссылка **Редактировать страницу** — она ведёт прямо к файлу на GitHub.
+	</Card>
+</CardGrid>
+
+## Поддержать проект
+
+Если Koala Clash вам полезен, поддержите разработку донатом через Tribute в Telegram.
+
+<LinkButton href="https://t.me/tribute/app?startapp=dtfk" icon="heart" iconPlacement="start">
+	Поддержать проект
+</LinkButton>

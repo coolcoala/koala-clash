@@ -163,7 +163,11 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
-/* The app's world map: blurred on inner pages, sharp on the splash page like the home screen. */
+/* The app's world map, blurred on inner pages… */
+:root {
+	--kc-map-blur: 24px;
+}
+
 body::before {
 	content: '';
 	position: fixed;
@@ -171,19 +175,17 @@ body::before {
 	z-index: -1;
 	pointer-events: none;
 	opacity: 0.65;
-	background: url('../assets/background/map-dark-blur.webp') center / cover no-repeat;
+	background: url('../assets/background/map-dark.webp') center / cover no-repeat;
+	filter: blur(var(--kc-map-blur));
 }
 
 :root[data-theme='light'] body::before {
-	background-image: url('../assets/background/map-light-blur.webp');
-}
-
-:root[data-has-hero] body::before {
-	background-image: url('../assets/background/map-dark.webp');
-}
-
-:root[data-theme='light'][data-has-hero] body::before {
 	background-image: url('../assets/background/map-light.webp');
+}
+
+/* …and sharp on the home page, like the app's home screen (Hero.astro sets `data-home`). */
+:root:has(.hero[data-home]) body::before {
+	filter: none;
 }
 
 /* ------------------------------------------------------------------- base -- */
@@ -519,6 +521,19 @@ mobile-starlight-toc nav {
 .starlight-aside a {
 	color: var(--kc-ink);
 	text-decoration-color: color-mix(in oklch, var(--kc-ink) 40%, transparent);
+}
+
+/* -------------------------------------------------------------------- tabs -- */
+
+/* Starlight bolds only the selected tab, so the labels change width and shift when switching.
+   Keep one weight for all tabs and mark the selected one with color and the underline. */
+.tab > [role='tab'] {
+	font-weight: 600;
+	transition: color 0.15s;
+}
+
+.tab > [role='tab']:hover {
+	color: var(--kc-ink);
 }
 
 /* ------------------------------------------------------------------- steps -- */

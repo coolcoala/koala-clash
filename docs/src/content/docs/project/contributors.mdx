@@ -1,0 +1,44 @@
+---
+title: Contributors
+description: The people who make Koala Clash, and how to join them.
+---
+
+import { Card, CardGrid, LinkButton } from '@astrojs/starlight/components';
+import ContributorList from '../../../components/ContributorList.astro';
+
+Koala Clash is an open-source project. These are all the people who contributed to the
+[app repository](https://github.com/coolcoala/koala-clash). Thank you for every contribution, big and
+small.
+
+<ContributorList githubRepo="coolcoala/koala-clash" />
+
+Koala Clash is based on [Sparkle](https://github.com/xishang0128/sparkle) — thanks to
+[xishang0128](https://github.com/xishang0128) and everyone who worked on it.
+
+## Become one of us
+
+<CardGrid>
+	<Card title="Report a bug" icon="warning">
+		Found a bug or missing a feature — open an
+		[issue on GitHub](https://github.com/coolcoala/koala-clash/issues). Include the app version, your
+		system and the [logs](../../usage/connections-logs/#logs).
+	</Card>
+	<Card title="Code" icon="github">
+		Pull requests are welcome in [coolcoala/koala-clash](https://github.com/coolcoala/koala-clash).
+		The repository README explains how to build the app locally.
+	</Card>
+	<Card title="Translations" icon="translate">
+		Interface strings live in `src/renderer/src/locales`. Fix a translation or add a new language.
+	</Card>
+	<Card title="Documentation" icon="pencil">
+		Every page has an **Edit page** link at the bottom — it takes you straight to the file on GitHub.
+	</Card>
+</CardGrid>
+
+## Support the project
+
+If Koala Clash is useful to you, support its development with a donation through Tribute in Telegram.
+
+<LinkButton href="https://t.me/tribute/app?startapp=dtfk" icon="heart" iconPlacement="start">
+	Support the project
+</LinkButton>
