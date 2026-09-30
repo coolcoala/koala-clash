@@ -102,6 +102,18 @@ delete: # subscription rules to remove
   - GEOSITE,category-ads-all,REJECT
 ```
 
+A rule can be inserted in the middle of the subscription's rules by starting it with a number. In
+`prepend` the number counts from the start of the subscription's rules, in `append` from the end:
+
+```yaml
+prepend:
+  - 2,DOMAIN-SUFFIX,example.com,Proxy # after the first two subscription rules
+append:
+  - 1,IP-CIDR,10.0.0.0/8,DIRECT # before the last rule, usually MATCH
+```
+
+`delete` matches the rule string exactly.
+
 <Aside>
   **Edit File** in the profile menu changes the subscription config itself — such edits are overwritten
   by the next update. Use the rule editor for rules.

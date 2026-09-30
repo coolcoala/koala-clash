@@ -17,16 +17,27 @@ interface Contributor {
   profile: string;
 }
 
+// One request per repo per process: the unauthenticated GitHub API allows 60 requests an hour,
+// and the dev server re-renders the page on every reload.
+const cache = new Map<string, Promise<any[]>>();
+
+function fetchContributors(repo: string): Promise<any[]> {
+  if (!cache.has(repo)) {
+    const request = fetch(`https://api.github.com/repos/${repo}/contributors?per_page=100`).then((res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json();
+    });
+    request.catch(() => cache.delete(repo));
+    cache.set(repo, request);
+  }
+  return cache.get(repo)!;
+}
+
 async function getContributors(repo: string, ignoreList: string[]): Promise<Contributor[]> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contributors?per_page=100`);
-    if (!res.ok) {
-      console.error(`Failed to fetch contributors for ${repo}: ${res.statusText}`);
-      return [];
-    }
-    const data = await res.json();
+    const data = await fetchContributors(repo);
     return data
-      .filter((c: any) => !ignoreList.includes(c.login))
+      .filter((c: any) => c.type !== 'Bot' && !ignoreList.includes(c.login))
       .map((c: any) => ({
         username: c.login,
         avatar: c.avatar_url,
