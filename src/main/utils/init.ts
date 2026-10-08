@@ -3,6 +3,7 @@ import {
   controledMihomoConfigPath,
   dataDir,
   logDir,
+  logPath,
   mihomoTestDir,
   mihomoWorkDir,
   profileConfigPath,
@@ -19,9 +20,12 @@ import {
   defaultProfileConfig
 } from './template'
 import { stringifyYaml } from './yaml'
-import { mkdir, writeFile, cp, rm, readdir } from 'fs/promises'
-import { existsSync } from 'fs'
+import { mkdir, writeFile, cp, rm, readdir, stat, utimes } from 'fs/promises'
+import { createReadStream, createWriteStream, existsSync } from 'fs'
+import { pipeline } from 'stream/promises'
+import { createGzip } from 'zlib'
 import path from 'path'
+import { GEO_FILES, linkGeoFiles, removeUnusedMetadb } from './geo'
 import {
   startPacServer
 } from '../resolve/server'
@@ -86,22 +90,14 @@ async function initConfig(): Promise<void> {
 async function initFiles(): Promise<void> {
   const copy = async (file: string): Promise<void> => {
     const targetPath = path.join(mihomoWorkDir(), file)
-    const testTargetPath = path.join(mihomoTestDir(), file)
     const sourcePath = path.join(resourcesFilesDir(), file)
     if (!existsSync(targetPath) && existsSync(sourcePath)) {
       await cp(sourcePath, targetPath, { recursive: true })
     }
-    if (!existsSync(testTargetPath) && existsSync(sourcePath)) {
-      await cp(sourcePath, testTargetPath, { recursive: true })
-    }
   }
-  await Promise.all([
-    copy('country.mmdb'),
-    copy('geoip.metadb'),
-    copy('geoip.dat'),
-    copy('geosite.dat'),
-    copy('ASN.mmdb')
-  ])
+  await Promise.all(GEO_FILES.map(copy))
+  await removeUnusedMetadb(mihomoWorkDir())
+  await linkGeoFiles(mihomoTestDir())
 }
 
 async function cleanup(): Promise<void> {
@@ -116,18 +112,25 @@ async function cleanup(): Promise<void> {
       }
     }
   }
-  // logs
+  // logs, aged by mtime since heap snapshots are named by timestamp rather than by date
   const { maxLogDays = 7 } = await getAppConfig()
+  const currentLog = path.basename(logPath())
   const logs = await readdir(logDir())
   for (const log of logs) {
-    const date = new Date(log.split('.')[0])
-    const diff = Date.now() - date.getTime()
-    if (diff > maxLogDays * 24 * 60 * 60 * 1000) {
-      try {
-        await rm(path.join(logDir(), log))
-      } catch {
-        // ignore
+    const logFile = path.join(logDir(), log)
+    try {
+      const { atime, mtime } = await stat(logFile)
+      if (Date.now() - mtime.getTime() > maxLogDays * 24 * 60 * 60 * 1000) {
+        await rm(logFile)
+      } else if (log.endsWith('.log') && log !== currentLog) {
+        // Past days are no longer written to, and text logs shrink about tenfold
+        await pipeline(createReadStream(logFile), createGzip(), createWriteStream(`${logFile}.gz`))
+        // The archive keeps the log's date so it expires on the same schedule
+        await utimes(`${logFile}.gz`, atime, mtime)
+        await rm(logFile)
       }
+    } catch {
+      // ignore
     }
   }
 }

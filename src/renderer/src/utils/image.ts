@@ -1,7 +1,7 @@
 export async function cropAndPadTransparent(
   base64: string,
-  finalSize = 256,
-  border = 24
+  finalSize = 128,
+  border = 12
 ): Promise<string> {
   const img = new Image()
   img.src = base64

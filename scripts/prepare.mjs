@@ -100,6 +100,8 @@ if (!WITH_ALPHA) {
   const alphaFile = `mihomo-alpha${platform === 'win32' ? '.exe' : ''}`
   fs.rmSync(path.join(cwd, 'extra', 'sidecar', alphaFile), { force: true })
 }
+// mihomo reads country.mmdb ahead of geoip.metadb, so the latter is no longer shipped
+fs.rmSync(path.join(cwd, 'extra', 'files', 'geoip.metadb'), { force: true })
 
 /**
  * core info
@@ -260,11 +262,6 @@ const resolveMmdb = () =>
     file: 'country.mmdb',
     downloadURL: `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country-lite.mmdb`
   })
-const resolveMetadb = () =>
-  resolveResource({
-    file: 'geoip.metadb',
-    downloadURL: `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb`
-  })
 const resolveGeosite = () =>
   resolveResource({
     file: 'geosite.dat',
@@ -348,7 +345,6 @@ const tasks = [
     retry: 5
   },
   { name: 'mmdb', func: resolveMmdb, retry: 5 },
-  { name: 'metadb', func: resolveMetadb, retry: 5 },
   { name: 'geosite', func: resolveGeosite, retry: 5 },
   { name: 'geoip', func: resolveGeoIP, retry: 5 },
   { name: 'asn', func: resolveASN, retry: 5 },

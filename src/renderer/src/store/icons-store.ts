@@ -23,6 +23,79 @@ const appNameQueue = new Set<string>()
 const processingAppNames = new Set<string>()
 let appNameTimer: ReturnType<typeof setTimeout> | null = null
 
+// A path stores only the hash of its icon, so paths sharing one (every CLI tool gets the
+// default icon, helper processes reuse their app's) keep a single copy of the image
+const ICON_PATH_PREFIX = 'icon:'
+const ICON_DATA_PREFIX = 'iconData:'
+const ICON_CACHE_VERSION_KEY = 'iconCacheVersion'
+const ICON_CACHE_VERSION = '2'
+
+const iconsByHash = new Map<string, string>()
+
+// cyrb53, a fast 53-bit string hash
+const hashIcon = (dataURL: string): string => {
+  let h1 = 0xdeadbeef
+  let h2 = 0x41c6ce57
+  for (let i = 0; i < dataURL.length; i++) {
+    const ch = dataURL.charCodeAt(i)
+    h1 = Math.imul(h1 ^ ch, 2654435761)
+    h2 = Math.imul(h2 ^ ch, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36)
+}
+
+const readCachedIcon = (path: string): string | null => {
+  const hash = localStorage.getItem(ICON_PATH_PREFIX + path)
+  if (!hash) return null
+  const known = iconsByHash.get(hash)
+  if (known) return known
+  const dataURL = localStorage.getItem(ICON_DATA_PREFIX + hash)
+  if (dataURL) iconsByHash.set(hash, dataURL)
+  return dataURL
+}
+
+const cacheIcon = (path: string, dataURL: string): string => {
+  const hash = hashIcon(dataURL)
+  const shared = iconsByHash.get(hash) ?? dataURL
+  iconsByHash.set(hash, shared)
+  try {
+    if (localStorage.getItem(ICON_DATA_PREFIX + hash) === null) {
+      localStorage.setItem(ICON_DATA_PREFIX + hash, shared)
+    }
+    localStorage.setItem(ICON_PATH_PREFIX + path, hash)
+  } catch {
+    // ignore
+  }
+  return shared
+}
+
+// Earlier versions kept a full-size icon under each raw path, which filled the storage quota
+const dropLegacyIconCache = (): void => {
+  if (localStorage.getItem(ICON_CACHE_VERSION_KEY) === ICON_CACHE_VERSION) return
+  for (const key of Object.keys(localStorage)) {
+    // Proxy group icons are keyed by their URL
+    if (
+      key.startsWith('http') ||
+      key.startsWith(ICON_PATH_PREFIX) ||
+      key.startsWith(ICON_DATA_PREFIX)
+    ) {
+      continue
+    }
+    if (localStorage.getItem(key)?.startsWith('data:')) localStorage.removeItem(key)
+  }
+  localStorage.setItem(ICON_CACHE_VERSION_KEY, ICON_CACHE_VERSION)
+}
+
+try {
+  dropLegacyIconCache()
+} catch {
+  // ignore
+}
+
 export const useIconsStore = create<IconsStore>((set, get) => ({
   icons: {},
   appNames: {},
@@ -31,7 +104,7 @@ export const useIconsStore = create<IconsStore>((set, get) => ({
     const state = get()
     if (state.icons[path] || processingIcons.has(path) || iconQueue.has(path)) return
     try {
-      const cached = localStorage.getItem(path)
+      const cached = readCachedIcon(path)
       if (cached) {
         set((s) => ({ icons: { ...s.icons, [path]: cached } }))
         return
@@ -80,13 +153,8 @@ const processIcons = async (): Promise<void> => {
         processedDataURL = await cropAndPadTransparent(fullDataURL)
       }
 
-      try {
-        localStorage.setItem(path, processedDataURL)
-      } catch {
-        // ignore
-      }
-
-      useIconsStore.setState((s) => ({ icons: { ...s.icons, [path]: processedDataURL } }))
+      const iconDataURL = cacheIcon(path, processedDataURL)
+      useIconsStore.setState((s) => ({ icons: { ...s.icons, [path]: iconDataURL } }))
     } catch {
       // ignore
     } finally {

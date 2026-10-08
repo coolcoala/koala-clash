@@ -187,7 +187,8 @@ export async function getIconDataURL(appPath: string): Promise<string> {
     if (!targetPath) {
       return darwinDefaultIcon
     }
-    const iconBuffer = await fileIconToBuffer(targetPath, { size: 512 })
+    // Shown at 48px at most, and the renderer caches every icon
+    const iconBuffer = await fileIconToBuffer(targetPath, { size: 128 })
     const base64Icon = Buffer.from(iconBuffer).toString('base64')
     return `data:image/png;base64,${base64Icon}`
   }
