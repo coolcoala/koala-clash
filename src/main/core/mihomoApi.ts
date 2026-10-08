@@ -319,13 +319,19 @@ const isControllerError = (e: unknown): e is { message: string } =>
   !(e instanceof Error) &&
   typeof (e as { message?: unknown }).message === 'string'
 
+// A hot reload that failed this way left the previous config running; any other failure (a timeout,
+// an unreachable core) says nothing about the config itself
+export const isConfigRejection = (e: unknown): boolean =>
+  (e instanceof CoreError && e.reason === 'config-invalid') || isControllerError(e)
+
 export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { generateProfile } = await import('./factory')
   const { getProfileConfig } = await import('../config')
   const { resetProviderTracking } = await import('./manager')
   const { logLevel } = await generateProfile().catch((e) => {
-    reportCoreError(new CoreError('config-invalid', e))
-    throw e
+    const error = new CoreError('config-invalid', e)
+    reportCoreError(error)
+    throw error
   })
   const { current } = await getProfileConfig()
   const { diffWorkDir = false } = await getAppConfig()

@@ -82,6 +82,9 @@ let networkDownHandled = false
 let child: ChildProcess
 let retry = 10
 
+// The (re)start in flight, settled once its controller is up or the start has failed
+let coreStarting: Promise<unknown> | null = null
+
 let initialized = false
 let providerNames = new Set<string>()
 let unmatchedProviders = new Set<string>()
@@ -101,7 +104,28 @@ export async function resetProviderTracking(): Promise<void> {
   initialized = false
 }
 
-export async function startCore(detached = false): Promise<Promise<void>[]> {
+function trackCoreStart<T>(starting: Promise<T>): Promise<T> {
+  coreStarting = starting
+  const settle = (): void => {
+    if (coreStarting === starting) coreStarting = null
+  }
+  starting.then(settle, settle)
+  return starting
+}
+
+// Resolves once no (re)start is in flight; the core state then tells whether the core came up
+export async function waitForCoreStart(): Promise<void> {
+  while (coreStarting) {
+    await coreStarting.catch(() => {})
+  }
+}
+
+export function startCore(detached = false): Promise<Promise<void>[]> {
+  // A detached core is left running on quit, nothing waits for it
+  return detached ? launchCore(true) : trackCoreStart(launchCore())
+}
+
+async function launchCore(detached = false): Promise<Promise<void>[]> {
   const {
     core = 'mihomo',
     autoSetDNSMode = 'exec',
@@ -122,7 +146,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
   } catch (error) {
     if (core === 'system') {
       await patchAppConfig({ core: 'mihomo' })
-      return startCore(detached)
+      return launchCore(detached)
     }
     throw error
   }
@@ -425,8 +449,13 @@ async function stopChildProcess(process: ChildProcess): Promise<void> {
 async function runCore(stop: () => Promise<void>): Promise<void> {
   let promises: Promise<void>[]
   try {
-    await stop()
-    promises = await startCore()
+    // Tracked from the stop on, so nobody mistakes the stopped core for one that is down for good
+    promises = await trackCoreStart(
+      (async (): Promise<Promise<void>[]> => {
+        await stop()
+        return startCore()
+      })()
+    )
   } catch (e) {
     reportCoreError(e)
     return
