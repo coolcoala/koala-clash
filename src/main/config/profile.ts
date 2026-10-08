@@ -84,7 +84,7 @@ export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> 
       throw new Error(t('error.duplicateProfile'))
     }
   }
-  const newItem = await createProfile(item)
+  const { item: newItem, hwidLimitSupportUrl } = await createProfile(item)
   const config = await getProfileConfig()
   const isExisting = !!(await getProfileItem(newItem.id))
   if (isExisting) {
@@ -102,6 +102,11 @@ export async function addProfileItem(item: Partial<ProfileItem>): Promise<void> 
     await applyProfileExpandProxyGroups(newItem.id)
     await patchAppConfig({ customTheme: newItem.customCss || 'default.css' })
     mainWindow?.webContents.send('appConfigUpdated')
+  }
+
+  // The profile is already saved at this point, the error only reports the limit to the user
+  if (hwidLimitSupportUrl !== undefined) {
+    throw new Error(`HWID_LIMIT:${hwidLimitSupportUrl}`)
   }
 }
 
@@ -187,8 +192,13 @@ async function downloadLogoAsBase64(
   }
 }
 
-export async function createProfile(item: Partial<ProfileItem>): Promise<ProfileItem> {
+// `hwidLimitSupportUrl` is set (possibly to '') when the server reported that this device is over the
+// HWID limit while updating an existing subscription; the profile is still updated in that case.
+export async function createProfile(
+  item: Partial<ProfileItem>
+): Promise<{ item: ProfileItem; hwidLimitSupportUrl?: string }> {
   const id = item.id || new Date().getTime().toString(16)
+  let hwidLimitSupportUrl: string | undefined
   const newItem = {
     id,
     name: item.name || (item.type === 'remote' ? 'Remote File' : 'Local File'),
@@ -241,13 +251,8 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
         throw error
       }
 
-
-      const data = res.data
+      let data: string = res.data
       const headers = res.headers
-      const contentType = String(headers['content-type'] ?? '').toLowerCase()
-      if (contentType.includes('text/html') || contentType.includes('text/xml')) {
-        throw new Error(t('error.subscriptionFormatError'))
-      }
       const hwidLimitKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('x-hwid-limit')
       )
@@ -261,8 +266,18 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
         const hwidSupportKey = Object.keys(headers).find((k) =>
           k.toLowerCase().endsWith('support-url')
         )
-        const hwidSupportUrl = hwidSupportKey ? headers[hwidSupportKey] : ''
-        throw new Error(`HWID_LIMIT:${hwidSupportUrl}`)
+        hwidLimitSupportUrl = hwidSupportKey ? headers[hwidSupportKey] : ''
+        // A new subscription over the limit is not added at all
+        if (!(await getProfileItem(id))) {
+          throw new Error(`HWID_LIMIT:${hwidLimitSupportUrl}`)
+        }
+      }
+      const contentType = String(headers['content-type'] ?? '').toLowerCase()
+      if (
+        hwidLimitSupportUrl === undefined &&
+        (contentType.includes('text/html') || contentType.includes('text/xml'))
+      ) {
+        throw new Error(t('error.subscriptionFormatError'))
       }
       const profileTitleKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('profile-title')
@@ -368,30 +383,16 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
           // ignore css download failure
         }
       }
-      if (newItem.verify) {
-        let parsed: MihomoConfig
+      if (hwidLimitSupportUrl !== undefined) {
+        // Over the limit the server's response still replaces the stored config, otherwise the
+        // previously downloaded one keeps working. A body that is not a config is stored as empty.
         try {
-          parsed = parseYaml<MihomoConfig>(data)
-        } catch (error) {
-          throw new Error(t('error.subscriptionFormatError') + '\n' + (error as Error).message)
+          verifyProfileStr(data)
+        } catch {
+          data = ''
         }
-        if (
-          typeof parsed !== 'object' ||
-          parsed === null ||
-          Array.isArray(parsed) ||
-          !(
-            'proxies' in parsed ||
-            'proxy-providers' in parsed ||
-            'proxy-groups' in parsed ||
-            'rules' in parsed ||
-            'rule-providers' in parsed ||
-            'dns' in parsed ||
-            'tun' in parsed ||
-            'mixed-port' in parsed
-          )
-        ) {
-          throw new Error(t('error.subscriptionFormatError'))
-        }
+      } else if (newItem.verify) {
+        verifyProfileStr(data)
       }
       await setProfileStr(id, data)
       break
@@ -402,7 +403,33 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
       break
     }
   }
-  return newItem
+  return { item: newItem, hwidLimitSupportUrl }
+}
+
+function verifyProfileStr(data: string): void {
+  let parsed: MihomoConfig
+  try {
+    parsed = parseYaml<MihomoConfig>(data)
+  } catch (error) {
+    throw new Error(t('error.subscriptionFormatError') + '\n' + (error as Error).message)
+  }
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    Array.isArray(parsed) ||
+    !(
+      'proxies' in parsed ||
+      'proxy-providers' in parsed ||
+      'proxy-groups' in parsed ||
+      'rules' in parsed ||
+      'rule-providers' in parsed ||
+      'dns' in parsed ||
+      'tun' in parsed ||
+      'mixed-port' in parsed
+    )
+  ) {
+    throw new Error(t('error.subscriptionFormatError'))
+  }
 }
 
 export async function getProfileStr(id: string | undefined): Promise<string> {
