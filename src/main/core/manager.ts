@@ -40,8 +40,18 @@ import { disableSysProxy, triggerSysProxy } from '../sys/sysproxy'
 import { getAxios } from './mihomoApi'
 import { setSysDns } from '../service/api'
 import { t } from '../utils/i18n'
+import { CoreError, reportCoreError, setCoreStatus } from './status'
 
 const ctlParam = process.platform === 'win32' ? '-ext-ctl-pipe' : '-ext-ctl-unix'
+
+// Lines of core output attached to a crash report
+const CORE_OUTPUT_TAIL = 20
+
+// Spawn failures (ENOENT, EACCES, UNKNOWN...) mean the binary itself is gone or blocked
+function isSpawnFailure(error: unknown): error is NodeJS.ErrnoException {
+  const { code, syscall } = (error ?? {}) as NodeJS.ErrnoException
+  return typeof code === 'string' && !!syscall?.startsWith('spawn')
+}
 
 class UserCancelledError extends Error {
   constructor(message = t('tray.userCancelled')) {
@@ -116,8 +126,14 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     }
     throw error
   }
+  // An antivirus quarantining the binary leaves no other trace
+  if (!existsSync(corePath)) {
+    throw new CoreError('binary-missing', `${corePath}: ENOENT`)
+  }
 
-  const { logLevel } = await generateProfile()
+  const { logLevel } = await generateProfile().catch((e) => {
+    throw new CoreError('config-invalid', e)
+  })
   await checkProfile()
   await stopCore()
   if (tun?.enable && autoSetDNSMode !== 'none') {
@@ -163,21 +179,43 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
       resolve([new Promise(() => {})])
     })
   }
-  child.on('close', async (code, signal) => {
-    await writeFile(logPath(), `[Manager]: Core closed, code: ${code}, signal: ${signal}\n`, {
-      flag: 'a'
-    })
-    if (retry) {
-      await writeFile(logPath(), `[Manager]: Try Restart Core\n`, { flag: 'a' })
-      retry--
-      await restartCore()
-    } else {
-      await stopCore()
-    }
-  })
+  setCoreStatus('starting')
+  const outputTail: string[] = []
+  const rememberOutput = (data: Buffer): void => {
+    outputTail.push(...data.toString().split('\n').filter(Boolean))
+    outputTail.splice(0, outputTail.length - CORE_OUTPUT_TAIL)
+  }
   child.stdout?.pipe(stdout)
   child.stderr?.pipe(stderr)
+  child.stdout?.on('data', rememberOutput)
+  child.stderr?.on('data', rememberOutput)
   return new Promise((resolve, reject) => {
+    let ready = false
+    child.on('error', (error) => {
+      reject(isSpawnFailure(error) ? new CoreError('binary-missing', error) : error)
+    })
+    child.on('close', async (code, signal) => {
+      await writeFile(logPath(), `[Manager]: Core closed, code: ${code}, signal: ${signal}\n`, {
+        flag: 'a'
+      })
+      const failure = new CoreError(
+        'crashed',
+        [`code: ${code}, signal: ${signal}`, ...outputTail].join('\n')
+      )
+      // Exiting before the controller came up would fail the same way on every retry
+      if (!ready) {
+        reject(failure)
+        return
+      }
+      if (retry) {
+        await writeFile(logPath(), `[Manager]: Try Restart Core\n`, { flag: 'a' })
+        retry--
+        await restartCore()
+      } else {
+        await stopCore()
+        reportCoreError(failure)
+      }
+    })
     child.stdout?.on('data', async (data) => {
       const str = data.toString()
       if (
@@ -188,19 +226,15 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
       }
 
       if (process.platform === 'win32' && str.includes('updater: finished')) {
-        try {
-          await stopCore(true)
-          const promises = await startCore()
-          await Promise.all(promises)
-        } catch (e) {
-          showError(t('tray.coreStartError'), `${e}`)
-        }
+        await runCore(() => stopCore(true))
       }
 
       if (
         (process.platform !== 'win32' && str.includes('RESTful API unix listening at')) ||
         (process.platform === 'win32' && str.includes('RESTful API pipe listening at'))
       ) {
+        ready = true
+        setCoreStatus('running')
         resolve([
           new Promise((resolve, reject) => {
             const handleProviderInitialization = async (logLine: string): Promise<void> => {
@@ -290,6 +324,7 @@ export async function stopCore(force = false): Promise<void> {
     await stopChildProcess(child)
     child = undefined as unknown as ChildProcess
   }
+  setCoreStatus('stopped')
 
   await getAxios(true).catch(() => {})
 
@@ -386,14 +421,25 @@ async function stopChildProcess(process: ChildProcess): Promise<void> {
   })
 }
 
-export async function restartCore(): Promise<void> {
+// A failed start leaves no core running, while a rejected readiness promise (e.g. TUN) does not
+async function runCore(stop: () => Promise<void>): Promise<void> {
+  let promises: Promise<void>[]
   try {
-    await stopCore()
-    const promises = await startCore()
+    await stop()
+    promises = await startCore()
+  } catch (e) {
+    reportCoreError(e)
+    return
+  }
+  try {
     await Promise.all(promises)
   } catch (e) {
     showError(t('tray.coreStartError'), `${e}`)
   }
+}
+
+export async function restartCore(): Promise<void> {
+  await runCore(() => stopCore())
 }
 
 export async function keepCoreAlive(): Promise<void> {
@@ -433,16 +479,19 @@ async function checkProfile(): Promise<void> {
       { env }
     )
   } catch (error) {
-    if (error instanceof Error && 'stdout' in error) {
-      const { stdout } = error as { stdout: string }
-      const errorLines = stdout
-        .split('\n')
-        .filter((line) => line.includes('level=error'))
-        .map((line) => line.split('level=error')[1])
-      throw new Error(`Profile Check Failed:\n${errorLines.join('\n')}`)
-    } else {
-      throw error
+    // The promisified execFile attaches stdout even when the binary never ran
+    if (isSpawnFailure(error)) {
+      throw new CoreError('binary-missing', error)
     }
+    const { stdout = '', stderr = '' } = error as { stdout?: string; stderr?: string }
+    const errorLines = `${stdout}\n${stderr}`
+      .split('\n')
+      .filter((line) => /level=(error|fatal)/.test(line))
+      .map((line) => line.split(/level=(?:error|fatal)/)[1].trim())
+    if (errorLines.length > 0) {
+      throw new CoreError('config-invalid', errorLines.join('\n'))
+    }
+    throw error
   }
 }
 

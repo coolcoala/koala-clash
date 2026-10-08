@@ -13,20 +13,66 @@ import {
 import { parseYaml, stringifyYaml } from '../utils/yaml'
 import { copyFile, mkdir, readFile, writeFile } from 'fs/promises'
 import { deepMerge } from '../utils/merge'
+import { defaultControledMihomoConfig } from '../utils/template'
 import { existsSync } from 'fs'
 import path from 'path'
 
 let runtimeConfigStr: string,
   rawProfileStr: string,
   currentProfileStr: string,
-  runtimeConfig: MihomoConfig
+  runtimeConfig: MihomoConfig,
+  lastMixedPort: number | undefined
 
 const LOG_LEVELS: readonly LogLevel[] = ['silent', 'error', 'warning', 'info', 'debug']
 
 const STDOUT_PARSEABLE_LOG_LEVELS: readonly LogLevel[] = ['info', 'debug']
 
+export const PORT_KEYS: readonly MihomoPortKey[] = [
+  'port',
+  'socks-port',
+  'redir-port',
+  'tproxy-port',
+  'mixed-port'
+]
+
 function isLogLevel(value: unknown): value is LogLevel {
   return LOG_LEVELS.includes(value as LogLevel)
+}
+
+function isPort(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) > 0 && (value as number) <= 65535
+}
+
+// A port declared by the profile wins, unless the user has set that port in the app settings
+function resolvePorts(
+  profile: Partial<MihomoConfig>,
+  controledMihomoConfig: Partial<MihomoConfig>,
+  customPorts: MihomoPortKey[]
+): Record<MihomoPortKey, MihomoPortInfo> {
+  const ports = {} as Record<MihomoPortKey, MihomoPortInfo>
+  for (const key of PORT_KEYS) {
+    const declared = profile[key]
+    const profileValue = isPort(declared) ? declared : undefined
+    const fromProfile = profileValue !== undefined && !customPorts.includes(key)
+    ports[key] = {
+      value: fromProfile
+        ? profileValue
+        : (controledMihomoConfig[key] ?? defaultControledMihomoConfig[key] ?? 0),
+      profileValue,
+      fromProfile
+    }
+  }
+  return ports
+}
+
+export async function getEffectivePorts(): Promise<Record<MihomoPortKey, MihomoPortInfo>> {
+  const { current } = await getProfileConfig()
+  const { customPorts = [] } = await getAppConfig()
+  return resolvePorts(await getProfile(current), await getControledMihomoConfig(), customPorts)
+}
+
+export async function getMixedPort(): Promise<number> {
+  return (await getEffectivePorts())['mixed-port'].value
 }
 
 // 辅助函数：处理带偏移量的规则
@@ -67,7 +113,8 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
     diffWorkDir = false,
     controlDns = true,
     controlSniff = true,
-    controlTun = false
+    controlTun = false,
+    customPorts = []
   } = appConfig
   const proxyModeEnabled = appConfig.proxyMode ?? false
   const currentProfile = await getProfile(current)
@@ -78,6 +125,10 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   const configToMerge = JSON.parse(JSON.stringify(controledMihomoConfig))
   if (isLogLevel(currentProfile['log-level'])) {
     delete configToMerge['log-level']
+  }
+  const ports = resolvePorts(currentProfile, controledMihomoConfig, customPorts)
+  for (const key of PORT_KEYS) {
+    if (ports[key].fromProfile) delete configToMerge[key]
   }
   if (!controlDns && currentProfile.dns) {
     delete configToMerge.dns
@@ -167,6 +218,19 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
     diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work'),
     runtimeConfigStr
   )
+
+  // The mixed port can follow the profile, so switching profiles may move it
+  const previousMixedPort = lastMixedPort
+  lastMixedPort = ports['mixed-port'].value
+  if (
+    previousMixedPort !== undefined &&
+    previousMixedPort !== lastMixedPort &&
+    proxyModeEnabled &&
+    appConfig.sysProxy?.enable
+  ) {
+    const { triggerSysProxy } = await import('../sys/sysproxy')
+    await triggerSysProxy(true, appConfig.onlyActiveDevice ?? false).catch(() => {})
+  }
   return { logLevel }
 }
 

@@ -208,6 +208,10 @@ export async function restartCore(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('restartCore'))
 }
 
+export async function getCoreState(): Promise<CoreState> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getCoreState'))
+}
+
 export async function restartMihomoConnections(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('restartMihomoConnections'))
 }
@@ -314,6 +318,10 @@ export async function getCurrentProfileStr(): Promise<string> {
 
 export async function getRuntimeConfig(): Promise<MihomoConfig> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getRuntimeConfig'))
+}
+
+export async function getEffectivePorts(): Promise<Record<MihomoPortKey, MihomoPortInfo>> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getEffectivePorts'))
 }
 
 export async function checkUpdate(): Promise<AppVersion | undefined> {

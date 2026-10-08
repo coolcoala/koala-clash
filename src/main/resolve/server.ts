@@ -1,4 +1,5 @@
-import { getAppConfig, getControledMihomoConfig } from '../config'
+import { getAppConfig } from '../config'
+import { getMixedPort } from '../core/factory'
 import http from 'http'
 import net from 'net'
 
@@ -40,7 +41,7 @@ export async function startPacServer(): Promise<void> {
   }
   const host = cHost || '127.0.0.1'
   let script = pacScript || defaultPacScript
-  const { 'mixed-port': port = 7897 } = await getControledMihomoConfig()
+  const port = await getMixedPort()
   script = script.replaceAll('%mixed-port%', port.toString())
   pacPort = await findAvailablePort(10000)
   pacServer = http

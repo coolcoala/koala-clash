@@ -33,6 +33,7 @@ import {
 import { triggerSysProxy } from '../sys/sysproxy'
 import { quitWithoutCore } from '../core/manager'
 import { mihomoHotReloadConfig } from '../core/mihomoApi'
+import { getMixedPort } from '../core/factory'
 import { floatingWindow } from './floatingWindow'
 import { is } from '@electron-toolkit/utils'
 import { join } from 'path'
@@ -426,7 +427,7 @@ ipcMain.on('customTray:close', () => {
 })
 
 export async function copyEnv(type: 'bash' | 'cmd' | 'powershell' | 'nushell'): Promise<void> {
-  const { 'mixed-port': mixedPort = 7897 } = await getControledMihomoConfig()
+  const mixedPort = await getMixedPort()
   const { sysProxy } = await getAppConfig()
   const { host, bypass = [] } = sysProxy
   switch (type) {

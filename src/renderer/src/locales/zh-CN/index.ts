@@ -235,6 +235,7 @@ export default {
       connecting: '连接中...',
       connected: '已连接',
       disconnecting: '断开中...',
+      coreProblem: '内核异常',
       trafficRemaining: '剩余流量:',
       daysRemaining: '剩余天数:',
       expires: '到期:',
@@ -482,6 +483,17 @@ export default {
     copyErrorInfo: '复制报错信息'
   },
 
+  coreError: {
+    binaryMissingTitle: '未找到内核',
+    binaryMissingDescription:
+      '内核文件已被删除或拦截，很可能被杀毒软件隔离。请将应用目录加入杀毒软件白名单并重新安装应用。',
+    configInvalidTitle: '配置错误',
+    configInvalidDescription: '内核无法加载当前订阅的配置。请尝试更新订阅或联系支持。',
+    crashedTitle: '内核已停止',
+    crashedDescription: '内核异常退出，请尝试重启内核。',
+    restart: '重启'
+  },
+
   modal: {
     pleaseConfirm: '请确认',
     confirmDelete: '确认删除',
@@ -644,6 +656,8 @@ export default {
       httpPort: 'Http 端口',
       redirPort: 'Redir 端口',
       tproxyPort: 'TProxy 端口',
+      fromProfile: '来自订阅',
+      useProfilePort: '使用订阅中的端口（{{port}}）',
       allowLan: '允许局域网连接',
       allowedIpRanges: '允许连接的 IP 段',
       deniedIpRanges: '禁止连接的 IP 段',

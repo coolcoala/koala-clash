@@ -161,6 +161,7 @@ export default {
       connecting: 'Подключение...',
       connected: 'Подключено',
       disconnecting: 'Отключение...',
+      coreProblem: 'Проблема с ядром',
       trafficRemaining: 'Трафика осталось:',
       daysRemaining: 'Дней осталось:',
       expires: 'Истекает:',
@@ -418,6 +419,18 @@ export default {
     copyErrorInfo: 'Копировать информацию об ошибке'
   },
 
+  coreError: {
+    binaryMissingTitle: 'Ядро не найдено',
+    binaryMissingDescription:
+      'Файл ядра удалён или заблокирован. Скорее всего, его поместил в карантин антивирус: добавьте папку приложения в исключения и переустановите приложение.',
+    configInvalidTitle: 'Ошибка в конфигурации',
+    configInvalidDescription:
+      'Ядро не смогло загрузить конфигурацию профиля. Попробуйте обновить подписку или обратитесь в поддержку.',
+    crashedTitle: 'Ядро остановилось',
+    crashedDescription: 'Ядро завершило работу с ошибкой. Попробуйте перезапустить его.',
+    restart: 'Перезапустить'
+  },
+
   modal: {
     pleaseConfirm: 'Подтвердите действие',
     confirmDelete: 'Подтвердить удаление',
@@ -584,6 +597,8 @@ export default {
       httpPort: 'HTTP-порт',
       redirPort: 'Redir-порт',
       tproxyPort: 'Порт TProxy',
+      fromProfile: 'из подписки',
+      useProfilePort: 'Вернуть порт из подписки ({{port}})',
       allowLan: 'Разрешить подключения из локальной сети',
       allowedIpRanges: 'Разрешённые диапазоны IP',
       deniedIpRanges: 'Запрещённые диапазоны IP',

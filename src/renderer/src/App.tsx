@@ -21,6 +21,7 @@ import { SidebarProvider } from '@renderer/components/ui/sidebar'
 import AppSidebar from '@renderer/components/app-sidebar'
 import UpdateBanner from '@renderer/components/updater/update-banner'
 import HwidLimitAlert from '@renderer/components/profiles/hwid-limit-alert'
+import CoreErrorAlert from '@renderer/components/mihomo/core-error-alert'
 import WindowControls from '@renderer/components/window-controls'
 import mapDark from '@renderer/assets/map_darktheme.svg'
 import mapLight from '@renderer/assets/map_lighttheme.svg'
@@ -248,6 +249,7 @@ const App: React.FC = () => {
         />
       )}
       <HwidLimitAlert />
+      <CoreErrorAlert />
       {platform === 'darwin' && (
         <div className="fixed top-0.5 -left-1 h-14.25 flex items-center pl-3 z-100 app-drag">
           <WindowControls />

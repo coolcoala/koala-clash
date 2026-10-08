@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CircleAlert } from 'lucide-react'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
@@ -16,6 +17,10 @@ import {
 const HwidLimitAlert = () => {
   const { t } = useTranslation()
   const { hwidLimitError, clearHwidLimitError } = useProfileConfig()
+  // Keeps the footer in place while the dialog fades out after the error is cleared
+  const shownSupportUrl = useRef(hwidLimitError)
+  if (hwidLimitError !== null) shownSupportUrl.current = hwidLimitError
+  const supportUrl = shownSupportUrl.current
 
   return (
     <AlertDialog open={hwidLimitError !== null} onOpenChange={(open) => !open && clearHwidLimitError()}>
@@ -28,11 +33,17 @@ const HwidLimitAlert = () => {
           <AlertDialogDescription>{t('pages.profiles.hwidLimitDescription')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={clearHwidLimitError}>{t('common.close')}</AlertDialogCancel>
-          {hwidLimitError && (
+          {/* Without a support link closing is the only action, so it takes the primary style */}
+          <AlertDialogCancel
+            variant={supportUrl ? 'outline' : 'default'}
+            onClick={clearHwidLimitError}
+          >
+            {t('common.close')}
+          </AlertDialogCancel>
+          {supportUrl && (
             <AlertDialogAction
               onClick={() => {
-                open(hwidLimitError)
+                open(supportUrl)
                 clearHwidLimitError()
               }}
             >

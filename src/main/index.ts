@@ -4,6 +4,7 @@ import windowStateKeeper from 'electron-window-state'
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerMonitor, shell } from 'electron'
 import { addProfileItem, getAppConfig, patchControledMihomoConfig } from './config'
 import { quitWithoutCore, startCore, stopCore } from './core/manager'
+import { reportCoreError } from './core/status'
 import { triggerSysProxy } from './sys/sysproxy'
 import icon from '../../resources/icon.png?asset'
 import { createTray } from './resolve/tray'
@@ -337,7 +338,8 @@ app.whenReady().then(async () => {
       })
       coreStarted = true
     } catch (e) {
-      showError(t('dialog.coreStartError'), `${e}`)
+      // Kept as state rather than sent as an event: the renderer may not be listening yet
+      reportCoreError(e)
     }
   })()
 

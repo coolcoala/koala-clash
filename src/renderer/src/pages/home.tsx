@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
+import Alert from '@renderer/assets/alert_icon.svg'
 import {
   InfinityIcon,
   WifiOff,
@@ -29,6 +30,7 @@ import { Spinner } from '@renderer/components/ui/spinner'
 import { CharacterMorph } from '@renderer/components/ui/character-morph'
 import { calcTraffic } from '@renderer/utils/calc'
 import { useTrafficStore } from '@renderer/store/traffic-store'
+import { reopenCoreError, useCoreLifecycleStore } from '@renderer/store/core-lifecycle-store'
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
@@ -120,24 +122,33 @@ const Home: React.FC = () => {
     'connecting'
   )
 
-  const isSelected = (tun?.enable ?? false) || proxyMode
+  // A dead core cannot carry traffic, whatever the saved switch state says
+  const coreProblem = useCoreLifecycleStore((s) => s.coreState.status === 'error')
+  const isSelected = !coreProblem && ((tun?.enable ?? false) || proxyMode)
 
   const isDisabled =
     loading ||
-    (mainSwitchMode === 'sysproxy' && writeSysProxy && mode == 'manual' && sysProxyDisabled)
+    (!coreProblem &&
+      mainSwitchMode === 'sysproxy' &&
+      writeSysProxy &&
+      mode == 'manual' &&
+      sysProxyDisabled)
 
   const status = loading
     ? loadingDirection === 'connecting'
       ? t('pages.home.connecting')
       : t('pages.home.disconnecting')
-    : isSelected
-      ? t('pages.home.connected')
-      : t('pages.home.disconnected')
+    : coreProblem
+      ? t('pages.home.coreProblem')
+      : isSelected
+        ? t('pages.home.connected')
+        : t('pages.home.disconnected')
   const statusWidthTexts = [
     t('pages.home.connecting'),
     t('pages.home.disconnecting'),
     t('pages.home.connected'),
-    t('pages.home.disconnected')
+    t('pages.home.disconnected'),
+    t('pages.home.coreProblem')
   ]
   const showConnectedTimer = !loading && isSelected
 
@@ -404,7 +415,7 @@ const Home: React.FC = () => {
             </div>
             <button
               disabled={isDisabled}
-              onClick={() => onValueChange(!isSelected)}
+              onClick={() => (coreProblem ? reopenCoreError() : onValueChange(!isSelected))}
               data-guide="home-power-toggle"
               className="relative group transition-transform active:scale-95 cursor-pointer"
             >
@@ -432,7 +443,16 @@ const Home: React.FC = () => {
                     src={Power}
                     alt=""
                     className={`absolute inset-0 size-16 fill-foreground transition-all duration-300 ease-out ${
-                      !loading && !isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                      !loading && !isSelected && !coreProblem
+                        ? 'opacity-100 scale-100'
+                        : 'opacity-0 scale-90'
+                    }`}
+                  />
+                  <img
+                    src={Alert}
+                    alt=""
+                    className={`absolute inset-0 size-16 fill-foreground transition-all duration-300 ease-out ${
+                      !loading && coreProblem ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                     }`}
                   />
                 </div>

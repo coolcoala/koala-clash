@@ -52,6 +52,17 @@ interface MihomoConfig {
   'proxy-providers'?: Record<string, unknown>
 }
 
+type MihomoPortKey = 'port' | 'socks-port' | 'redir-port' | 'tproxy-port' | 'mixed-port'
+
+interface MihomoPortInfo {
+  // the port mihomo is configured with
+  value: number
+  // the port declared by the current profile, if any
+  profileValue?: number
+  // true when the profile's port is used instead of the app setting
+  fromProfile: boolean
+}
+
 interface MihomoTunConfig {
   enable?: boolean
   stack?: TunStack

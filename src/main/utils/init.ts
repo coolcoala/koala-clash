@@ -35,6 +35,7 @@ import {
 import { app } from 'electron'
 import { startSSIDCheck } from '../sys/ssid'
 import { startNetworkDetection } from '../core/manager'
+import { PORT_KEYS } from '../core/factory'
 import { initKeyManager } from '../service/manager'
 import { migrateFromOldApp } from './migration'
 
@@ -173,6 +174,13 @@ async function migration(): Promise<void> {
     if (!(key in appConfig) && defaultConfig[key as keyof AppConfig] !== undefined) {
       ;(appConfigPatch as Record<string, unknown>)[key] = defaultConfig[key as keyof AppConfig]
     }
+  }
+
+  // Before customPorts existed, a port that differs from the default was set by the user
+  if (appConfig.customPorts === undefined) {
+    appConfigPatch.customPorts = PORT_KEYS.filter(
+      (key) => key in mihomoConfig && mihomoConfig[key] !== defaultControledMihomoConfig[key]
+    )
   }
 
   // Migrate: the old sysProxy.enable toggle now maps to the new proxyMode toggle.

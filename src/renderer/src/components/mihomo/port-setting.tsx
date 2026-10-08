@@ -1,42 +1,39 @@
 import React, { useState } from 'react'
+import useSWR from 'swr'
 import SettingCard from '../base/base-setting-card'
 import SettingItem from '../base/base-setting-item'
 import EditableList from '../base/base-list-editor'
 
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { triggerSysProxy, mihomoHotReloadConfig } from '@renderer/utils/ipc'
+import { getEffectivePorts, mihomoHotReloadConfig } from '@renderer/utils/ipc'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { platform } from '@renderer/utils/init'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Switch } from '@renderer/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip'
 import InterfaceModal from '@renderer/components/mihomo/interface-modal'
 import { useTranslation } from 'react-i18next'
-import { Network } from 'lucide-react'
+import { Network, RotateCcw } from 'lucide-react'
+
+const PORT_KEYS: MihomoPortKey[] = ['mixed-port', 'socks-port', 'port', 'redir-port', 'tproxy-port']
 
 const PortSetting: React.FC = () => {
   const { t } = useTranslation()
-  const { appConfig } = useAppConfig()
-  const { sysProxy, proxyMode = false, onlyActiveDevice = false } = appConfig || {}
+  const { appConfig, patchAppConfig } = useAppConfig()
+  const { customPorts = [] } = appConfig || {}
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
+  const { data: ports, mutate: mutatePorts } = useSWR('getEffectivePorts', getEffectivePorts)
   const {
     authentication = [],
     'skip-auth-prefixes': skipAuthPrefixes = ['127.0.0.1/32'],
     'allow-lan': allowLan,
     'lan-allowed-ips': lanAllowedIps = [],
-    'lan-disallowed-ips': lanDisallowedIps = [],
-    'mixed-port': mixedPort = 7897,
-    'socks-port': socksPort = 0,
-    port: httpPort = 0,
-    'redir-port': redirPort = 0,
-    'tproxy-port': tproxyPort = 0
+    'lan-disallowed-ips': lanDisallowedIps = []
   } = controledMihomoConfig || {}
 
-  const [mixedPortInput, setMixedPortInput] = useState(mixedPort)
-  const [socksPortInput, setSocksPortInput] = useState(socksPort)
-  const [httpPortInput, setHttpPortInput] = useState(httpPort)
-  const [redirPortInput, setRedirPortInput] = useState(redirPort)
-  const [tproxyPortInput, setTproxyPortInput] = useState(tproxyPort)
+  // unconfirmed edits; a port without one shows the value mihomo actually uses
+  const [portInputs, setPortInputs] = useState<Partial<Record<MihomoPortKey, number>>>({})
   const [lanAllowedIpsInput, setLanAllowedIpsInput] = useState(lanAllowedIps)
   const [lanDisallowedIpsInput, setLanDisallowedIpsInput] = useState(lanDisallowedIps)
   const [authenticationInput, setAuthenticationInput] = useState(authentication)
@@ -48,15 +45,18 @@ const PortSetting: React.FC = () => {
     return { part1: user, part2: pass }
   }
   const formatAuth = (user: string, pass?: string): string => `${user}:${pass || ''}`
+  const portInput = (key: MihomoPortKey): number =>
+    portInputs[key] ?? ports?.[key].value ?? controledMihomoConfig?.[key] ?? 0
+  const clearPortInput = (key: MihomoPortKey): void => {
+    setPortInputs((inputs) => {
+      const next = { ...inputs }
+      delete next[key]
+      return next
+    })
+  }
   const hasPortConflict = (): boolean => {
-    const ports = [
-      mixedPortInput,
-      socksPortInput,
-      httpPortInput,
-      redirPortInput,
-      tproxyPortInput
-    ].filter((p) => p !== 0)
-    return new Set(ports).size !== ports.length
+    const values = PORT_KEYS.map(portInput).filter((p) => p !== 0)
+    return new Set(values).size !== values.length
   }
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
@@ -64,151 +64,91 @@ const PortSetting: React.FC = () => {
     await mihomoHotReloadConfig()
   }
 
+  // A confirmed port becomes the user's choice and stops following the profile
+  const onPortConfirm = async (key: MihomoPortKey): Promise<void> => {
+    if (!customPorts.includes(key)) {
+      await patchAppConfig({ customPorts: [...customPorts, key] })
+    }
+    await onChangeNeedRestart({ [key]: portInput(key) })
+    await mutatePorts()
+    clearPortInput(key)
+  }
+
+  const onPortReset = async (key: MihomoPortKey): Promise<void> => {
+    await patchAppConfig({ customPorts: customPorts.filter((k) => k !== key) })
+    await mihomoHotReloadConfig()
+    await mutatePorts()
+    clearPortInput(key)
+  }
+
+  const renderPortItem = (key: MihomoPortKey, title: string): React.ReactNode => {
+    const info = ports?.[key]
+    const value = portInput(key)
+    return (
+      <SettingItem
+        title={
+          <>
+            {title}
+            {info?.fromProfile && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                {t('mihomo.portSettings.fromProfile')}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          info &&
+          !info.fromProfile &&
+          info.profileValue !== undefined && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon-sm" variant="ghost" onClick={() => onPortReset(key)}>
+                  <RotateCcw className="text-lg" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('mihomo.portSettings.useProfilePort', { port: info.profileValue })}
+              </TooltipContent>
+            </Tooltip>
+          )
+        }
+        divider
+      >
+        <div className="flex">
+          {info && value !== info.value && (
+            <Button
+              size="sm"
+              className="mr-2"
+              disabled={hasPortConflict()}
+              onClick={() => onPortConfirm(key)}
+            >
+              {t('common.confirm')}
+            </Button>
+          )}
+          <Input
+            type="number"
+            className="w-25 h-8 text-sm"
+            value={value.toString()}
+            max={65535}
+            min={0}
+            onChange={(e) => {
+              setPortInputs((inputs) => ({ ...inputs, [key]: parseInt(e.target.value) || 0 }))
+            }}
+          />
+        </div>
+      </SettingItem>
+    )
+  }
+
   return (
     <>
       {lanOpen && <InterfaceModal onClose={() => setLanOpen(false)} />}
       <SettingCard title={t('mihomo.portSettings.title')}>
-        <SettingItem title={t('mihomo.portSettings.mixedPort')} divider>
-          <div className="flex">
-            {mixedPortInput !== mixedPort && (
-              <Button
-                size="sm"
-                className="mr-2"
-                disabled={hasPortConflict()}
-                onClick={async () => {
-                  await onChangeNeedRestart({ 'mixed-port': mixedPortInput })
-                  if (proxyMode && sysProxy?.enable) {
-                    await triggerSysProxy(true, onlyActiveDevice)
-                  }
-                }}
-              >
-                {t('common.confirm')}
-              </Button>
-            )}
-            <Input
-              type="number"
-              className="w-25 h-8 text-sm"
-              value={mixedPortInput.toString()}
-              max={65535}
-              min={0}
-              onChange={(e) => {
-                setMixedPortInput(parseInt(e.target.value) || 0)
-              }}
-            />
-          </div>
-        </SettingItem>
-        <SettingItem title={t('mihomo.portSettings.socksPort')} divider>
-          <div className="flex">
-            {socksPortInput !== socksPort && (
-              <Button
-                size="sm"
-                className="mr-2"
-                disabled={hasPortConflict()}
-                onClick={() => {
-                  onChangeNeedRestart({ 'socks-port': socksPortInput })
-                }}
-              >
-                {t('common.confirm')}
-              </Button>
-            )}
-
-            <Input
-              type="number"
-              className="w-25 h-8 text-sm"
-              value={socksPortInput.toString()}
-              max={65535}
-              min={0}
-              onChange={(e) => {
-                setSocksPortInput(parseInt(e.target.value) || 0)
-              }}
-            />
-          </div>
-        </SettingItem>
-        <SettingItem title={t('mihomo.portSettings.httpPort')} divider>
-          <div className="flex">
-            {httpPortInput !== httpPort && (
-              <Button
-                size="sm"
-                className="mr-2"
-                disabled={hasPortConflict()}
-                onClick={() => {
-                  onChangeNeedRestart({ port: httpPortInput })
-                }}
-              >
-                {t('common.confirm')}
-              </Button>
-            )}
-
-            <Input
-              type="number"
-              className="w-25 h-8 text-sm"
-              value={httpPortInput.toString()}
-              max={65535}
-              min={0}
-              onChange={(e) => {
-                setHttpPortInput(parseInt(e.target.value) || 0)
-              }}
-            />
-          </div>
-        </SettingItem>
-        {platform !== 'win32' && (
-          <SettingItem title={t('mihomo.portSettings.redirPort')} divider>
-            <div className="flex">
-              {redirPortInput !== redirPort && (
-                <Button
-                  size="sm"
-                  className="mr-2"
-                  disabled={hasPortConflict()}
-                  onClick={() => {
-                    onChangeNeedRestart({ 'redir-port': redirPortInput })
-                  }}
-                >
-                  {t('common.confirm')}
-                </Button>
-              )}
-
-              <Input
-                type="number"
-                className="w-25 h-8 text-sm"
-                value={redirPortInput.toString()}
-                max={65535}
-                min={0}
-                onChange={(e) => {
-                  setRedirPortInput(parseInt(e.target.value) || 0)
-                }}
-              />
-            </div>
-          </SettingItem>
-        )}
-        {platform === 'linux' && (
-          <SettingItem title={t('mihomo.portSettings.tproxyPort')} divider>
-            <div className="flex">
-              {tproxyPortInput !== tproxyPort && (
-                <Button
-                  size="sm"
-                  className="mr-2"
-                  disabled={hasPortConflict()}
-                  onClick={() => {
-                    onChangeNeedRestart({ 'tproxy-port': tproxyPortInput })
-                  }}
-                >
-                  {t('common.confirm')}
-                </Button>
-              )}
-
-              <Input
-                type="number"
-                className="w-25 h-8 text-sm"
-                value={tproxyPortInput.toString()}
-                max={65535}
-                min={0}
-                onChange={(e) => {
-                  setTproxyPortInput(parseInt(e.target.value) || 0)
-                }}
-              />
-            </div>
-          </SettingItem>
-        )}
+        {renderPortItem('mixed-port', t('mihomo.portSettings.mixedPort'))}
+        {renderPortItem('socks-port', t('mihomo.portSettings.socksPort'))}
+        {renderPortItem('port', t('mihomo.portSettings.httpPort'))}
+        {platform !== 'win32' && renderPortItem('redir-port', t('mihomo.portSettings.redirPort'))}
+        {platform === 'linux' && renderPortItem('tproxy-port', t('mihomo.portSettings.tproxyPort'))}
         <SettingItem
           title={t('mihomo.portSettings.allowLan')}
           actions={

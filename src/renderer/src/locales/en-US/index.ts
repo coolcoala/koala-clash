@@ -160,6 +160,7 @@ export default {
       connecting: 'Connecting...',
       connected: 'Connected',
       disconnecting: 'Disconnecting...',
+      coreProblem: 'Core problem',
       trafficRemaining: 'Traffic left:',
       daysRemaining: 'Days left:',
       expires: 'Expires:',
@@ -416,6 +417,18 @@ export default {
     copyErrorInfo: 'Copy error info'
   },
 
+  coreError: {
+    binaryMissingTitle: 'Core not found',
+    binaryMissingDescription:
+      'The core file was deleted or blocked, most likely quarantined by an antivirus. Add the app folder to the antivirus exclusions and reinstall the app.',
+    configInvalidTitle: 'Configuration error',
+    configInvalidDescription:
+      'The core could not load the profile configuration. Try updating the subscription or contact support.',
+    crashedTitle: 'Core stopped',
+    crashedDescription: 'The core exited with an error. Try restarting it.',
+    restart: 'Restart'
+  },
+
   modal: {
     pleaseConfirm: 'Please Confirm',
     confirmDelete: 'Confirm Delete',
@@ -583,6 +596,8 @@ export default {
       httpPort: 'HTTP Port',
       redirPort: 'Redir Port',
       tproxyPort: 'TProxy Port',
+      fromProfile: 'from subscription',
+      useProfilePort: 'Use the subscription port ({{port}})',
       allowLan: 'Allow LAN Connection',
       allowedIpRanges: 'Allowed IP Ranges',
       deniedIpRanges: 'Denied IP Ranges',

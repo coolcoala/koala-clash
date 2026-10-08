@@ -85,6 +85,8 @@ interface AppConfig {
   controlDns?: boolean
   controlSniff?: boolean
   controlTun?: boolean
+  // ports the user set in the app settings; the others follow the profile when it declares them
+  customPorts?: MihomoPortKey[]
   useDockIcon?: boolean
   useCustomTrayMenu?: boolean
   hosts: IHost[]
@@ -142,4 +144,12 @@ interface SubscriptionUserInfo {
   download: number
   total: number
   expire: number
+}
+
+type CoreErrorReason = 'binary-missing' | 'config-invalid' | 'crashed'
+
+interface CoreState {
+  status: 'starting' | 'running' | 'stopped' | 'error'
+  // `at` identifies the failure, so the UI can tell a new one from one the user already closed
+  error?: { reason: CoreErrorReason; detail: string; at: number }
 }

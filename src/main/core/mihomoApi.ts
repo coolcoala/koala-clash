@@ -9,6 +9,11 @@ import { floatingWindow } from '../resolve/floatingWindow'
 import { mihomoIpcPath } from '../utils/dirs'
 import { safeSend } from '../utils/safeSend'
 import { debounce } from '../utils/debounce'
+import { t } from '../utils/i18n'
+import { CoreError, reportCoreError, setCoreStatus } from './status'
+
+// Socket-level failures mean nothing is listening on the controller, i.e. the core is down
+const CORE_UNREACHABLE_CODES = new Set(['ENOENT', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE'])
 
 let axiosIns: AxiosInstance = null!
 let mihomoTrafficWs: WebSocket | null = null
@@ -43,6 +48,9 @@ export const getAxios = async (force: boolean = false): Promise<AxiosInstance> =
     (error) => {
       if (error.response && error.response.data) {
         return Promise.reject(error.response.data)
+      }
+      if (CORE_UNREACHABLE_CODES.has(error.code)) {
+        return Promise.reject(new Error(t('error.coreUnreachable')))
       }
       return Promise.reject(error)
     }
@@ -304,18 +312,37 @@ export const mihomoUpgradeUI = async (): Promise<void> => {
   return await instance.post('/upgrade/ui')
 }
 
+// Error bodies returned by the controller, as opposed to transport failures
+const isControllerError = (e: unknown): e is { message: string } =>
+  typeof e === 'object' &&
+  e !== null &&
+  !(e instanceof Error) &&
+  typeof (e as { message?: unknown }).message === 'string'
+
 export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { generateProfile } = await import('./factory')
   const { getProfileConfig } = await import('../config')
   const { resetProviderTracking } = await import('./manager')
-  const { logLevel } = await generateProfile()
+  const { logLevel } = await generateProfile().catch((e) => {
+    reportCoreError(new CoreError('config-invalid', e))
+    throw e
+  })
   const { current } = await getProfileConfig()
   const { diffWorkDir = false } = await getAppConfig()
   const { mihomoWorkConfigPath } = await import('../utils/dirs')
   const configPath = diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work')
   await resetProviderTracking()
   const instance = await getAxios()
-  await instance.put('/configs?force=true', { path: configPath })
+  try {
+    await instance.put('/configs?force=true', { path: configPath })
+  } catch (e) {
+    // The controller answers with the parse error and keeps serving the previous config
+    if (isControllerError(e)) {
+      reportCoreError(new CoreError('config-invalid', e.message))
+    }
+    throw e
+  }
+  setCoreStatus('running')
   await applyLogLevel(logLevel)
 }
 

@@ -1,4 +1,5 @@
-import { getAppConfig, getControledMihomoConfig } from '../config'
+import { getAppConfig } from '../config'
+import { getMixedPort } from '../core/factory'
 import { pacPort, startPacServer, stopPacServer } from '../resolve/server'
 import { promisify } from 'util'
 import { execFile } from 'child_process'
@@ -72,7 +73,7 @@ async function setSysProxy(onlyActiveDevice: boolean): Promise<void> {
   await startPacServer()
   const { sysProxy } = await getAppConfig()
   const { mode, host, bypass = defaultBypass, settingMode = 'exec' } = sysProxy
-  const { 'mixed-port': port = 7897 } = await getControledMihomoConfig()
+  const port = await getMixedPort()
   const execFilePromise = promisify(execFile)
   const useService = process.platform === 'darwin' && settingMode === 'service'
 

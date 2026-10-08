@@ -142,6 +142,7 @@ const zhCN: LocaleTranslations = {
     downloadFailed: '下载失败',
     userCancelledDownload: '用户取消下载',
     scriptReturnMustBeObject: '脚本返回值必须是对象',
+    coreUnreachable: '内核无响应，可能未在运行',
   },
   ui: {
     defaultTheme: '默认',
@@ -282,6 +283,7 @@ const enUS: LocaleTranslations = {
     downloadFailed: 'Download failed',
     userCancelledDownload: 'User cancelled download',
     scriptReturnMustBeObject: 'Script return value must be an object',
+    coreUnreachable: 'The core is not responding, it may not be running',
   },
   ui: {
     defaultTheme: 'Default',
@@ -422,7 +424,8 @@ const ruRU: LocaleTranslations = {
     downloadCancelled: 'Загрузка отменена',
     downloadFailed: 'Ошибка загрузки',
     userCancelledDownload: 'Пользователь отменил загрузку',
-    scriptReturnMustBeObject: 'Возвращаемое значение скрипта должно быть объектом'
+    scriptReturnMustBeObject: 'Возвращаемое значение скрипта должно быть объектом',
+    coreUnreachable: 'Ядро не отвечает, возможно, оно не запущено'
   },
   ui: {
     defaultTheme: 'По умолчанию',

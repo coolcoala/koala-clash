@@ -54,6 +54,7 @@ import {
   revokeCorePermission,
   checkCorePermission
 } from '../core/manager'
+import { getCoreState } from '../core/status'
 import { triggerSysProxy } from '../sys/sysproxy'
 import { checkUpdate, downloadAndInstallUpdate, cancelUpdate } from '../resolve/autoUpdater'
 import {
@@ -82,7 +83,8 @@ import {
   getRuntimeConfig,
   getRuntimeConfigStr,
   getRawProfileStr,
-  getCurrentProfileStr
+  getCurrentProfileStr,
+  getEffectivePorts
 } from '../core/factory'
 import { getInterfaces } from '../sys/interface'
 import { closeTrayIcon, copyEnv, setDockVisible, showTrayIcon, updateTrayIcon } from '../resolve/tray'
@@ -202,6 +204,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('addProfileItem', (_e, item) => ipcErrorWrapper(addProfileItem)(item))
   ipcMain.handle('removeProfileItem', (_e, id) => ipcErrorWrapper(removeProfileItem)(id))
   ipcMain.handle('restartCore', ipcErrorWrapper(restartCore))
+  ipcMain.handle('getCoreState', () => getCoreState())
   ipcMain.handle('restartMihomoConnections', ipcErrorWrapper(restartMihomoConnections))
   ipcMain.handle('triggerSysProxy', (_e, enable, onlyActiveDevice) =>
     ipcErrorWrapper(triggerSysProxy)(enable, onlyActiveDevice)
@@ -230,6 +233,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('getRawProfileStr', ipcErrorWrapper(getRawProfileStr))
   ipcMain.handle('getCurrentProfileStr', ipcErrorWrapper(getCurrentProfileStr))
   ipcMain.handle('getRuntimeConfig', ipcErrorWrapper(getRuntimeConfig))
+  ipcMain.handle('getEffectivePorts', ipcErrorWrapper(getEffectivePorts))
   ipcMain.handle('downloadAndInstallUpdate', (_e, version) =>
     ipcErrorWrapper(downloadAndInstallUpdate)(version)
   )
