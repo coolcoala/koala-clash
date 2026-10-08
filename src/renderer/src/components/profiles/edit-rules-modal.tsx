@@ -971,27 +971,46 @@ const RuleListItemBase: React.FC<RuleListItemProps> = ({
               checked={editingRule.additionalParams?.includes('src') || false}
               onCheckedChange={(checked) => handleEditParamChange('src', checked)}
             />
-            <span className="text-[10px] text-muted-foreground">src</span>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">src</span>
           </div>
         )}
       </>
     )
 
+    // Params stay on the left, actions are pushed right and wrap to their own line when narrow
+    const paramsAndActions = (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
+        {additionalParamsControls}
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="xs" variant="ghost" onClick={onCancelEditing}>
+            <XIcon className="size-3" />
+            {t('common.cancel')}
+          </Button>
+          <Button size="xs" onClick={onConfirmEditing}>
+            <CheckIcon className="size-3" />
+            {t('common.save')}
+          </Button>
+        </div>
+      </div>
+    )
+
+    // Layout follows the card width (container query), not the window:
+    // narrow cards stack controls, wide cards keep type/proxy in a fixed column
     return (
       <div
         ref={setNodeRef}
         style={sortableStyle}
-        className="p-3 rounded-xl border-2 border-primary/50 bg-primary/5 flex flex-col gap-2 animate-in fade-in-0 duration-150"
+        className="@container p-3 rounded-xl border-2 border-primary/50 bg-primary/5 flex flex-col gap-2 animate-in fade-in-0 duration-150"
         onKeyDown={handleEditKeyDown}
       >
         {isEditingLogicalRule ? (
           <>
-            <div className="grid grid-cols-[180px_minmax(0,1fr)] gap-2 items-start">
-              <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 gap-2 items-start @md:grid-cols-[11.25rem_minmax(0,1fr)]">
+              <div className="grid grid-cols-2 gap-2 @md:grid-cols-1">
                 {typeSelect}
                 {proxySelector}
               </div>
-              <div className="flex-1 flex flex-col gap-1">
+              <div className="flex flex-col gap-1 min-w-0">
                 <Textarea
                   className="min-h-18 text-xs leading-5 font-mono resize-y"
                   value={editingRule.payload}
@@ -1004,53 +1023,22 @@ const RuleListItemBase: React.FC<RuleListItemProps> = ({
               </div>
             </div>
 
-            {/* Row 2: Params + actions */}
-            <div className="flex items-center gap-2">
-              {additionalParamsControls}
-
-              <div className="flex-1" />
-              <Button size="xs" variant="ghost" onClick={onCancelEditing}>
-                <XIcon className="size-3" />
-                {t('common.cancel')}
-              </Button>
-              <Button size="xs" onClick={onConfirmEditing}>
-                <CheckIcon className="size-3" />
-                {t('common.save')}
-              </Button>
-            </div>
+            {paramsAndActions}
           </>
         ) : (
-          <>
-            {/* Row 1: Type + Payload */}
-            <div className="flex gap-2">
-              <div className="w-45 shrink-0">{typeSelect}</div>
-              <Input
-                className="flex-1 h-8 text-xs"
-                value={editingRule.payload}
-                onChange={(e) => onEditingRuleChange({ ...editingRule, payload: e.target.value })}
-                placeholder={getRuleExample(editingRule.type) || ''}
-                disabled={editingRule.type === 'MATCH'}
-                autoFocus
-              />
-            </div>
-
-            {/* Row 2: Proxy + params + actions */}
-            <div className="flex items-center gap-2">
-              <div className="w-45 shrink-0">{proxySelector}</div>
-
-              {additionalParamsControls}
-
-              <div className="flex-1" />
-              <Button size="xs" variant="ghost" onClick={onCancelEditing}>
-                <XIcon className="size-3" />
-                {t('common.cancel')}
-              </Button>
-              <Button size="xs" onClick={onConfirmEditing}>
-                <CheckIcon className="size-3" />
-                {t('common.save')}
-              </Button>
-            </div>
-          </>
+          <div className="grid grid-cols-1 gap-2 items-center @md:grid-cols-[11.25rem_minmax(0,1fr)]">
+            {typeSelect}
+            <Input
+              className="h-8 text-xs"
+              value={editingRule.payload}
+              onChange={(e) => onEditingRuleChange({ ...editingRule, payload: e.target.value })}
+              placeholder={getRuleExample(editingRule.type) || ''}
+              disabled={editingRule.type === 'MATCH'}
+              autoFocus
+            />
+            {proxySelector}
+            {paramsAndActions}
+          </div>
         )}
       </div>
     )
@@ -1960,7 +1948,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                 {(isRuleSupportsNoResolve(newRule.type) || isRuleSupportsSrc(newRule.type)) && (
                   <>
                     <Separator />
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                       {isRuleSupportsNoResolve(newRule.type) && (
                         <div className="flex items-center gap-2">
                           <Switch
@@ -1971,7 +1959,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                               handleAdditionalParamChange('no-resolve', checked)
                             }
                           />
-                          <Label htmlFor="no-resolve" className="text-xs">
+                          <Label htmlFor="no-resolve" className="text-xs leading-snug">
                             {t('profile.editRules.noResolve')}
                           </Label>
                         </div>
@@ -1986,7 +1974,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                               handleAdditionalParamChange('src', checked)
                             }
                           />
-                          <Label htmlFor="src" className="text-xs">
+                          <Label htmlFor="src" className="text-xs leading-snug">
                             {t('profile.editRules.src')}
                           </Label>
                         </div>
@@ -1997,17 +1985,17 @@ const EditRulesModal: React.FC<Props> = (props) => {
 
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    className="flex-1"
+                    className="flex-auto min-w-0"
                     onClick={() => handleAddRule('prepend')}
                     disabled={
                       isLoading || !!loadError || isAddRuleDisabled(newRule, validateRulePayload)
                     }
                   >
                     <ArrowUpToLine className="size-4" />
-                    {t('profile.editRules.addRulePrepend')}
+                    <span className="truncate">{t('profile.editRules.addRulePrepend')}</span>
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="flex-auto min-w-0"
                     variant="outline"
                     onClick={() => handleAddRule('append')}
                     disabled={
@@ -2015,7 +2003,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                     }
                   >
                     <ArrowDownToLine className="size-4" />
-                    {t('profile.editRules.addRuleAppend')}
+                    <span className="truncate">{t('profile.editRules.addRuleAppend')}</span>
                   </Button>
                 </div>
               </div>
