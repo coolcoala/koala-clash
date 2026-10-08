@@ -290,16 +290,19 @@ const Mihomo: React.FC = () => {
         <SettingItem
           title={t('pages.mihomo.coreVersion')}
           actions={
-            <Button
-              size="icon-sm"
-              title={t('pages.mihomo.upgradeCore')}
-              variant="ghost"
-              disabled={upgrading}
-              aria-busy={upgrading}
-              onClick={handleCoreUpgrade}
-            >
-              {upgrading ? <Spinner className="size-4" /> : <CloudDownload className="text-lg" />}
-            </Button>
+            // The upgrade would target the running core, not the alpha one awaiting download
+            pendingAlpha ? null : (
+              <Button
+                size="icon-sm"
+                title={t('pages.mihomo.upgradeCore')}
+                variant="ghost"
+                disabled={upgrading}
+                aria-busy={upgrading}
+                onClick={handleCoreUpgrade}
+              >
+                {upgrading ? <Spinner className="size-4" /> : <CloudDownload className="text-lg" />}
+              </Button>
+            )
           }
           divider
         >
