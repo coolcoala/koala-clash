@@ -148,7 +148,7 @@ const Tun: React.FC = () => {
                 <SelectTrigger size="sm" className="w-50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent position="popper" className="mr-5.5">
+                <SelectContent className="mr-5.5">
                   <SelectItem value="none">{t('pages.tun.noAutoSet')}</SelectItem>
                   <SelectItem value="exec">{t('pages.tun.execCommand')}</SelectItem>
                   <SelectItem value="service">{t('pages.tun.serviceMode')}</SelectItem>

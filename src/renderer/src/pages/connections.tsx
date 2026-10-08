@@ -729,7 +729,7 @@ const Connections: React.FC = () => {
                     <SelectTrigger size="sm" className="min-w-50">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent position="popper">
+                    <SelectContent>
                       <SelectItem value="upload">{t('pages.connections.uploadAmount')}</SelectItem>
                       <SelectItem value="download">
                         {t('pages.connections.downloadAmount')}

@@ -903,7 +903,7 @@ const RuleListItemBase: React.FC<RuleListItemProps> = ({
         <SelectTrigger className="w-full h-8 text-xs">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="max-h-60" style={{ maxHeight: 240 }} position="popper">
+        <SelectContent className="max-h-60" style={{ maxHeight: 240 }}>
           {ruleTypes.map((type) => (
             <SelectItem key={type} value={type}>
               {type}
@@ -1822,11 +1822,7 @@ const EditRulesModal: React.FC<Props> = (props) => {
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent
-                      className="max-h-60"
-                      style={{ maxHeight: 240 }}
-                      position="popper"
-                    >
+                    <SelectContent className="max-h-60" style={{ maxHeight: 240 }}>
                       {ruleTypes.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}

@@ -65,7 +65,7 @@ const ConnectionSettingModal: React.FC<Props> = (props) => {
               <SelectTrigger className="w-45">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 <SelectItem value="classic">{t('pages.connections.classicView')}</SelectItem>
                 <SelectItem value="process">{t('pages.connections.processView')}</SelectItem>
               </SelectContent>
