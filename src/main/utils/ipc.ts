@@ -78,7 +78,8 @@ import {
   testServiceConnection,
   restartService
 } from '../service/manager'
-import { findSystemMihomo } from './dirs'
+import { installedCores } from './dirs'
+import { downloadAlphaCore } from '../core/alphaCore'
 import {
   getRuntimeConfig,
   getRuntimeConfigStr,
@@ -226,7 +227,8 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('startService', () => ipcErrorWrapper(startService)())
   ipcMain.handle('restartService', () => ipcErrorWrapper(restartService)())
   ipcMain.handle('stopService', () => ipcErrorWrapper(stopService)())
-  ipcMain.handle('findSystemMihomo', () => findSystemMihomo())
+  ipcMain.handle('installedCores', () => installedCores())
+  ipcMain.handle('downloadAlphaCore', () => ipcErrorWrapper(downloadAlphaCore)())
   ipcMain.handle('getFilePath', (_e, ext) => getFilePath(ext))
   ipcMain.handle('readTextFile', (_e, filePath) => ipcErrorWrapper(readTextFile)(filePath))
   ipcMain.handle('getRuntimeConfigStr', ipcErrorWrapper(getRuntimeConfigStr))

@@ -292,8 +292,12 @@ export async function stopService(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('stopService'))
 }
 
-export async function findSystemMihomo(): Promise<string[]> {
-  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('findSystemMihomo'))
+export async function installedCores(): Promise<AppConfig['core'][]> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('installedCores'))
+}
+
+export async function downloadAlphaCore(): Promise<void> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('downloadAlphaCore'))
 }
 
 export async function getFilePath(ext: string[]): Promise<string[] | undefined> {

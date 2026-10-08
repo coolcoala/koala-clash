@@ -9,7 +9,7 @@ import { encryptString, decryptString, isEncrypted } from '../utils/encrypt'
 let appConfig: AppConfig
 let writePromise: Promise<void> = Promise.resolve()
 
-const ENCRYPTED_FIELDS = ['systemCorePath', 'serviceAuthKey'] as const
+const ENCRYPTED_FIELDS = ['serviceAuthKey'] as const
 
 function isValidConfig(config: unknown): config is AppConfig {
   if (!config || typeof config !== 'object') return false

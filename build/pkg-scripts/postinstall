@@ -12,8 +12,11 @@ fi
 
 # --- Set suid on mihomo binaries ---
 chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
-chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
 chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
-chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
+# The alpha core ships only with builds that opted into it
+if [ -f "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha" ]; then
+    chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
+    chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
+fi
 
 exit 0

@@ -251,7 +251,17 @@ export default {
     },
     logs: {
       title: 'Логи',
-      clearLogs: 'Очистить логи'
+      clearLogs: 'Очистить логи',
+      pause: 'Приостановить',
+      resume: 'Продолжить',
+      newLogs_one: '{{count}} новая запись',
+      newLogs_few: '{{count}} новые записи',
+      newLogs_many: '{{count}} новых записей',
+      emptyTitle: 'Логов пока нет',
+      emptyDescription: 'Сообщения ядра появятся здесь',
+      emptyFilterTitle: 'Ничего не найдено',
+      emptyFilterDescription: 'Измените запрос или сбросьте фильтр, чтобы увидеть все записи.',
+      clearFilter: 'Сбросить фильтр'
     },
     rules: {
       title: 'Правила'
@@ -348,17 +358,11 @@ export default {
       coreVersion: 'Версия ядра',
       upgradeCore: 'Обновить ядро',
       builtinStable: 'Встроенное стабильное',
-      builtinPreview: 'Встроенное предварительное',
-      useSystemCore: 'Использовать системное ядро',
-      systemCorePath: 'Путь к системному ядру',
-      searchingCore: 'Поиск системного ядра...',
-      coreNotFound: 'Ядро не найдено',
-      coreNotFoundWarning:
-        'В системе не найдено ядро mihomo или clash. Установите его и попробуйте снова',
+      builtinPreview: 'Предварительное (alpha)',
+      downloadAlphaCore: 'Скачать',
+      downloadAlphaCoreHint: 'Скачать предварительное ядро mihomo (alpha)',
+      alphaCoreNotDownloaded: '(не загружено)',
       alreadyLatest: 'Уже используется последняя версия',
-      systemCoreNotFound: 'Системное ядро не найдено',
-      systemCoreNotFoundBody:
-        'В системе не найдено доступное ядро mihomo или clash, поэтому приложение автоматически переключилось на встроенное ядро',
       runningMode: 'Режим работы',
       taskSchedule: 'Планировщик задач',
       authorizedRun: 'Запуск с повышенными правами',

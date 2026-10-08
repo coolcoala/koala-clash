@@ -249,7 +249,16 @@ export default {
     },
     logs: {
       title: 'Real-time Logs',
-      clearLogs: 'Clear logs'
+      clearLogs: 'Clear logs',
+      pause: 'Pause',
+      resume: 'Resume',
+      newLogs_one: '{{count}} new log',
+      newLogs_other: '{{count}} new logs',
+      emptyTitle: 'No logs yet',
+      emptyDescription: 'Core messages will appear here',
+      emptyFilterTitle: 'Nothing matches the filter',
+      emptyFilterDescription: 'Try a different query or clear the filter to see all logs.',
+      clearFilter: 'Clear filter'
     },
     rules: {
       title: 'Routing Rules'
@@ -346,17 +355,11 @@ export default {
       coreVersion: 'Core Version',
       upgradeCore: 'Upgrade core',
       builtinStable: 'Built-in Stable',
-      builtinPreview: 'Built-in Preview',
-      useSystemCore: 'Use System Core',
-      systemCorePath: 'System Core Path Selection',
-      searchingCore: 'Searching for system core...',
-      coreNotFound: 'Core not found',
-      coreNotFoundWarning:
-        'No mihomo or clash core found in the system, please install and try again',
+      builtinPreview: 'Preview (alpha)',
+      downloadAlphaCore: 'Download',
+      downloadAlphaCoreHint: 'Download the mihomo preview (alpha) core',
+      alphaCoreNotDownloaded: '(not downloaded)',
       alreadyLatest: 'Already using latest version',
-      systemCoreNotFound: 'System core not found',
-      systemCoreNotFoundBody:
-        'No available mihomo or clash core found in the system, automatically switched back to built-in core',
       runningMode: 'Running Mode',
       taskSchedule: 'Task Schedule',
       authorizedRun: 'Authorized Run',

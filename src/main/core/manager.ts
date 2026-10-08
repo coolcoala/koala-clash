@@ -1,6 +1,7 @@
 import { ChildProcess, execFile, execFileSync, spawn } from 'child_process'
 import {
   dataDir,
+  installedCores,
   logPath,
   mihomoCorePath,
   mihomoIpcPath,
@@ -140,16 +141,12 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
   const { current } = await getProfileConfig()
   const { tun } = await getControledMihomoConfig()
 
-  let corePath: string
-  try {
-    corePath = mihomoCorePath(core)
-  } catch (error) {
-    if (core === 'system') {
-      await patchAppConfig({ core: 'mihomo' })
-      return launchCore(detached)
-    }
-    throw error
+  // Older configs may name the removed system core or an alpha core this build left out
+  if (core !== 'mihomo' && !installedCores().includes(core)) {
+    await patchAppConfig({ core: 'mihomo' })
+    return launchCore(detached)
   }
+  const corePath = mihomoCorePath(core)
   // An antivirus quarantining the binary leaves no other trace
   if (!existsSync(corePath)) {
     throw new CoreError('binary-missing', `${corePath}: ENOENT`)
@@ -553,7 +550,7 @@ export async function manualGrantCorePermition(
     }
   }
 
-  const targetCores = cores || ['mihomo', 'mihomo-alpha']
+  const targetCores = cores || installedCores()
   await Promise.all(targetCores.map((core) => grantPermission(core)))
 }
 
@@ -617,7 +614,7 @@ export async function revokeCorePermission(cores?: ('mihomo' | 'mihomo-alpha')[]
     }
   }
 
-  const targetCores = cores || ['mihomo', 'mihomo-alpha']
+  const targetCores = cores || installedCores()
   await Promise.all(targetCores.map((core) => revokePermission(core)))
 }
 

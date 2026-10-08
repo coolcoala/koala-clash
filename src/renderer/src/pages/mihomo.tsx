@@ -27,7 +27,8 @@ import {
   mihomoUpgrade,
   restartCore,
   revokeCorePermission,
-  findSystemMihomo,
+  installedCores,
+  downloadAlphaCore,
   deleteElevateTask,
   checkElevateTask,
   relaunchApp,
@@ -40,35 +41,13 @@ import {
   initService,
   restartService
 } from '@renderer/utils/ipc'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import useSWR from 'swr'
 import ControllerSetting from '@renderer/components/mihomo/controller-setting'
 import EnvSetting from '@renderer/components/mihomo/env-setting'
 import AdvancedSetting from '@renderer/components/mihomo/advanced-settings'
 import { useTranslation } from 'react-i18next'
-import { CloudDownload } from 'lucide-react'
-
-let systemCorePathsCache: string[] | null = null
-let cachePromise: Promise<string[]> | null = null
-
-const getSystemCorePaths = async (): Promise<string[]> => {
-  if (systemCorePathsCache !== null) return systemCorePathsCache
-  if (cachePromise !== null) return cachePromise
-
-  cachePromise = findSystemMihomo()
-    .then((paths) => {
-      systemCorePathsCache = paths
-      cachePromise = null
-      return paths
-    })
-    .catch(() => {
-      cachePromise = null
-      return []
-    })
-
-  return cachePromise
-}
-
-getSystemCorePaths().catch(() => {})
+import { CloudDownload, Download } from 'lucide-react'
 
 const Mihomo: React.FC = () => {
   const { t } = useTranslation()
@@ -83,17 +62,11 @@ const Mihomo: React.FC = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [showServiceModal, setShowServiceModal] = useState(false)
   const [pendingPermissionMode, setPendingPermissionMode] = useState<string>('')
-  const [systemCorePaths, setSystemCorePaths] = useState<string[]>(systemCorePathsCache || [])
-  const [loadingPaths, setLoadingPaths] = useState(systemCorePathsCache === null)
-
-  useEffect(() => {
-    if (systemCorePathsCache !== null) return
-
-    getSystemCorePaths()
-      .then(setSystemCorePaths)
-      .catch(() => {})
-      .finally(() => setLoadingPaths(false))
-  }, [])
+  const [downloadingAlpha, setDownloadingAlpha] = useState(false)
+  // Picking the alpha core before it is downloaded only offers the download, the running core stays
+  const [pendingAlpha, setPendingAlpha] = useState(false)
+  const { data: cores, mutate: mutateCores } = useSWR('installedCores', installedCores)
+  const alphaInstalled = !cores || cores.includes('mihomo-alpha')
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
@@ -125,22 +98,29 @@ const Mihomo: React.FC = () => {
     }
   }
 
-  const handleCoreChange = async (newCore: 'mihomo' | 'mihomo-alpha' | 'system'): Promise<void> => {
-    if (newCore === 'system') {
-      const paths = await getSystemCorePaths()
+  const handleCoreChange = (value: string): void => {
+    const pending = value === 'mihomo-alpha' && !alphaInstalled
+    setPendingAlpha(pending)
+    if (!pending && value !== core) handleConfigChangeWithRestart('core', value)
+  }
 
-      if (paths.length === 0) {
-        new Notification(t('pages.mihomo.systemCoreNotFound'), {
-          body: t('pages.mihomo.systemCoreNotFoundBody')
-        })
-        return
+  const handleAlphaDownload = async (): Promise<void> => {
+    setDownloadingAlpha(true)
+    try {
+      await downloadAlphaCore()
+      // Installers authorize the bundled cores, a downloaded one has to ask on its own
+      if (platform !== 'win32') {
+        // Declining only leaves the core unauthorized, which the permission modal can fix later
+        await manualGrantCorePermition(['mihomo-alpha']).catch(() => {})
       }
-
-      if (!appConfig?.systemCorePath || !paths.includes(appConfig.systemCorePath)) {
-        await patchAppConfig({ systemCorePath: paths[0] })
-      }
+      await mutateCores()
+      setPendingAlpha(false)
+      await handleConfigChangeWithRestart('core', 'mihomo-alpha')
+    } catch (e) {
+      toast.error(`${e}`)
+    } finally {
+      setDownloadingAlpha(false)
     }
-    handleConfigChangeWithRestart('core', newCore)
   }
 
   const handlePermissionModeChange = async (key: string): Promise<void> => {
@@ -310,80 +290,55 @@ const Mihomo: React.FC = () => {
         <SettingItem
           title={t('pages.mihomo.coreVersion')}
           actions={
-            core === 'mihomo' || core === 'mihomo-alpha' ? (
-              <Button
-                size="icon-sm"
-                title={t('pages.mihomo.upgradeCore')}
-                variant="ghost"
-                disabled={upgrading}
-                aria-busy={upgrading}
-                onClick={handleCoreUpgrade}
-              >
-                {upgrading ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <CloudDownload className="text-lg" />
-                )}
-              </Button>
-            ) : null
+            <Button
+              size="icon-sm"
+              title={t('pages.mihomo.upgradeCore')}
+              variant="ghost"
+              disabled={upgrading}
+              aria-busy={upgrading}
+              onClick={handleCoreUpgrade}
+            >
+              {upgrading ? <Spinner className="size-4" /> : <CloudDownload className="text-lg" />}
+            </Button>
           }
           divider
         >
-          <Select
-            value={core}
-            onValueChange={(value) =>
-              handleCoreChange(value as 'mihomo' | 'mihomo-alpha' | 'system')
-            }
-          >
-            <SelectTrigger size="sm" className="w-[300px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mihomo">{t('pages.mihomo.builtinStable')}</SelectItem>
-              <SelectItem value="mihomo-alpha">{t('pages.mihomo.builtinPreview')}</SelectItem>
-              <SelectItem value="system">{t('pages.mihomo.useSystemCore')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </SettingItem>
-        {core === 'system' && (
-          <SettingItem title={t('pages.mihomo.systemCorePath')} divider>
-            <Select
-              value={appConfig?.systemCorePath}
-              disabled={loadingPaths}
-              onValueChange={(value) => {
-                if (value) handleConfigChangeWithRestart('systemCorePath', value)
-              }}
-            >
-              <SelectTrigger size="sm" className="w-[350px]">
-                <SelectValue
-                  placeholder={
-                    loadingPaths
-                      ? t('pages.mihomo.searchingCore')
-                      : t('pages.mihomo.coreNotFound')
-                  }
-                />
+          <div className="flex items-center gap-2">
+            {pendingAlpha && (
+              <Button
+                size="sm"
+                variant="outline"
+                title={t('pages.mihomo.downloadAlphaCoreHint')}
+                disabled={downloadingAlpha}
+                aria-busy={downloadingAlpha}
+                onClick={handleAlphaDownload}
+              >
+                {downloadingAlpha ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                {t('pages.mihomo.downloadAlphaCore')}
+              </Button>
+            )}
+            <Select value={pendingAlpha ? 'mihomo-alpha' : core} onValueChange={handleCoreChange}>
+              <SelectTrigger size="sm" className="w-[300px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {loadingPaths ? (
-                  <SelectItem value="">{t('pages.mihomo.searchingCore')}</SelectItem>
-                ) : systemCorePaths.length > 0 ? (
-                  systemCorePaths.map((path) => (
-                    <SelectItem key={path} value={path}>
-                      {path}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="">{t('pages.mihomo.coreNotFound')}</SelectItem>
-                )}
+                <SelectItem value="mihomo">{t('pages.mihomo.builtinStable')}</SelectItem>
+                <SelectItem value="mihomo-alpha">
+                  {t('pages.mihomo.builtinPreview')}
+                  {!alphaInstalled && (
+                    <span className="ml-1 text-muted-foreground">
+                      {t('pages.mihomo.alphaCoreNotDownloaded')}
+                    </span>
+                  )}
+                </SelectItem>
               </SelectContent>
             </Select>
-            {!loadingPaths && systemCorePaths.length === 0 && (
-              <div className="mt-2 text-sm text-warning">
-                {t('pages.mihomo.coreNotFoundWarning')}
-              </div>
-            )}
-          </SettingItem>
-        )}
+          </div>
+        </SettingItem>
         <SettingItem title={t('pages.mihomo.runningMode')} divider>
           <Tabs value={corePermissionMode} onValueChange={handlePermissionModeChange}>
             <TabsList>

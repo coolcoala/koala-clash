@@ -18,8 +18,7 @@ interface IHost {
 }
 
 interface AppConfig {
-  core: 'mihomo' | 'mihomo-alpha' | 'system'
-  systemCorePath?: string
+  core: 'mihomo' | 'mihomo-alpha'
   corePermissionMode?: 'elevated' | 'service'
   elevationDeclined?: boolean
   serviceAuthKey?: string

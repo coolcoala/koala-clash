@@ -22,7 +22,10 @@ fi
 
 chmod 4755 "/opt/${APP_NAME}/chrome-sandbox" || true
 chmod +sx "/opt/${APP_NAME}/resources/sidecar/mihomo"
-chmod +sx "/opt/${APP_NAME}/resources/sidecar/mihomo-alpha"
+# The alpha core ships only with builds that opted into it
+if [ -f "/opt/${APP_NAME}/resources/sidecar/mihomo-alpha" ]; then
+    chmod +sx "/opt/${APP_NAME}/resources/sidecar/mihomo-alpha"
+fi
 
 if hash update-mime-database 2>/dev/null; then
     update-mime-database /usr/share/mime || true

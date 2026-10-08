@@ -320,7 +320,15 @@ export default {
     },
     logs: {
       title: '实时日志',
-      clearLogs: '清空日志'
+      clearLogs: '清空日志',
+      pause: '暂停',
+      resume: '继续',
+      newLogs_other: '{{count}} 条新日志',
+      emptyTitle: '暂无日志',
+      emptyDescription: '内核日志会显示在这里',
+      emptyFilterTitle: '没有匹配的结果',
+      emptyFilterDescription: '换个关键词，或清除筛选条件查看全部日志。',
+      clearFilter: '清除筛选'
     },
     rules: {
       title: '分流规则'
@@ -415,15 +423,11 @@ export default {
       coreVersion: '内核版本',
       upgradeCore: '升级内核',
       builtinStable: '内置稳定版',
-      builtinPreview: '内置预览版',
-      useSystemCore: '使用系统内核',
-      systemCorePath: '系统内核路径选择',
-      searchingCore: '正在查找系统内核...',
-      coreNotFound: '未找到系统内核',
-      coreNotFoundWarning: '未在系统中找到 mihomo 或 clash 内核，请安装后重试',
+      builtinPreview: '预览版 (alpha)',
+      downloadAlphaCore: '下载',
+      downloadAlphaCoreHint: '下载 mihomo 预览版 (alpha) 内核',
+      alphaCoreNotDownloaded: '（未下载）',
       alreadyLatest: '已经是最新版本',
-      systemCoreNotFound: '未找到系统内核',
-      systemCoreNotFoundBody: '系统中未找到可用的 mihomo 或 clash 内核，已自动切换回内置内核',
       runningMode: '运行模式',
       taskSchedule: '任务计划',
       authorizedRun: '授权运行',

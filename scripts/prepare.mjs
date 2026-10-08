@@ -19,6 +19,9 @@ if (process.env.SKIP_PREPARE === '1') {
   process.exit(0)
 }
 
+// The alpha core ships only when a build opts in with MIHOMO_ALPHA=1
+const WITH_ALPHA = process.env.MIHOMO_ALPHA === '1'
+
 /* ======= mihomo alpha======= */
 const MIHOMO_ALPHA_VERSION_URL =
   'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt'
@@ -88,8 +91,14 @@ if (!MIHOMO_MAP[`${platform}-${arch}`]) {
   throw new Error(`unsupported platform "${platform}-${arch}"`)
 }
 
-if (!MIHOMO_ALPHA_MAP[`${platform}-${arch}`]) {
+if (WITH_ALPHA && !MIHOMO_ALPHA_MAP[`${platform}-${arch}`]) {
   throw new Error(`unsupported platform "${platform}-${arch}"`)
+}
+
+// extraResources packs extra/ wholesale, so an alpha binary left by an earlier run would ship too
+if (!WITH_ALPHA) {
+  const alphaFile = `mihomo-alpha${platform === 'win32' ? '.exe' : ''}`
+  fs.rmSync(path.join(cwd, 'extra', 'sidecar', alphaFile), { force: true })
 }
 
 /**
@@ -330,7 +339,8 @@ const tasks = [
   {
     name: 'mihomo-alpha',
     func: () => getLatestAlphaVersion().then(() => resolveSidecar(MihomoAlpha())),
-    retry: 5
+    retry: 5,
+    alphaOnly: true
   },
   {
     name: 'mihomo',
@@ -378,6 +388,7 @@ async function runTask() {
   if (task.winOnly && platform !== 'win32') return runTask()
   if (task.linuxOnly && platform !== 'linux') return runTask()
   if (task.unixOnly && platform === 'win32') return runTask()
+  if (task.alphaOnly && !WITH_ALPHA) return runTask()
 
   for (let i = 0; i < task.retry; i++) {
     try {

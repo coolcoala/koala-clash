@@ -1,8 +1,7 @@
 import { is } from '@electron-toolkit/utils'
-import { existsSync, mkdirSync, readdirSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import { app } from 'electron'
 import path from 'path'
-import { execSync } from 'child_process'
 import { getAppConfigSync } from '../config/app'
 import { checkCorePermissionSync } from '../core/manager'
 import { t } from './i18n'
@@ -62,10 +61,7 @@ export function mihomoIpcPath(): string {
     return '\\\\.\\pipe\\Koala-Clash\\mihomo'
   }
   const { core = 'mihomo' } = getAppConfigSync()
-  if (core === 'system') {
-    return '/tmp/koala-clash-mihomo-external.sock'
-  }
-  if (!checkCorePermissionSync(core as 'mihomo' | 'mihomo-alpha')) {
+  if (!checkCorePermissionSync(core)) {
     return '/tmp/koala-clash-mihomo-api-noperm.sock'
   }
   return '/tmp/koala-clash-mihomo-api.sock'
@@ -82,25 +78,26 @@ export function mihomoCoreDir(): string {
   return path.join(resourcesDir(), 'sidecar')
 }
 
+// Cores fetched at runtime, since the app's own resources are not writable without elevation
+export function downloadedCoreDir(): string {
+  return path.join(dataDir(), 'sidecar')
+}
+
 export function mihomoCorePath(core: string): string {
   if (core === 'mihomo' || core === 'mihomo-alpha') {
-    const isWin = process.platform === 'win32'
-    return path.join(mihomoCoreDir(), `${core}${isWin ? '.exe' : ''}`)
-  }
-  if (core === 'system') {
-    const sysPath = systemCorePath()
-    if (!sysPath || !existsSync(sysPath)) {
-      const errorMsg = sysPath ? `${t('error.systemCorePathInvalid')}: ${sysPath}` : t('error.systemCorePathNotSet')
-      throw new Error(errorMsg)
+    const file = `${core}${process.platform === 'win32' ? '.exe' : ''}`
+    const bundledPath = path.join(mihomoCoreDir(), file)
+    // Builds ship the alpha core only on opt-in, otherwise the user downloads it
+    if (core === 'mihomo-alpha' && !existsSync(bundledPath)) {
+      return path.join(downloadedCoreDir(), file)
     }
-    return sysPath
+    return bundledPath
   }
   throw new Error(t('error.corePathError'))
 }
 
-function systemCorePath(): string {
-  const { systemCorePath = '' } = getAppConfigSync()
-  return systemCorePath
+export function installedCores(): AppConfig['core'][] {
+  return (['mihomo', 'mihomo-alpha'] as const).filter((core) => existsSync(mihomoCorePath(core)))
 }
 
 export function servicePath(): string {
@@ -164,175 +161,4 @@ export function rulesDir(): string {
 
 export function rulePath(id: string): string {
   return path.join(rulesDir(), `${id}.yaml`)
-}
-
-function hasCommand(command: string): boolean {
-  try {
-    const isWin = process.platform === 'win32'
-    const whichCmd = isWin ? 'where' : 'which'
-    execSync(`${whichCmd} ${command}`, { encoding: 'utf8', stdio: 'pipe' })
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
-export function findSystemMihomo(): string[] {
-  const isWin = process.platform === 'win32'
-  const isLinux = process.platform === 'linux'
-  const isMac = process.platform === 'darwin'
-  const foundPaths: string[] = []
-  const searchNames = ['mihomo', 'clash']
-
-  for (const name of searchNames) {
-    try {
-      const command = isWin ? 'where' : 'which'
-      const result = execSync(`${command} ${name}`, { encoding: 'utf8' }).trim()
-      if (result) {
-        const paths = result.split('\n').filter((p) => p && existsSync(p))
-        for (const p of paths) {
-          if (!foundPaths.includes(p)) {
-            foundPaths.push(p)
-          }
-        }
-      }
-    } catch (error) {
-      // ignore
-    }
-  }
-
-  if (!isWin) {
-    const commonDirs = [
-      '/bin',
-      '/usr/bin',
-      '/usr/local/bin',
-      path.join(homeDir, '.local/bin'),
-      path.join(homeDir, 'bin')
-    ]
-
-    for (const dir of commonDirs) {
-      if (existsSync(dir)) {
-        try {
-          const files = readdirSync(dir)
-          for (const file of files) {
-            if (file.startsWith('mihomo') || file.startsWith('clash')) {
-              const binPath = path.join(dir, file)
-              if (existsSync(binPath) && !foundPaths.includes(binPath)) {
-                foundPaths.push(binPath)
-              }
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-  }
-
-  if (isMac || isLinux) {
-    // Homebrew
-    if (hasCommand('brew')) {
-      for (const name of searchNames) {
-        try {
-          const result = execSync(`brew --prefix ${name} 2>/dev/null`, {
-            encoding: 'utf8'
-          }).trim()
-          if (result) {
-            const binPath = path.join(result, 'bin', name)
-            if (existsSync(binPath) && !foundPaths.includes(binPath)) {
-              foundPaths.push(binPath)
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-  }
-
-  if (isLinux) {
-    // apt/dpkg (Debian/Ubuntu)
-    if (hasCommand('dpkg')) {
-      for (const name of searchNames) {
-        try {
-          const result = execSync(`dpkg -L ${name} 2>/dev/null | grep bin/${name}$`, {
-            encoding: 'utf8'
-          }).trim()
-          if (result) {
-            const paths = result.split('\n').filter((p) => p && existsSync(p))
-            for (const p of paths) {
-              if (!foundPaths.includes(p)) {
-                foundPaths.push(p)
-              }
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-
-    // rpm/yum (RedHat/CentOS/Fedora)
-    if (hasCommand('rpm')) {
-      for (const name of searchNames) {
-        try {
-          const result = execSync(`rpm -ql ${name} 2>/dev/null | grep bin/${name}$`, {
-            encoding: 'utf8'
-          }).trim()
-          if (result) {
-            const paths = result.split('\n').filter((p) => p && existsSync(p))
-            for (const p of paths) {
-              if (!foundPaths.includes(p)) {
-                foundPaths.push(p)
-              }
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-
-    // pacman (Arch Linux)
-    if (hasCommand('pacman')) {
-      for (const name of searchNames) {
-        try {
-          const result = execSync(`pacman -Ql ${name} 2>/dev/null | grep bin/${name}$`, {
-            encoding: 'utf8'
-          }).trim()
-          if (result) {
-            const paths = result
-              .split('\n')
-              .map((line) => line.split(' ')[1])
-              .filter((p) => p && existsSync(p))
-            for (const p of paths) {
-              if (!foundPaths.includes(p)) {
-                foundPaths.push(p)
-              }
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-  }
-
-  if (isWin) {
-    // Scoop
-    if (hasCommand('scoop')) {
-      for (const name of searchNames) {
-        try {
-          const result = execSync(`scoop which ${name} 2>nul`, { encoding: 'utf8' }).trim()
-          if (result && existsSync(result) && !foundPaths.includes(result)) {
-            foundPaths.push(result)
-          }
-        } catch (error) {
-          // ignore
-        }
-      }
-    }
-  }
-
-  return Array.from(new Set(foundPaths)).sort()
 }
