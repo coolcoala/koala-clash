@@ -138,10 +138,6 @@ async function migration(): Promise<void> {
 
   const mihomoConfigPatch: Partial<MihomoConfig> = {}
 
-  if (appConfig.controlTun === false && mihomoConfig.tun?.enable) {
-    mihomoConfigPatch.tun = { enable: false }
-  }
-
   for (const key in defaultControledMihomoConfig) {
     if (
       !(key in mihomoConfig) &&

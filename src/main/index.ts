@@ -333,9 +333,14 @@ app.whenReady().then(async () => {
   const coreStartPromise = (async (): Promise<void> => {
     try {
       const [startPromise] = await startCore()
-      startPromise.then(async () => {
-        await initProfileUpdater()
-      })
+      startPromise
+        .catch((e) => {
+          // TUN failing to start leaves the core running, so nothing else reports it
+          showError(t('tray.coreStartError'), `${e}`)
+        })
+        .then(async () => {
+          await initProfileUpdater()
+        })
       coreStarted = true
     } catch (e) {
       // Kept as state rather than sent as an event: the renderer may not be listening yet
