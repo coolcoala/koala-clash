@@ -3,7 +3,6 @@ import {
   controledMihomoConfigPath,
   dataDir,
   logDir,
-  logPath,
   mihomoTestDir,
   mihomoWorkDir,
   profileConfigPath,
@@ -20,10 +19,8 @@ import {
   defaultProfileConfig
 } from './template'
 import { stringifyYaml } from './yaml'
-import { mkdir, writeFile, cp, rm, readdir, stat, utimes } from 'fs/promises'
-import { createReadStream, createWriteStream, existsSync } from 'fs'
-import { pipeline } from 'stream/promises'
-import { createGzip } from 'zlib'
+import { mkdir, writeFile, cp, rm, readdir } from 'fs/promises'
+import { existsSync } from 'fs'
 import path from 'path'
 import { GEO_FILES, linkGeoFiles, removeUnusedMetadb } from './geo'
 import {
@@ -42,6 +39,7 @@ import { startNetworkDetection } from '../core/manager'
 import { PORT_KEYS } from '../core/factory'
 import { initKeyManager } from '../service/manager'
 import { migrateFromOldApp } from './migration'
+import { cleanupLogs } from './logs'
 
 async function initDirs(): Promise<void> {
   if (!existsSync(dataDir())) {
@@ -110,27 +108,6 @@ async function cleanup(): Promise<void> {
       } catch {
         // ignore
       }
-    }
-  }
-  // logs, aged by mtime since heap snapshots are named by timestamp rather than by date
-  const { maxLogDays = 7 } = await getAppConfig()
-  const currentLog = path.basename(logPath())
-  const logs = await readdir(logDir())
-  for (const log of logs) {
-    const logFile = path.join(logDir(), log)
-    try {
-      const { atime, mtime } = await stat(logFile)
-      if (Date.now() - mtime.getTime() > maxLogDays * 24 * 60 * 60 * 1000) {
-        await rm(logFile)
-      } else if (log.endsWith('.log') && log !== currentLog) {
-        // Past days are no longer written to, and text logs shrink about tenfold
-        await pipeline(createReadStream(logFile), createGzip(), createWriteStream(`${logFile}.gz`))
-        // The archive keeps the log's date so it expires on the same schedule
-        await utimes(`${logFile}.gz`, atime, mtime)
-        await rm(logFile)
-      }
-    } catch {
-      // ignore
     }
   }
 }
@@ -230,6 +207,8 @@ export async function init(): Promise<void> {
       // ignore
     })
   ])
+  // Archiving can take a while and nothing at startup depends on it
+  cleanupLogs().catch(() => {})
 
   const {
     sysProxy,

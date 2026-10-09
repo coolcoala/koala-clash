@@ -36,14 +36,18 @@ import { promisify } from 'util'
 import { mainWindow, showError } from '..'
 import path from 'path'
 import os from 'os'
-import { createWriteStream, existsSync } from 'fs'
+import { existsSync } from 'fs'
 import { disableSysProxy, triggerSysProxy } from '../sys/sysproxy'
 import { getAxios } from './mihomoApi'
 import { setSysDns } from '../service/api'
 import { t } from '../utils/i18n'
+import { RotatingLog } from '../utils/logs'
 import { CoreError, reportCoreError, setCoreStatus } from './status'
 
 const ctlParam = process.platform === 'win32' ? '-ext-ctl-pipe' : '-ext-ctl-unix'
+
+// Shared by stdout, stderr and every restart, so one place tracks the size of the current file
+const coreLog = new RotatingLog()
 
 // Lines of core output attached to a crash report
 const CORE_OUTPUT_TAIL = 20
@@ -167,8 +171,6 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
     }
   }
   await resetProviderTracking()
-  const stdout = createWriteStream(logPath(), { flags: 'a' })
-  const stderr = createWriteStream(logPath(), { flags: 'a' })
   const env = {
     DISABLE_LOOPBACK_DETECTOR: String(disableLoopbackDetector),
     DISABLE_EMBED_CA: String(disableEmbedCA),
@@ -206,8 +208,9 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
     outputTail.push(...data.toString().split('\n').filter(Boolean))
     outputTail.splice(0, outputTail.length - CORE_OUTPUT_TAIL)
   }
-  child.stdout?.pipe(stdout)
-  child.stderr?.pipe(stderr)
+  // The log outlives this core, so its exit must not end it
+  child.stdout?.pipe(coreLog, { end: false })
+  child.stderr?.pipe(coreLog, { end: false })
   child.stdout?.on('data', rememberOutput)
   child.stderr?.on('data', rememberOutput)
   return new Promise((resolve, reject) => {
