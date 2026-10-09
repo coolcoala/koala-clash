@@ -1,3 +1,13 @@
+## 1.5.0
+
+- alerts about kernel issues (configuration, antivirus, etc.)
+- updating the profile even when the HWID limit is reached
+- the look of the logs has been improved
+- the size of the storage space has been reduced
+- fixed logs size issue
+- mixed/socks/etc ports from the profile are now being used
+- minor fixes
+
 ## 1.4.1
 
 - hotfix
