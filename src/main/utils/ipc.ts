@@ -17,6 +17,7 @@ import {
   mihomoUpgradeUI,
   mihomoUpgradeGeo,
   mihomoHotReloadConfig,
+  mihomoApplyLogLevel,
   mihomoVersion,
   mihomoConfig,
   patchMihomoConfig,
@@ -85,7 +86,8 @@ import {
   getRuntimeConfigStr,
   getRawProfileStr,
   getCurrentProfileStr,
-  getEffectivePorts
+  getEffectivePorts,
+  getEffectiveLogLevel
 } from '../core/factory'
 import { getInterfaces } from '../sys/interface'
 import { closeTrayIcon, copyEnv, setDockVisible, showTrayIcon, updateTrayIcon } from '../resolve/tray'
@@ -168,6 +170,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('mihomoUpgradeUI', ipcErrorWrapper(mihomoUpgradeUI))
   ipcMain.handle('mihomoUpgrade', ipcErrorWrapper(mihomoUpgrade))
   ipcMain.handle('mihomoHotReloadConfig', ipcErrorWrapper(mihomoHotReloadConfig))
+  ipcMain.handle('mihomoApplyLogLevel', ipcErrorWrapper(mihomoApplyLogLevel))
   ipcMain.handle('mihomoProxyDelay', (_e, proxy, url, provider) =>
     ipcErrorWrapper(mihomoProxyDelay)(proxy, url, provider)
   )
@@ -236,6 +239,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('getCurrentProfileStr', ipcErrorWrapper(getCurrentProfileStr))
   ipcMain.handle('getRuntimeConfig', ipcErrorWrapper(getRuntimeConfig))
   ipcMain.handle('getEffectivePorts', ipcErrorWrapper(getEffectivePorts))
+  ipcMain.handle('getEffectiveLogLevel', ipcErrorWrapper(getEffectiveLogLevel))
   ipcMain.handle('downloadAndInstallUpdate', (_e, version) =>
     ipcErrorWrapper(downloadAndInstallUpdate)(version)
   )

@@ -11,6 +11,7 @@ import {
 import { Spinner } from '@renderer/components/ui/spinner'
 import { Switch } from '@renderer/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip'
 import BasePage from '@renderer/components/base/base-page'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import SettingItem from '@renderer/components/base/base-setting-item'
@@ -39,7 +40,9 @@ import {
   startService,
   stopService,
   initService,
-  restartService
+  restartService,
+  getEffectiveLogLevel,
+  mihomoApplyLogLevel
 } from '@renderer/utils/ipc'
 import React, { useState } from 'react'
 import useSWR from 'swr'
@@ -47,14 +50,25 @@ import ControllerSetting from '@renderer/components/mihomo/controller-setting'
 import EnvSetting from '@renderer/components/mihomo/env-setting'
 import AdvancedSetting from '@renderer/components/mihomo/advanced-settings'
 import { useTranslation } from 'react-i18next'
-import { CloudDownload, Download } from 'lucide-react'
+import { CloudDownload, Download, RotateCcw } from 'lucide-react'
 
 const Mihomo: React.FC = () => {
   const { t } = useTranslation()
   const { appConfig, patchAppConfig } = useAppConfig()
-  const { core = 'mihomo', maxLogDays = 7, corePermissionMode = 'elevated' } = appConfig || {}
+  const {
+    core = 'mihomo',
+    maxLogDays = 7,
+    corePermissionMode = 'elevated',
+    customLogLevel = false
+  } = appConfig || {}
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
-  const { ipv6, 'log-level': logLevel = 'info' } = controledMihomoConfig || {}
+  const { ipv6, 'log-level': controledLogLevel = 'info' } = controledMihomoConfig || {}
+  const { data: logLevelInfo, mutate: mutateLogLevel } = useSWR(
+    'getEffectiveLogLevel',
+    getEffectiveLogLevel
+  )
+  // the level mihomo actually uses, which may come from the profile
+  const logLevel = logLevelInfo?.value ?? controledLogLevel
 
   const [upgrading, setUpgrading] = useState(false)
   const [showGrantConfirm, setShowGrantConfirm] = useState(false)
@@ -70,6 +84,23 @@ const Mihomo: React.FC = () => {
 
   const onChangeNeedRestart = async (patch: Partial<MihomoConfig>): Promise<void> => {
     await patchControledMihomoConfig(patch)
+  }
+
+  // A picked level becomes the user's choice and stops following the profile
+  const onLogLevelChange = async (value: LogLevel): Promise<void> => {
+    if (!customLogLevel) await patchAppConfig({ customLogLevel: true })
+    await patchControledMihomoConfig({ 'log-level': value })
+    await mutateLogLevel()
+  }
+
+  const onLogLevelReset = async (): Promise<void> => {
+    await patchAppConfig({ customLogLevel: false })
+    try {
+      await mihomoApplyLogLevel()
+    } catch (e) {
+      toast.error(`${e}`)
+    }
+    await mutateLogLevel()
   }
 
   const handleConfigChangeWithRestart = async (key: string, value: unknown): Promise<void> => {
@@ -385,7 +416,36 @@ const Mihomo: React.FC = () => {
             }
           />
         </SettingItem>
-        <SettingItem title={t('pages.mihomo.logLevel')}>
+        <SettingItem
+          title={
+            <>
+              {t('pages.mihomo.logLevel')}
+              {logLevelInfo?.fromProfile && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {t('pages.mihomo.fromProfile')}
+                </span>
+              )}
+            </>
+          }
+          actions={
+            logLevelInfo &&
+            !logLevelInfo.fromProfile &&
+            logLevelInfo.profileValue !== undefined && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon-sm" variant="ghost" onClick={onLogLevelReset}>
+                    <RotateCcw className="text-lg" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('pages.mihomo.useProfileLogLevel', {
+                    level: logLevelOptions.find((o) => o.value === logLevelInfo.profileValue)?.label
+                  })}
+                </TooltipContent>
+              </Tooltip>
+            )
+          }
+        >
           {/* Скрытые копии всех вариантов задают ширину по самому длинному из них */}
           <div className="grid">
             {logLevelOptions.map((option) => (
@@ -397,10 +457,7 @@ const Mihomo: React.FC = () => {
                 {option.label}
               </span>
             ))}
-            <Select
-              value={logLevel}
-              onValueChange={(value) => onChangeNeedRestart({ 'log-level': value as LogLevel })}
-            >
+            <Select value={logLevel} onValueChange={(value) => onLogLevelChange(value as LogLevel)}>
               <SelectTrigger size="sm" className="col-start-1 row-start-1 w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -63,6 +63,15 @@ interface MihomoPortInfo {
   fromProfile: boolean
 }
 
+interface MihomoLogLevelInfo {
+  // the level mihomo logs at
+  value: LogLevel
+  // the level declared by the current profile, if any
+  profileValue?: LogLevel
+  // true when the profile's level is used instead of the app setting
+  fromProfile: boolean
+}
+
 interface MihomoTunConfig {
   enable?: boolean
   stack?: TunStack

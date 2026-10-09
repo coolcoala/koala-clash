@@ -88,6 +88,10 @@ export async function mihomoHotReloadConfig(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('mihomoHotReloadConfig'))
 }
 
+export async function mihomoApplyLogLevel(): Promise<void> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('mihomoApplyLogLevel'))
+}
+
 export async function mihomoProxyDelay(
   proxy: string,
   url?: string,
@@ -326,6 +330,10 @@ export async function getRuntimeConfig(): Promise<MihomoConfig> {
 
 export async function getEffectivePorts(): Promise<Record<MihomoPortKey, MihomoPortInfo>> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getEffectivePorts'))
+}
+
+export async function getEffectiveLogLevel(): Promise<MihomoLogLevelInfo> {
+  return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('getEffectiveLogLevel'))
 }
 
 export async function checkUpdate(): Promise<AppVersion | undefined> {

@@ -352,6 +352,17 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   await applyLogLevel(logLevel)
 }
 
+// Only the log level changed, so a hot reload, which also resets the fake-ip pool, is not needed
+export const mihomoApplyLogLevel = async (): Promise<void> => {
+  const { generateProfile } = await import('./factory')
+  const { logLevel } = await generateProfile()
+  try {
+    await applyLogLevel(logLevel)
+  } catch {
+    // running core may not be ready; the level will apply on next restart/reload
+  }
+}
+
 export const startMihomoTraffic = async (): Promise<void> => {
   await mihomoTraffic()
 }
@@ -462,9 +473,8 @@ export const stopMihomoLogs = (): void => {
 }
 
 export const applyLogLevel = async (level: LogLevel): Promise<void> => {
-  if (level !== (await getRuntimeConfig())?.['log-level']) {
-    await patchMihomoConfig({ 'log-level': level })
-  }
+  // The core may still run a level patched earlier, so the config file can't tell whether it is current
+  await patchMihomoConfig({ 'log-level': level })
   if (mihomoLogsWs && level !== mihomoLogsLevel) {
     stopMihomoLogs()
     startMihomoLogs(level)

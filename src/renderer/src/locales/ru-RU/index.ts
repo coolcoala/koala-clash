@@ -378,6 +378,8 @@ export default {
       warning: 'Предупреждение',
       info: 'Информация',
       debug: 'Отладка',
+      fromProfile: 'из подписки',
+      useProfileLogLevel: 'Вернуть уровень из подписки ({{level}})',
       confirmUseTaskSchedule: 'Включить запуск через планировщик задач?',
       confirmUseTaskScheduleDesc:
         'После подтверждения приложение завершится. Затем один раз запустите программу от имени администратора вручную',

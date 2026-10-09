@@ -86,6 +86,8 @@ interface AppConfig {
   controlTun?: boolean
   // ports the user set in the app settings; the others follow the profile when it declares them
   customPorts?: MihomoPortKey[]
+  // true when the user set the log level in the app settings; otherwise it follows the profile when it declares one
+  customLogLevel?: boolean
   useDockIcon?: boolean
   useCustomTrayMenu?: boolean
   hosts: IHost[]

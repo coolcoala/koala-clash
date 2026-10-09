@@ -443,6 +443,8 @@ export default {
       warning: '警告',
       info: '信息',
       debug: '调试',
+      fromProfile: '来自订阅',
+      useProfileLogLevel: '使用订阅中的日志等级（{{level}}）',
       confirmUseTaskSchedule: '确认使用任务计划？',
       confirmUseTaskScheduleDesc: '确认后将退出应用，请手动使用管理员运行一次程序',
       confirmCancelTaskSchedule: '确认取消任务计划？',

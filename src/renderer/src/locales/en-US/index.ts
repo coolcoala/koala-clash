@@ -375,6 +375,8 @@ export default {
       warning: 'Warning',
       info: 'Info',
       debug: 'Debug',
+      fromProfile: 'from subscription',
+      useProfileLogLevel: 'Use the subscription level ({{level}})',
       confirmUseTaskSchedule: 'Confirm to use task schedule?',
       confirmUseTaskScheduleDesc:
         'After confirmation, the application will exit. Please manually run the program as administrator once',

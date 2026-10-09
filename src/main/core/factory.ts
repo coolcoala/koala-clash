@@ -71,6 +71,33 @@ export async function getMixedPort(): Promise<number> {
   return (await getEffectivePorts())['mixed-port'].value
 }
 
+// Like the ports, a log level declared by the profile wins unless the user has set one in the app settings
+function resolveLogLevel(
+  profile: Partial<MihomoConfig>,
+  controledMihomoConfig: Partial<MihomoConfig>,
+  customLogLevel: boolean
+): MihomoLogLevelInfo {
+  const declared = profile['log-level']
+  const profileValue = isLogLevel(declared) ? declared : undefined
+  const fromProfile = profileValue !== undefined && !customLogLevel
+  const controled = controledMihomoConfig['log-level']
+  return {
+    value: fromProfile ? profileValue : isLogLevel(controled) ? controled : 'info',
+    profileValue,
+    fromProfile
+  }
+}
+
+export async function getEffectiveLogLevel(): Promise<MihomoLogLevelInfo> {
+  const { current } = await getProfileConfig()
+  const { customLogLevel = false } = await getAppConfig()
+  return resolveLogLevel(
+    await getProfile(current),
+    await getControledMihomoConfig(),
+    customLogLevel
+  )
+}
+
 // 辅助函数：处理带偏移量的规则
 function processRulesWithOffset(ruleStrings: string[], currentRules: string[], isAppend = false) {
   const normalRules: string[] = []
@@ -110,7 +137,8 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
     controlDns = true,
     controlSniff = true,
     controlTun = false,
-    customPorts = []
+    customPorts = [],
+    customLogLevel = false
   } = appConfig
   const proxyModeEnabled = appConfig.proxyMode ?? false
   const currentProfile = await getProfile(current)
@@ -119,9 +147,8 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   const controledMihomoConfig = await getControledMihomoConfig()
 
   const configToMerge = JSON.parse(JSON.stringify(controledMihomoConfig))
-  if (isLogLevel(currentProfile['log-level'])) {
-    delete configToMerge['log-level']
-  }
+  const logLevel = resolveLogLevel(currentProfile, controledMihomoConfig, customLogLevel)
+  if (logLevel.fromProfile) delete configToMerge['log-level']
   const ports = resolvePorts(currentProfile, controledMihomoConfig, customPorts)
   for (const key of PORT_KEYS) {
     if (ports[key].fromProfile) delete configToMerge[key]
@@ -192,7 +219,6 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   }
 
   const profile = deepMerge(JSON.parse(JSON.stringify(currentProfile)), configToMerge)
-  const logLevel = isLogLevel(profile['log-level']) ? profile['log-level'] : 'info'
 
   const tunEnabled = profile.tun?.enable ?? false
   if (!tunEnabled && !proxyModeEnabled) {
@@ -227,7 +253,7 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
     const { triggerSysProxy } = await import('../sys/sysproxy')
     await triggerSysProxy(true, appConfig.onlyActiveDevice ?? false).catch(() => {})
   }
-  return { logLevel }
+  return { logLevel: logLevel.value }
 }
 
 async function cleanProfile(
