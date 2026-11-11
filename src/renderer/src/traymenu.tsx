@@ -2,6 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import '@renderer/assets/traymenu.css'
+// Without it every label in this window rendered as its translation key
+import '@renderer/i18n'
 import TrayMenuApp from '@renderer/TrayMenuApp'
 import BaseErrorBoundary from './components/base/base-error-boundary'
 import { AppConfigProvider } from './hooks/use-app-config'

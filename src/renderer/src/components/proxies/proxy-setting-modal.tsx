@@ -20,6 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import React, { useState, useEffect } from 'react'
 import SettingItem from '../base/base-setting-item'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
+import { useProfileConfig } from '@renderer/hooks/use-profile-config'
+import { profilePingDisplay } from '@renderer/utils/ping-display'
 import debounce from '@renderer/utils/debounce'
 import { t } from 'i18next'
 
@@ -30,6 +32,9 @@ interface Props {
 const ProxySettingModal: React.FC<Props> = (props) => {
   const { onClose } = props
   const { appConfig, patchAppConfig } = useAppConfig()
+  const { profileConfig } = useProfileConfig()
+  // The subscription decides the view while its header is set, so the setting is hidden then
+  const pingDisplayFromProfile = profilePingDisplay(profileConfig) !== undefined
 
   const {
     proxyCols = 'auto',
@@ -38,6 +43,7 @@ const ProxySettingModal: React.FC<Props> = (props) => {
     proxyDisplayLayout = 'double',
     autoCloseConnection = true,
     expandProxyGroups = false,
+    pingDisplay = 'ping',
     delayTestUrl,
     delayTestConcurrency,
     delayTestTimeout
@@ -135,6 +141,24 @@ const ProxySettingModal: React.FC<Props> = (props) => {
               </TabsList>
             </Tabs>
           </SettingItem>
+          {!pingDisplayFromProfile && (
+            <SettingItem title={t('proxies.pingDisplay')} divider>
+              <Tabs
+                value={pingDisplay}
+                onValueChange={async (value) => {
+                  await patchAppConfig({ pingDisplay: value as PingDisplay })
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="ping">{t('proxies.pingDisplayNumber')}</TabsTrigger>
+                  <TabsTrigger value="indicator">
+                    <span aria-hidden className="size-2 rounded-full bg-success" />
+                    {t('proxies.pingDisplayIndicator')}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </SettingItem>
+          )}
           <SettingItem title={t('proxies.disconnectOnSwitch')} divider>
             <Switch
               checked={autoCloseConnection}

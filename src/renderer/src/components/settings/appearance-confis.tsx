@@ -52,6 +52,7 @@ const AppearanceConfig: React.FC<AppearanceConfigProps> = (props) => {
   const {
     useDockIcon = true,
     proxyInTray = true,
+    useCustomTrayMenu = false,
     disableTray = false,
     showFloatingWindow: showFloating = false,
     spinFloatingIcon = true,
@@ -156,16 +157,28 @@ const AppearanceConfig: React.FC<AppearanceConfigProps> = (props) => {
             }}
           />
         </SettingItem>
+        {/* On Linux the tray icon only has the system menu */}
         {platform !== 'linux' && (
           <>
-            <SettingItem title={t('settings.appearance.trayShowNodeInfo')} divider>
+            <SettingItem title={t('settings.appearance.customTrayMenu')} divider>
               <Switch
-                checked={proxyInTray}
+                checked={useCustomTrayMenu}
                 onCheckedChange={async (value) => {
-                  await patchAppConfig({ proxyInTray: value })
+                  await patchAppConfig({ useCustomTrayMenu: value })
                 }}
               />
             </SettingItem>
+            {/* The extended menu always lists the groups, this one is for the system menu */}
+            {!useCustomTrayMenu && (
+              <SettingItem title={t('settings.appearance.trayShowNodeInfo')} divider>
+                <Switch
+                  checked={proxyInTray}
+                  onCheckedChange={async (value) => {
+                    await patchAppConfig({ proxyInTray: value })
+                  }}
+                />
+              </SettingItem>
+            )}
           </>
         )}
         {platform === 'darwin' && (

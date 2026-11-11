@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios'
 import { getAppConfig, getControledMihomoConfig } from '../config'
 import { mainWindow } from '..'
 import WebSocket from 'ws'
-import { tray } from '../resolve/tray'
+import { customTrayWindow, tray } from '../resolve/tray'
 import { calcTraffic } from '../utils/calc'
 import { getRuntimeConfig } from './factory'
 import { floatingWindow } from '../resolve/floatingWindow'
@@ -395,6 +395,10 @@ const mihomoTraffic = async (): Promise<void> => {
         )
       }
       safeSend(floatingWindow, 'mihomoTraffic', json)
+      // The tray menu window stays alive while hidden, it only needs the numbers while shown
+      if (customTrayWindow?.isVisible()) {
+        safeSend(customTrayWindow, 'mihomoTraffic', json)
+      }
     } catch {
       // ignore
     }

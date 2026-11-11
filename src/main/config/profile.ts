@@ -167,6 +167,20 @@ async function applyProfileExpandProxyGroups(id: string): Promise<void> {
   await patchAppConfig({ expandProxyGroups: profile.expandProxyGroups })
 }
 
+// `circle` is the Android name for `indicator`. An unknown value counts as no header, so the
+// user's own setting stays in effect.
+function parsePingDisplay(value: string): PingDisplay | undefined {
+  switch (value.trim().toLowerCase()) {
+    case 'ping':
+      return 'ping'
+    case 'indicator':
+    case 'circle':
+      return 'indicator'
+    default:
+      return undefined
+  }
+}
+
 async function enforceGlobalModeRestriction(id: string): Promise<void> {
   const profile = await getProfileItem(id)
   if (profile?.globalMode === false) {
@@ -397,6 +411,12 @@ export async function createProfile(
       )
       if (expandProxyGroupsKey) {
         newItem.expandProxyGroups = String(headers[expandProxyGroupsKey]).toLowerCase() !== 'false'
+      }
+      const pingDisplayKey = Object.keys(headers).find((k) =>
+        k.toLowerCase().endsWith('ping-display')
+      )
+      if (pingDisplayKey) {
+        newItem.pingDisplay = parsePingDisplay(String(headers[pingDisplayKey]))
       }
       const announceKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('announce')

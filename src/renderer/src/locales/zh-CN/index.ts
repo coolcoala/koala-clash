@@ -546,6 +546,7 @@ export default {
       rotateFloatingIcon: '根据网速旋转悬浮窗图标',
       disableTrayIcon: '禁用托盘图标',
       trayShowNodeInfo: '托盘菜单显示节点信息',
+      customTrayMenu: '增强托盘菜单',
       showDockIcon: '显示 Dock 图标',
       alwaysOnTop: '窗口置顶',
       useSystemTitleBar: '使用系统标题栏',
@@ -976,6 +977,9 @@ export default {
     displayDouble: '双行',
     disconnectOnSwitch: '切换节点时断开连接',
     expandProxyGroups: '默认展开代理组',
+    pingDisplay: '延迟显示方式',
+    pingDisplayNumber: '数字',
+    pingDisplayIndicator: '圆点',
     delayTestUrl: '延迟测试地址',
     delayTestConcurrency: '延迟测试并发数量',
     delayTestUrlPlaceholder: '默认 https://www.gstatic.com/generate_204',
@@ -997,5 +1001,9 @@ export default {
   notifications: {
     taskScheduleManagement: '任务计划管理',
     coreAuthManagement: '内核授权管理'
+  },
+
+  trayMenu: {
+    openWindow: '打开 Koala Clash'
   }
 }

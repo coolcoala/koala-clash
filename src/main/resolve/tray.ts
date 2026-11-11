@@ -41,7 +41,7 @@ import { applyTheme } from './theme'
 import { t } from '../utils/i18n'
 
 export let tray: Tray | null = null
-let customTrayWindow: BrowserWindow | null = null
+export let customTrayWindow: BrowserWindow | null = null
 
 function formatDelayText(delay: number): string {
   if (delay === 0) {
@@ -74,7 +74,23 @@ function hideCustomTray(): void {
   }
 }
 
+// When the tray menu last lost focus, see the toggle check in showCustomTray
+let customTrayBlurredAt = 0
+// A tray icon click this soon after the menu hid on blur is the click that hid it
+const TRAY_TOGGLE_WINDOW_MS = 400
+
 async function showCustomTray(): Promise<void> {
+  // A second click on the tray icon closes the menu. Where that click takes the focus (Windows),
+  // the menu has already hidden itself on blur a moment ago and must not come back; where it
+  // does not, the menu is still visible
+  if (customTrayWindow && !customTrayWindow.isDestroyed()) {
+    if (customTrayWindow.isVisible()) {
+      hideCustomTray()
+      return
+    }
+    if (Date.now() - customTrayBlurredAt < TRAY_TOGGLE_WINDOW_MS) return
+  }
+
   const { useCustomTrayMenu = false, customTheme = 'default.css' } = await getAppConfig()
   if (!useCustomTrayMenu) {
     await updateTrayMenu()
@@ -94,6 +110,9 @@ async function showCustomTray(): Promise<void> {
       skipTaskbar: true,
       fullscreenable: false,
       focusable: true,
+      // The page draws its own rounded, bordered panel; the system mask of a frameless window
+      // has a larger radius on recent macOS and cut the border off at the corners
+      roundedCorners: false,
       hasShadow: true,
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
@@ -103,6 +122,7 @@ async function showCustomTray(): Promise<void> {
     })
 
     customTrayWindow.on('blur', () => {
+      customTrayBlurredAt = Date.now()
       hideCustomTray()
     })
     customTrayWindow.on('close', () => {

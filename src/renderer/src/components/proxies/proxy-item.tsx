@@ -5,6 +5,8 @@ import { mihomoUnfixedProxy } from '@renderer/utils/ipc'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@renderer/components/ui/spinner'
+import DelayDot from '@renderer/components/base/delay-dot'
+import { delayColorClass } from '@renderer/utils/ping-display'
 import { Gauge, MapPin } from 'lucide-react'
 
 interface Props {
@@ -14,6 +16,7 @@ interface Props {
     url?: string
   ) => Promise<ControllerProxiesDelay>
   proxyDisplayLayout: 'hidden' | 'single' | 'double'
+  pingDisplay: PingDisplay
   proxy: ControllerProxiesDetail | ControllerGroupDetail
   group: ControllerMixedGroup
   onSelect: (group: string, proxy: string) => void
@@ -21,17 +24,19 @@ interface Props {
   isGroupDelaying?: boolean
 }
 
-function delayColorClass(delay: number): string {
-  if (delay === -1) return 'text-primary'
-  if (delay === 0) return 'text-destructive'
-  if (delay < 500) return 'text-success'
-  return 'text-warning'
-}
-
 const ProxyItem: React.FC<Props> = React.memo((props) => {
   const { t } = useTranslation()
-  const { mutateProxies, proxyDisplayLayout, group, proxy, selected, onSelect, onProxyDelay, isGroupDelaying } =
-    props
+  const {
+    mutateProxies,
+    proxyDisplayLayout,
+    pingDisplay,
+    group,
+    proxy,
+    selected,
+    onSelect,
+    onProxyDelay,
+    isGroupDelaying
+  } = props
 
   const delay = useMemo(() => {
     if (proxy.history.length > 0) {
@@ -67,9 +72,18 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
 
   function delayContent(d: number): React.ReactNode {
     if (d === -1) return <Gauge className="size-3.5" />
+    if (pingDisplay === 'indicator') return <DelayDot delay={d} />
     if (d === 0) return '–'
     return d.toString()
   }
+
+  // The dot alone does not say how fast the node is, so its tooltip carries the number
+  const delayTitle =
+    pingDisplay === 'indicator' && delay !== -1
+      ? delay === 0
+        ? t('proxies.timeout')
+        : `${delay} ms`
+      : proxy.type
 
   const delayIndicator = (
     <span className="relative inline-flex items-center justify-center w-full">
@@ -137,7 +151,7 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
                 )}
                 <Button
                   variant="ghost"
-                  title={proxy.type}
+                  title={delayTitle}
                   disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -178,7 +192,7 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
                 )}
                 <Button
                   variant="ghost"
-                  title={proxy.type}
+                  title={delayTitle}
                   disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()

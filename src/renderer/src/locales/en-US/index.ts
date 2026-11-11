@@ -484,6 +484,7 @@ export default {
       rotateFloatingIcon: 'Rotate floating icon based on network speed',
       disableTrayIcon: 'Disable tray icon',
       trayShowNodeInfo: 'Show node info in tray menu',
+      customTrayMenu: 'Extended tray menu',
       showDockIcon: 'Show Dock icon',
       alwaysOnTop: 'Always on top',
       useSystemTitleBar: 'Use system title bar',
@@ -923,6 +924,9 @@ export default {
     displayDouble: 'Double line',
     disconnectOnSwitch: 'Disconnect on Node Switch',
     expandProxyGroups: 'Expand Groups by Default',
+    pingDisplay: 'Latency Display',
+    pingDisplayNumber: 'Number',
+    pingDisplayIndicator: 'Dot',
     delayTestUrl: 'Delay Test URL',
     delayTestConcurrency: 'Delay Test Concurrency',
     delayTestUrlPlaceholder: 'Default: https://www.gstatic.com/generate_204',
@@ -1025,5 +1029,9 @@ export default {
     tutorialEnd: 'Tutorial Complete',
     tutorialEndDesc:
       'Now you understand the basic usage of this software. If you have more questions, please refer to the official documentation.'
+  },
+
+  trayMenu: {
+    openWindow: 'Open Koala Clash'
   }
 }

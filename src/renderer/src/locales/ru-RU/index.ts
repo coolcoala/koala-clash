@@ -485,6 +485,7 @@ export default {
       rotateFloatingIcon: 'Вращать иконку плавающего окна в зависимости от скорости сети',
       disableTrayIcon: 'Скрыть иконку в трее',
       trayShowNodeInfo: 'Показать информацию об узле в меню трея',
+      customTrayMenu: 'Расширенное меню в трее',
       showDockIcon: 'Показать иконку в Dock',
       alwaysOnTop: 'Поверх всех окон',
       useSystemTitleBar: 'Использовать системную строку заголовка',
@@ -925,6 +926,9 @@ export default {
     displayDouble: 'Две строки',
     disconnectOnSwitch: 'Отключаться при смене узла',
     expandProxyGroups: 'Раскрывать группы по умолчанию',
+    pingDisplay: 'Вид задержки',
+    pingDisplayNumber: 'Число',
+    pingDisplayIndicator: 'Точка',
     delayTestUrl: 'URL для теста задержки',
     delayTestConcurrency: 'Количество параллельных тестов задержки',
     delayTestUrlPlaceholder: 'По умолчанию: https://www.gstatic.com/generate_204',
@@ -1029,5 +1033,9 @@ export default {
     tutorialEnd: 'Готово!',
     tutorialEndDesc:
       'Вы освоили основы работы с приложением. Если остались вопросы — загляните в документацию.'
+  },
+
+  trayMenu: {
+    openWindow: 'Открыть Koala Clash'
   }
 }

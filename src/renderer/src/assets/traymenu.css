@@ -16,6 +16,11 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+  /* the main window background, see App.tsx */
+  --app-bg: #c5d4f1;
+  --stroke-power-off: oklch(0.8245 0.0724 24);
+  --gradient-start-power-off: oklch(0.8962 0.0921 28);
+  --gradient-end-power-off: oklch(0.7065 0.1648 25);
   --stroke-power-on: oklch(0.9441 0.083 166.12);
   --gradient-start-power-on: oklch(0.8738 0.2417 149.81);
   --gradient-end-power-on: oklch(0.7333 0.2018 150.03);
@@ -46,6 +51,10 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
+  --app-bg: #080f16;
+  --stroke-power-off: oklch(0.5682 0.0961 25);
+  --gradient-start-power-off: oklch(0.7014 0.1722 25);
+  --gradient-end-power-off: oklch(0.3828 0.095 25);
   --stroke-power-on: oklch(0.7827 0.1797 149.49);
   --gradient-start-power-on: oklch(0.8738 0.2417 149.81);
   --gradient-end-power-on: oklch(0.6958 0.1883 150.53);
@@ -76,6 +85,10 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-app-bg: var(--app-bg);
+  --color-stroke-power-off: var(--stroke-power-off);
+  --color-gradient-start-power-off: var(--gradient-start-power-off);
+  --color-gradient-end-power-off: var(--gradient-end-power-off);
   --color-stroke-power-on: var(--stroke-power-on);
   --color-gradient-start-power-on: var(--gradient-start-power-on);
   --color-gradient-end-power-on: var(--gradient-end-power-on);
@@ -102,24 +115,38 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
 }
 
-html {
+/* The window is transparent, only the rounded panel inside it is painted */
+html,
+body {
   background: none !important;
   background-color: transparent !important;
 }
 
-body {
+@font-face {
+  font-family: 'twemoji';
+  src: url('./twemoji.ttf');
+}
+
+/* Same as main.css: Windows has no flag emoji of its own */
+.flag-emoji {
   font-family:
-    'Inter',
-    'SF Pro Display',
-    'Microsoft YaHei',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    sans-serif;
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Open Sans',
+    'Helvetica Neue',
+    sans-serif,
+    'Apple Color Emoji',
+    'twemoji';
 }
 
 * {

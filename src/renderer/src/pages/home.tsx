@@ -4,7 +4,7 @@ import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useGroups } from '@renderer/hooks/use-groups'
-import { triggerSysProxy, updateTrayIcon, mihomoHotReloadConfig } from '@renderer/utils/ipc'
+import { setConnectionEnabled } from '@renderer/utils/connection'
 import { useTranslation } from 'react-i18next'
 import { memo, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -85,8 +85,7 @@ const Home: React.FC = () => {
   const {
     mainSwitchMode = 'tun',
     sysProxy,
-    proxyMode = false,
-    onlyActiveDevice = false
+    proxyMode = false
   } = appConfig || {}
   const { enable: writeSysProxy = true, mode } = sysProxy || {}
   const { controledMihomoConfig, patchControledMihomoConfig } = useControledMihomoConfig()
@@ -231,37 +230,12 @@ const Home: React.FC = () => {
     setLoading(true)
     setLoadingDirection(enable ? 'connecting' : 'disconnecting')
     try {
-      if (enable) {
-        if (mainSwitchMode === 'tun') {
-          await patchControledMihomoConfig({ tun: { enable: true }, dns: { enable: true } })
-          await mihomoHotReloadConfig()
-        } else {
-          if (writeSysProxy && mode == 'manual' && sysProxyDisabled) return
-          await patchAppConfig({ proxyMode: true })
-          await mihomoHotReloadConfig()
-          if (writeSysProxy) {
-            await triggerSysProxy(true, onlyActiveDevice)
-          }
-        }
-      } else {
-        const tunWasEnabled = tun?.enable ?? false
-        const proxyModeWasEnabled = proxyMode
-        if (tunWasEnabled) {
-          await patchControledMihomoConfig({ tun: { enable: false } })
-        }
-        if (proxyModeWasEnabled) {
-          if (writeSysProxy) {
-            await triggerSysProxy(false, onlyActiveDevice)
-          }
-          await patchAppConfig({ proxyMode: false })
-        }
-        if (tunWasEnabled || proxyModeWasEnabled) {
-          await mihomoHotReloadConfig()
-        }
-      }
-      window.electron.ipcRenderer.send('updateFloatingWindow')
-      window.electron.ipcRenderer.send('updateTrayMenu')
-      await updateTrayIcon()
+      await setConnectionEnabled(enable, {
+        appConfig,
+        controledMihomoConfig,
+        patchAppConfig,
+        patchControledMihomoConfig
+      })
     } catch (e) {
       toast.error(`${e}`)
     } finally {
