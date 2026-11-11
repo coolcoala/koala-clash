@@ -16,6 +16,7 @@ import { defaultProfile } from '../utils/template'
 import { dirname, join } from 'path'
 import { deepMerge } from '../utils/merge'
 import { getUserAgent } from '../utils/userAgent'
+import { decodeHeaderText } from '../utils/headers'
 import { getHWID, getDeviceOS, getOSVersion, getDeviceModel } from '../utils/deviceInfo'
 import { t } from '../utils/i18n'
 import { downloadCustomCss } from '../resolve/theme'
@@ -331,12 +332,7 @@ export async function createProfile(
         k.toLowerCase().endsWith('profile-title')
       )
       if (profileTitleKey) {
-        const titleValue = headers[profileTitleKey]
-        if (titleValue.startsWith('base64:')) {
-          newItem.name = Buffer.from(titleValue.slice(7), 'base64').toString('utf-8')
-        } else {
-          newItem.name = titleValue
-        }
+        newItem.name = decodeHeaderText(headers[profileTitleKey])
       } else {
         const contentDispositionKey = Object.keys(headers).find((k) =>
           k.toLowerCase().endsWith('content-disposition')
@@ -355,10 +351,7 @@ export async function createProfile(
         k.toLowerCase().endsWith('profile-web-page-name')
       )
       if (homeNameKey) {
-        const homeNameValue = headers[homeNameKey]
-        newItem.homeName = homeNameValue.startsWith('base64:')
-          ? Buffer.from(homeNameValue.slice(7), 'base64').toString('utf-8')
-          : homeNameValue
+        newItem.homeName = decodeHeaderText(headers[homeNameKey])
       }
       const intervalKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('profile-update-interval')
@@ -409,11 +402,7 @@ export async function createProfile(
         k.toLowerCase().endsWith('announce')
       )
       if (announceKey) {
-        const announceValue = headers[announceKey]
-        const decoded = announceValue.startsWith('base64:')
-          ? Buffer.from(announceValue.slice(7), 'base64').toString('utf-8')
-          : announceValue
-        newItem.announce = decoded.replace(/\\n/g, '\n')
+        newItem.announce = decodeHeaderText(headers[announceKey]).replace(/\\n/g, '\n')
       }
       const customCssKey = Object.keys(headers).find((k) =>
         k.toLowerCase().endsWith('custom-css')

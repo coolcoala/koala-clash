@@ -21,6 +21,7 @@ import { showFloatingWindow } from './resolve/floatingWindow'
 import { getAppConfigSync } from './config/app'
 import { declineElevation, ELEVATION_DECLINED_ARG } from './utils/elevation'
 import { t } from './utils/i18n'
+import { decodeHeaderText } from './utils/headers'
 
 
 let quitTimeout: NodeJS.Timeout | null = null
@@ -434,12 +435,7 @@ async function showProfileInstallConfirm(url: string, name?: string | null): Pro
       })
 
       if (response.headers['profile-title']) {
-        const titleValue = response.headers['profile-title']
-        if (titleValue.startsWith('base64:')) {
-          extractedName = Buffer.from(titleValue.slice(7), 'base64').toString('utf-8')
-        } else {
-          extractedName = titleValue
-        }
+        extractedName = decodeHeaderText(response.headers['profile-title'])
       } else {
         if (response.headers['content-disposition']) {
           extractedName = parseFilename(response.headers['content-disposition'])
