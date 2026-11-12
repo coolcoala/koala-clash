@@ -1,3 +1,9 @@
+## 1.6.0
+
+- bugfixes
+- perfomance optimizations
+- new bugs
+
 ## 1.5.0
 
 - alerts about kernel issues (configuration, antivirus, etc.)
