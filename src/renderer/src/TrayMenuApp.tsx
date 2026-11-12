@@ -27,6 +27,7 @@ import {
   mihomoGroupDelay,
   mihomoProxyDelay,
   notDialogQuit,
+  onIpc,
   patchMihomoConfig,
   showMainWindow
 } from './utils/ipc'
@@ -100,13 +101,7 @@ const TrayMenuApp: React.FC = () => {
   const [testingProxies, setTestingProxies] = useState<ReadonlySet<string>>(new Set())
   const [traffic, setTraffic] = useState<TrafficData>({ up: 0, down: 0 })
 
-  useEffect(() => {
-    const onTraffic = (_e: unknown, info: TrafficData): void => setTraffic(info)
-    window.electron.ipcRenderer.on('mihomoTraffic', onTraffic)
-    return () => {
-      window.electron.ipcRenderer.removeListener('mihomoTraffic', onTraffic)
-    }
-  }, [])
+  useEffect(() => onIpc<[TrafficData]>('mihomoTraffic', setTraffic), [])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {

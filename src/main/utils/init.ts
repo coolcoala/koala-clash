@@ -218,26 +218,25 @@ export async function init(): Promise<void> {
   } = appConfig
   const writeSysProxy = proxyMode && sysProxy.enable
 
-  const initTasks: Promise<void>[] = [
-    startSSIDCheck()
-  ]
+  // The SSID check may switch the mode to direct, which the core reads from the config at start
+  const initTasks: Promise<void>[] = [startSSIDCheck()]
 
   if (networkDetection) {
     initTasks.push(startNetworkDetection())
   }
 
-  initTasks.push(
-    (async (): Promise<void> => {
-      try {
-        if (writeSysProxy) {
-          await startPacServer()
-        }
-        await triggerSysProxy(writeSysProxy, onlyActiveDevice)
-      } catch {
-        // ignore
+  // Setting or clearing the system proxy runs external tools, and neither the window nor the
+  // core waits for it, so it no longer delays the first window
+  void (async (): Promise<void> => {
+    try {
+      if (writeSysProxy) {
+        await startPacServer()
       }
-    })()
-  )
+      await triggerSysProxy(writeSysProxy, onlyActiveDevice)
+    } catch {
+      // ignore
+    }
+  })()
 
   await Promise.all(initTasks)
 

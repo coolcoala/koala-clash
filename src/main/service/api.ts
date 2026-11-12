@@ -13,6 +13,9 @@ export const initServiceAPI = (km: KeyManager): void => {
     baseURL: 'http://localhost',
     socketPath: serviceIpcPath(),
     timeout: 15000,
+    // As for the core controller: no redirects here, and follow-redirects leaks a socket listener
+    // per request on a kept-alive connection
+    maxRedirects: 0,
     headers: {
       'Content-Type': 'application/json'
     }

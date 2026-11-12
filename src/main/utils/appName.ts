@@ -1,62 +1,64 @@
 import fs from 'fs'
+import { readFile } from 'fs/promises'
 import path from 'path'
 import plist from 'plist'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import { findBestAppPath, isIOSApp } from './icon'
-import { spawnSync } from 'child_process'
 
-export async function getAppName(appPath: string): Promise<string> {
-  if (process.platform === 'darwin') {
+const execFileAsync = promisify(execFile)
+
+// Names already looked up, and lookups still running, so each path costs one lookup per run
+const appNames = new Map<string, Promise<string>>()
+
+export function getAppName(appPath: string): Promise<string> {
+  let name = appNames.get(appPath)
+  if (!name) {
+    name = lookupAppName(appPath)
+    appNames.set(appPath, name)
+  }
+  return name
+}
+
+async function lookupAppName(appPath: string): Promise<string> {
+  if (process.platform !== 'darwin') return ''
+  try {
+    const targetPath = findBestAppPath(appPath)
+    if (!targetPath) return ''
+
+    if (isIOSApp(targetPath)) {
+      return await readBundleName(path.join(targetPath, 'Info.plist'))
+    }
+
     try {
-      const targetPath = findBestAppPath(appPath)
-      if (!targetPath) return ''
-
-      if (isIOSApp(targetPath)) {
-        const plistPath = path.join(targetPath, 'Info.plist')
-        const xml = fs.readFileSync(plistPath, 'utf-8')
-        const parsed = plist.parse(xml) as Record<string, unknown>
-        return (parsed.CFBundleDisplayName as string) || (parsed.CFBundleName as string) || ''
-      }
-
-      try {
-        const appName = getLocalizedAppName(targetPath)
-        if (appName) return appName
-      } catch (err) {
-        // ignore
-      }
-
-      const plistPath = path.join(targetPath, 'Contents', 'Info.plist')
-      if (fs.existsSync(plistPath)) {
-        const xml = fs.readFileSync(plistPath, 'utf-8')
-        const parsed = plist.parse(xml) as Record<string, unknown>
-
-        return (parsed.CFBundleDisplayName as string) || (parsed.CFBundleName as string) || ''
-      } else {
-        // ignore
-      }
-    } catch (err) {
+      const appName = await getLocalizedAppName(targetPath)
+      if (appName) return appName
+    } catch {
       // ignore
     }
+
+    const plistPath = path.join(targetPath, 'Contents', 'Info.plist')
+    if (fs.existsSync(plistPath)) {
+      return await readBundleName(plistPath)
+    }
+  } catch {
+    // ignore
   }
   return ''
 }
 
-function getLocalizedAppName(appPath: string): string {
-  const jxa = `
-  ObjC.import('Foundation');
-  const fm = $.NSFileManager.defaultManager;
-  const name = fm.displayNameAtPath('${appPath}');
-  name.js;
-`
-  const res = spawnSync('osascript', ['-l', 'JavaScript'], {
-    input: jxa,
+async function readBundleName(plistPath: string): Promise<string> {
+  const parsed = plist.parse(await readFile(plistPath, 'utf-8')) as Record<string, unknown>
+  return (parsed.CFBundleDisplayName as string) || (parsed.CFBundleName as string) || ''
+}
+
+// osascript takes a noticeable moment to start. Run synchronously, it froze the whole app for
+// every new process the connections page showed.
+async function getLocalizedAppName(appPath: string): Promise<string> {
+  const jxa = `ObjC.import('Foundation'); $.NSFileManager.defaultManager.displayNameAtPath(${JSON.stringify(appPath)}).js`
+  const { stdout } = await execFileAsync('osascript', ['-l', 'JavaScript', '-e', jxa], {
     encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe']
+    timeout: 5000
   })
-  if (res.error) {
-    throw res.error
-  }
-  if (res.status !== 0) {
-    throw new Error(res.stderr.trim() || `osascript exited ${res.status}`)
-  }
-  return res.stdout.trim()
+  return stdout.trim()
 }

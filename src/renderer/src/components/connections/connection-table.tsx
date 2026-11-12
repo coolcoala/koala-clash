@@ -1,4 +1,5 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
+import { TableComponents, TableVirtuoso } from 'react-virtuoso'
 import { Badge } from '@renderer/components/ui/badge'
 import { Button } from '@renderer/components/ui/button'
 import { calcTraffic } from '@renderer/utils/calc'
@@ -199,6 +200,46 @@ const DEFAULT_COLUMNS: Omit<ColumnConfig, 'label'>[] = [
   }
 ]
 
+// Same order as String.prototype.localeCompare, without setting up the locale on every call
+const collator = new Intl.Collator()
+
+interface TableContext {
+  openDetail: (connection: ControllerConnectionDetail) => void
+}
+
+// virtuoso measures the header through its ref
+const ConnectionsTableHead = React.forwardRef<
+  HTMLTableSectionElement,
+  Pick<React.ComponentProps<'thead'>, 'children' | 'style'>
+>(({ style, children }, ref) => (
+  <thead ref={ref} style={style} className="bg-muted">
+    {children}
+  </thead>
+))
+ConnectionsTableHead.displayName = 'ConnectionsTableHead'
+
+const ConnectionsTableRow: TableComponents<
+  ControllerConnectionDetail,
+  TableContext
+>['TableRow'] = ({ item, context, ...props }) => (
+  <tr
+    {...props}
+    className="border-b border-border hover:bg-muted cursor-pointer transition-colors h-12"
+    onClick={() => context.openDetail(item)}
+  />
+)
+
+// Defined once: new component types on every render would remount all the rows
+const TABLE_COMPONENTS: TableComponents<ControllerConnectionDetail, TableContext> = {
+  Table: ({ style, children }) => (
+    <table style={style} className="w-full border-collapse">
+      {children}
+    </table>
+  ),
+  TableHead: ConnectionsTableHead,
+  TableRow: ConnectionsTableRow
+}
+
 const ConnectionTable: React.FC<Props> = ({
   connections,
   setSelected,
@@ -213,7 +254,6 @@ const ConnectionTable: React.FC<Props> = ({
   initialSortDirection
 }) => {
   const { t } = useTranslation()
-  const tableRef = useRef<HTMLDivElement>(null)
   const [resizingColumn, setResizingColumn] = useState<string | null>(null)
   const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn || null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialSortDirection || 'asc')
@@ -364,7 +404,7 @@ const ConnectionTable: React.FC<Props> = ({
 
       let comparison = 0
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        comparison = aValue.localeCompare(bValue)
+        comparison = collator.compare(aValue, bValue)
       } else if (typeof aValue === 'number' && typeof bValue === 'number') {
         comparison = aValue - bValue
       }
@@ -375,116 +415,126 @@ const ConnectionTable: React.FC<Props> = ({
 
   const visibleColumnsFiltered = columnsWithLabels.filter((col) => col.visible)
 
+  const tableContext = useMemo<TableContext>(
+    () => ({
+      openDetail: (connection): void => {
+        setSelected(connection)
+        setIsDetailModalOpen(true)
+      }
+    }),
+    [setSelected, setIsDetailModalOpen]
+  )
+
+  const renderHeader = (): React.ReactNode => (
+    <tr>
+      {visibleColumnsFiltered.map((col) => (
+        <th
+          key={col.key}
+          className="relative border-b border-border text-left text-xs font-semibold text-muted-foreground px-3 h-10"
+          style={{ width: col.width, minWidth: col.minWidth }}
+        >
+          <div className="flex items-center justify-between gap-1">
+            <button
+              className="flex-1 text-left hover:text-foreground transition-colors"
+              onClick={() => handleSort(col.key)}
+            >
+              {col.label}
+              {sortColumn === col.key && (
+                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+              )}
+            </button>
+            <div
+              className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group"
+              onMouseDown={(e) => handleMouseDown(e, col.key)}
+            >
+              <div
+                className="w-px h-4 bg-border group-hover:bg-primary transition-colors"
+                style={{
+                  backgroundColor: resizingColumn === col.key ? 'var(--primary)' : undefined
+                }}
+              />
+            </div>
+          </div>
+        </th>
+      ))}
+      <th className="right-0 border-b border-border w-12 bg-muted" />
+    </tr>
+  )
+
+  const renderRow = (_index: number, connection: ControllerConnectionDetail): React.ReactNode => (
+    <>
+      {visibleColumnsFiltered.map((col) => {
+        const value = col.getValue(connection)
+        let content: React.ReactNode
+        if (col.key === 'status') {
+          content = renderStatus(connection)
+        } else if (col.key === 'type') {
+          content = renderType(connection)
+        } else if (col.render) {
+          content = col.render(connection)
+        } else {
+          content = value
+        }
+
+        return (
+          <td
+            key={col.key}
+            className="px-3 text-sm text-foreground truncate"
+            style={{ maxWidth: col.width }}
+            title={typeof value === 'string' ? value : ''}
+          >
+            {content}
+          </td>
+        )
+      })}
+      <td className="sticky right-1.5 bg-inherit" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="default"
+          size="icon-sm"
+          className={
+            connection.isActive
+              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 bg-zinc-900'
+              : 'text-destructive hover:text-destructive hover:bg-destructive/10 bg-zinc-900'
+          }
+          onClick={() => {
+            close(connection.id)
+          }}
+        >
+          {connection.isActive ? <X className="text-lg" /> : <Trash2 className="text-lg" />}
+        </Button>
+      </td>
+    </>
+  )
+
+  // Only the rows in view are rendered: the list refreshes on every tick and can hold hundreds of
+  // connections
   return (
     <div className="h-full flex flex-col border rounded-2xl overflow-hidden mx-2">
-      <div ref={tableRef} className="flex-1 overflow-auto">
-        <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-muted">
-            <tr>
-              {visibleColumnsFiltered.map((col) => (
-                <th
-                  key={col.key}
-                  className="relative border-b border-border text-left text-xs font-semibold text-muted-foreground px-3 h-10"
-                  style={{ width: col.width, minWidth: col.minWidth }}
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <button
-                      className="flex-1 text-left hover:text-foreground transition-colors"
-                      onClick={() => handleSort(col.key)}
-                    >
-                      {col.label}
-                      {sortColumn === col.key && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </button>
-                    <div
-                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group"
-                      onMouseDown={(e) => handleMouseDown(e, col.key)}
-                    >
-                      <div
-                        className="w-px h-4 bg-border group-hover:bg-primary transition-colors"
-                        style={{
-                          backgroundColor: resizingColumn === col.key ? 'var(--primary)' : undefined
-                        }}
-                      />
-                    </div>
-                  </div>
-                </th>
-              ))}
-              <th className="right-0 border-b border-border w-12 bg-muted" />
-            </tr>
-          </thead>
-          <tbody>
-            {sortedConnections.map((connection) => (
-              <tr
-                key={connection.id}
-                className="border-b border-border hover:bg-muted cursor-pointer transition-colors h-12"
-                onClick={() => {
-                  setSelected(connection)
-                  setIsDetailModalOpen(true)
-                }}
-              >
-                {visibleColumnsFiltered.map((col) => {
-                  let content: React.ReactNode
-                  if (col.key === 'status') {
-                    content = renderStatus(connection)
-                  } else if (col.key === 'type') {
-                    content = renderType(connection)
-                  } else if (col.render) {
-                    content = col.render(connection)
-                  } else {
-                    content = col.getValue(connection)
-                  }
-
-                  return (
-                    <td
-                      key={col.key}
-                      className="px-3 text-sm text-foreground truncate"
-                      style={{ maxWidth: col.width }}
-                      title={
-                        typeof col.getValue(connection) === 'string'
-                          ? (col.getValue(connection) as string)
-                          : ''
-                      }
-                    >
-                      {content}
-                    </td>
-                  )
-                })}
-                <td className="sticky right-1.5 bg-inherit" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="default"
-                    size="icon-sm"
-                    className={
-                      connection.isActive
-                        ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 bg-zinc-900'
-                        : 'text-destructive hover:text-destructive hover:bg-destructive/10 bg-zinc-900'
-                    }
-                    onClick={() => {
-                      close(connection.id)
-                    }}
-                  >
-                    {connection.isActive ? (
-                      <X className="text-lg" />
-                    ) : (
-                      <Trash2 className="text-lg" />
-                    )}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {sortedConnections.length === 0 &&
-          (emptyState ? (
+      {sortedConnections.length === 0 ? (
+        <div className="flex-1 overflow-auto">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-10 bg-muted">{renderHeader()}</thead>
+          </table>
+          {emptyState ? (
             /* Sits below the h-10 sticky header, so subtract it to avoid an extra scrollbar. */
             <div className="h-[calc(100%-2.5rem)]">{emptyState}</div>
           ) : (
             <div className="flex items-center justify-center h-32 text-muted-foreground">
               {t('connections.table.noData')}
             </div>
-          ))}
-      </div>
+          )}
+        </div>
+      ) : (
+        <TableVirtuoso
+          className="flex-1 min-h-0"
+          data={sortedConnections}
+          context={tableContext}
+          components={TABLE_COMPONENTS}
+          computeItemKey={(_index, connection) => connection.id}
+          fixedHeaderContent={renderHeader}
+          itemContent={renderRow}
+        />
+      )}
     </div>
   )
 }

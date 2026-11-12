@@ -1,42 +1,35 @@
-import React, { createContext, useContext, ReactNode } from 'react'
+import { useEffect } from 'react'
 import useSWR from 'swr'
-import { mihomoRules } from '@renderer/utils/ipc'
+import { mihomoRules, onIpc } from '@renderer/utils/ipc'
 import { subscribeCoreStarted } from '@renderer/store/core-lifecycle-store'
 
-interface RulesContextType {
+interface UseRulesResult {
   rules: ControllerRules | undefined
   mutate: () => void
 }
 
-const RulesContext = createContext<RulesContextType | undefined>(undefined)
-
-export const RulesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+// Loaded by the rules page, not at startup: the list can be long and nothing else shows it.
+// The cached list shows at once and is refreshed on every visit, so a profile switched elsewhere
+// (the tray menu, a hot reload) does not leave it stale.
+export const useRules = (): UseRulesResult => {
   const { data: rules, mutate } = useSWR<ControllerRules>('mihomoRules', mihomoRules, {
     errorRetryInterval: 200,
     errorRetryCount: 10
   })
 
-  React.useEffect(() => {
-    const onRulesUpdated = (): void => {
+  // Mounted on every visit to the page, so the listener has to really go away on leaving it
+  useEffect(() => {
+    const detachIpc = onIpc('rulesUpdated', () => {
       mutate()
-    }
-    window.electron.ipcRenderer.on('rulesUpdated', onRulesUpdated)
+    })
     const unsubscribe = subscribeCoreStarted(() => {
       mutate()
     })
     return (): void => {
-      window.electron.ipcRenderer.removeListener('rulesUpdated', onRulesUpdated)
+      detachIpc()
       unsubscribe()
     }
-  }, [])
+  }, [mutate])
 
-  return <RulesContext.Provider value={{ rules, mutate }}>{children}</RulesContext.Provider>
-}
-
-export const useRules = (): RulesContextType => {
-  const context = useContext(RulesContext)
-  if (context === undefined) {
-    throw new Error('useRules must be used within an RulesProvider')
-  }
-  return context
+  return { rules, mutate }
 }

@@ -18,13 +18,28 @@ const CORE_UNREACHABLE_CODES = new Set(['ENOENT', 'ECONNREFUSED', 'ECONNRESET', 
 let axiosIns: AxiosInstance = null!
 let mihomoTrafficWs: WebSocket | null = null
 let trafficRetry = 10
-let mihomoMemoryWs: WebSocket | null = null
-let memoryRetry = 10
 let mihomoLogsWs: WebSocket | null = null
 let logsRetry = 10
 let mihomoLogsLevel: LogLevel = 'info'
 let mihomoConnectionsWs: WebSocket | null = null
 let connectionsRetry = 10
+// The core is up, so the connections stream may run
+let connectionsAvailable = false
+// The connections page is open and visible: nothing else shows the list
+let connectionsWanted = false
+let connectionsOpening: Promise<void> | null = null
+
+// Closing a socket that is still connecting emits an error, which would be unhandled once the
+// listeners are gone; leaving it alone instead keeps it open and streaming for nobody
+const disposeWs = (ws: WebSocket): void => {
+  ws.removeAllListeners()
+  ws.on('error', () => {
+    // nothing is waiting for this socket any more
+  })
+  if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    ws.close()
+  }
+}
 
 export const getAxios = async (force: boolean = false): Promise<AxiosInstance> => {
   const currentSocketPath = mihomoIpcPath()
@@ -38,7 +53,10 @@ export const getAxios = async (force: boolean = false): Promise<AxiosInstance> =
   axiosIns = axios.create({
     baseURL: `http://localhost`,
     socketPath: currentSocketPath,
-    timeout: 15000
+    timeout: 15000,
+    // The controller never redirects. Through follow-redirects, axios leaves an error listener on
+    // the kept-alive socket after every request, and a few quick toggles in a row warned of a leak
+    maxRedirects: 0
   })
 
   axiosIns.interceptors.response.use(
@@ -327,7 +345,6 @@ export const isConfigRejection = (e: unknown): boolean =>
 export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { generateProfile } = await import('./factory')
   const { getProfileConfig } = await import('../config')
-  const { resetProviderTracking } = await import('./manager')
   const { logLevel } = await generateProfile().catch((e) => {
     const error = new CoreError('config-invalid', e)
     reportCoreError(error)
@@ -337,7 +354,6 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { diffWorkDir = false } = await getAppConfig()
   const { mihomoWorkConfigPath } = await import('../utils/dirs')
   const configPath = diffWorkDir ? mihomoWorkConfigPath(current) : mihomoWorkConfigPath('work')
-  await resetProviderTracking()
   const instance = await getAxios()
   try {
     await instance.put('/configs?force=true', { path: configPath })
@@ -349,6 +365,9 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
     throw e
   }
   setCoreStatus('running')
+  // The controller answers once the new config is applied, providers included
+  safeSend(mainWindow, 'groupsUpdated')
+  safeSend(mainWindow, 'rulesUpdated')
   await applyLogLevel(logLevel)
 }
 
@@ -419,46 +438,22 @@ const mihomoTraffic = async (): Promise<void> => {
   }
 }
 
-export const startMihomoMemory = async (): Promise<void> => {
-  await mihomoMemory()
-}
+// The core can emit bursts of lines; one message per tick keeps both IPC and the log list cheap
+const LOGS_FLUSH_INTERVAL = 100
+// The window keeps this many lines, older ones in a burst would be dropped there anyway
+const MAX_PENDING_LOGS = 500
+let pendingLogs: ControllerLog[] = []
+let logsFlushTimer: NodeJS.Timeout | null = null
 
-export const stopMihomoMemory = (): void => {
-  if (mihomoMemoryWs) {
-    mihomoMemoryWs.removeAllListeners()
-    if (mihomoMemoryWs.readyState === WebSocket.OPEN) {
-      mihomoMemoryWs.close()
-    }
-    mihomoMemoryWs = null
+const flushLogs = (): void => {
+  if (logsFlushTimer) {
+    clearTimeout(logsFlushTimer)
+    logsFlushTimer = null
   }
-}
-
-const mihomoMemory = async (): Promise<void> => {
-  mihomoMemoryWs = new WebSocket(`ws+unix:${mihomoIpcPath()}:/memory`)
-
-  mihomoMemoryWs.onmessage = (e): void => {
-    const data = e.data as string
-    memoryRetry = 10
-    try {
-      safeSend(mainWindow, 'mihomoMemory', JSON.parse(data) as ControllerMemory)
-    } catch {
-      // ignore
-    }
-  }
-
-  mihomoMemoryWs.onclose = (): void => {
-    if (memoryRetry) {
-      memoryRetry--
-      mihomoMemory()
-    }
-  }
-
-  mihomoMemoryWs.onerror = (): void => {
-    if (mihomoMemoryWs) {
-      mihomoMemoryWs.close()
-      mihomoMemoryWs = null
-    }
-  }
+  if (pendingLogs.length === 0) return
+  const batch = pendingLogs
+  pendingLogs = []
+  safeSend(mainWindow, 'mihomoLogs', batch)
 }
 
 export const startMihomoLogs = (level: LogLevel): void => {
@@ -467,11 +462,10 @@ export const startMihomoLogs = (level: LogLevel): void => {
 }
 
 export const stopMihomoLogs = (): void => {
+  // The last lines of a core that is going down are the ones worth reading
+  flushLogs()
   if (mihomoLogsWs) {
-    mihomoLogsWs.removeAllListeners()
-    if (mihomoLogsWs.readyState === WebSocket.OPEN) {
-      mihomoLogsWs.close()
-    }
+    disposeWs(mihomoLogsWs)
     mihomoLogsWs = null
   }
 }
@@ -492,9 +486,15 @@ const mihomoLogs = (): void => {
     const data = e.data as string
     logsRetry = 10
     try {
-      safeSend(mainWindow, 'mihomoLogs', JSON.parse(data) as ControllerLog)
+      pendingLogs.push(JSON.parse(data) as ControllerLog)
     } catch {
-      // ignore
+      return
+    }
+    if (pendingLogs.length > MAX_PENDING_LOGS) {
+      pendingLogs.splice(0, pendingLogs.length - MAX_PENDING_LOGS)
+    }
+    if (!logsFlushTimer) {
+      logsFlushTimer = setTimeout(flushLogs, LOGS_FLUSH_INTERVAL)
     }
   }
 
@@ -513,37 +513,60 @@ const mihomoLogs = (): void => {
   }
 }
 
-export const startMihomoConnections = async (): Promise<void> => {
-  await mihomoConnections()
-}
-
 const sendConnectionsDebounced = debounce((payload: ControllerConnections): void => {
   safeSend(mainWindow, 'mihomoConnections', payload)
 }, 100)
 
-export const stopMihomoConnections = (): void => {
+// The full list is parsed and copied to the window on every tick, so it only runs while shown
+const openConnections = async (): Promise<void> => {
+  if (!connectionsAvailable || !connectionsWanted) return
+  if (mihomoConnectionsWs || connectionsOpening) return
+  connectionsOpening = mihomoConnections().finally(() => {
+    connectionsOpening = null
+  })
+  await connectionsOpening
+}
+
+const closeConnections = (): void => {
   sendConnectionsDebounced.cancel()
   if (mihomoConnectionsWs) {
-    mihomoConnectionsWs.removeAllListeners()
-    if (mihomoConnectionsWs.readyState === WebSocket.OPEN) {
-      mihomoConnectionsWs.close()
-    }
+    disposeWs(mihomoConnectionsWs)
     mihomoConnectionsWs = null
   }
 }
 
+export const startMihomoConnections = async (): Promise<void> => {
+  connectionsAvailable = true
+  await openConnections()
+}
+
+export const stopMihomoConnections = (): void => {
+  connectionsAvailable = false
+  closeConnections()
+}
+
 export const restartMihomoConnections = async (): Promise<void> => {
-  stopMihomoConnections()
-  await startMihomoConnections()
+  closeConnections()
+  await openConnections()
+}
+
+export const setMihomoConnectionsWanted = async (wanted: boolean): Promise<void> => {
+  connectionsWanted = wanted
+  if (wanted) {
+    await openConnections()
+  } else {
+    closeConnections()
+  }
 }
 
 const mihomoConnections = async (): Promise<void> => {
   const { connectionInterval = 500 } = await getAppConfig()
-  mihomoConnectionsWs = new WebSocket(
-    `ws+unix:${mihomoIpcPath()}:/connections?interval=${connectionInterval}`
-  )
+  // The page may have closed or the core stopped while the config was read
+  if (!connectionsAvailable || !connectionsWanted) return
+  const ws = new WebSocket(`ws+unix:${mihomoIpcPath()}:/connections?interval=${connectionInterval}`)
+  mihomoConnectionsWs = ws
 
-  mihomoConnectionsWs.onmessage = (e): void => {
+  ws.onmessage = (e): void => {
     const data = e.data as string
     connectionsRetry = 10
     try {
@@ -553,17 +576,16 @@ const mihomoConnections = async (): Promise<void> => {
     }
   }
 
-  mihomoConnectionsWs.onclose = (): void => {
+  ws.onclose = (): void => {
+    if (mihomoConnectionsWs !== ws) return
+    mihomoConnectionsWs = null
     if (connectionsRetry) {
       connectionsRetry--
-      mihomoConnections()
+      openConnections().catch(() => {})
     }
   }
 
-  mihomoConnectionsWs.onerror = (): void => {
-    if (mihomoConnectionsWs) {
-      mihomoConnectionsWs.close()
-      mihomoConnectionsWs = null
-    }
+  ws.onerror = (): void => {
+    // a failed socket always closes afterwards, and the close handler retries
   }
 }

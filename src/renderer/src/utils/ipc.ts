@@ -1,5 +1,16 @@
 import { TitleBarOverlayOptions } from 'electron'
 
+// Listens to a message from the main process and returns the function that stops listening.
+// ipcRenderer.removeListener cannot do that from here: the context bridge hands the preload a new
+// proxy of the listener on every call, so the one passed to removeListener never matches and the
+// listener stays.
+export function onIpc<Args extends unknown[]>(
+  channel: string,
+  listener: (...args: Args) => void
+): () => void {
+  return window.electron.ipcRenderer.on(channel, (_event, ...args) => listener(...(args as Args)))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ipcErrorWrapper(response: any): any {
   if (typeof response === 'object' && 'invokeError' in response) {
@@ -218,6 +229,12 @@ export async function getCoreState(): Promise<CoreState> {
 
 export async function restartMihomoConnections(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('restartMihomoConnections'))
+}
+
+export async function setMihomoConnectionsWanted(wanted: boolean): Promise<void> {
+  return ipcErrorWrapper(
+    await window.electron.ipcRenderer.invoke('setMihomoConnectionsWanted', wanted)
+  )
 }
 
 export async function triggerSysProxy(enable: boolean, onlyActiveDevice: boolean): Promise<void> {

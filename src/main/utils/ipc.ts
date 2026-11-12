@@ -21,7 +21,8 @@ import {
   mihomoVersion,
   mihomoConfig,
   patchMihomoConfig,
-  restartMihomoConnections
+  restartMihomoConnections,
+  setMihomoConnectionsWanted
 } from '../core/mihomoApi'
 import { checkAutoRun, disableAutoRun, enableAutoRun } from '../sys/autoRun'
 import {
@@ -48,6 +49,7 @@ import {
 } from '../config'
 import {
   manualGrantCorePermition,
+  waitForGroupsReady,
   quitWithoutCore,
   restartCore,
   startNetworkDetection,
@@ -153,7 +155,10 @@ export function registerIpcMainHandlers(): void {
   )
   ipcMain.handle('mihomoRules', ipcErrorWrapper(mihomoRules))
   ipcMain.handle('mihomoProxies', ipcErrorWrapper(mihomoProxies))
-  ipcMain.handle('mihomoGroups', ipcErrorWrapper(mihomoGroups))
+  ipcMain.handle('mihomoGroups', async () => {
+    await waitForGroupsReady()
+    return ipcErrorWrapper(mihomoGroups)()
+  })
   ipcMain.handle('mihomoProxyProviders', ipcErrorWrapper(mihomoProxyProviders))
   ipcMain.handle('mihomoUpdateProxyProviders', (_e, name) =>
     ipcErrorWrapper(mihomoUpdateProxyProviders)(name)
@@ -210,6 +215,9 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('restartCore', ipcErrorWrapper(restartCore))
   ipcMain.handle('getCoreState', () => getCoreState())
   ipcMain.handle('restartMihomoConnections', ipcErrorWrapper(restartMihomoConnections))
+  ipcMain.handle('setMihomoConnectionsWanted', (_e, wanted) =>
+    ipcErrorWrapper(setMihomoConnectionsWanted)(wanted)
+  )
   ipcMain.handle('triggerSysProxy', (_e, enable, onlyActiveDevice) =>
     ipcErrorWrapper(triggerSysProxy)(enable, onlyActiveDevice)
   )

@@ -9,6 +9,15 @@ import { buildContextMenu } from './tray'
 export let floatingWindow: BrowserWindow | null = null
 let triggerTimeoutRef: NodeJS.Timeout | null = null
 
+// Registered once here rather than with the window: closing the floating window destroys it, and
+// each new one used to add one more listener
+ipcMain.on('updateFloatingWindow', () => {
+  if (floatingWindow) {
+    floatingWindow.webContents.send('controledMihomoConfigUpdated')
+    floatingWindow.webContents.send('appConfigUpdated')
+  }
+})
+
 async function preallocateGpuResources(): Promise<void> {
   const preallocWin = new BrowserWindow({
     width: 1,
@@ -66,12 +75,6 @@ async function createFloatingWindow(): Promise<void> {
   })
   floatingWindow.on('moved', () => {
     if (floatingWindow) floatingWindowState.saveState(floatingWindow)
-  })
-  ipcMain.on('updateFloatingWindow', () => {
-    if (floatingWindow) {
-      floatingWindow?.webContents.send('controledMihomoConfigUpdated')
-      floatingWindow?.webContents.send('appConfigUpdated')
-    }
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     floatingWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/floating.html`)

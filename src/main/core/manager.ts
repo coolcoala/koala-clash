@@ -10,7 +10,7 @@ import {
   mihomoWorkConfigPath,
   mihomoWorkDir
 } from '../utils/dirs'
-import { generateProfile, getRuntimeConfig } from './factory'
+import { generateProfile } from './factory'
 import {
   getAppConfig,
   getControledMihomoConfig,
@@ -23,13 +23,10 @@ import {
   startMihomoTraffic,
   startMihomoConnections,
   startMihomoLogs,
-  startMihomoMemory,
   stopMihomoConnections,
   stopMihomoTraffic,
   stopMihomoLogs,
-  stopMihomoMemory,
-  applyLogLevel,
-  mihomoGroups
+  applyLogLevel
 } from './mihomoApi'
 import { readFile, rm, writeFile } from 'fs/promises'
 import { promisify } from 'util'
@@ -90,23 +87,46 @@ let retry = 10
 // The (re)start in flight, settled once its controller is up or the start has failed
 let coreStarting: Promise<unknown> | null = null
 
-let initialized = false
-let providerNames = new Set<string>()
-let unmatchedProviders = new Set<string>()
+// mihomo runs the post-up command once the whole config is applied: controller, listeners, TUN and
+// every proxy and rule provider loaded, so the groups are complete. Its output is discarded, so it
+// leaves a file behind instead. The file is named relative to the core's working directory: Go
+// quotes the command for cmd.exe in a way cmd.exe does not read, so a quoted path with spaces never
+// works on Windows. The command always exits 0, as a failing post-up stops the core.
+const CORE_READY_FILE = 'core-ready'
+const POST_UP_COMMAND =
+  process.platform === 'win32'
+    ? `type nul > ${CORE_READY_FILE} 2>nul & exit /b 0`
+    : `touch ${CORE_READY_FILE} 2>/dev/null; exit 0`
 
-const normalize = (s: string): string =>
-  s
-    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .normalize('NFC')
+// Settles once the core being started has complete groups, or its start failed
+let groupsReady: Promise<void> = Promise.resolve()
+let groupsPending = false
+let markGroupsReady = (): void => {}
 
-export async function resetProviderTracking(): Promise<void> {
-  const { 'rule-providers': ruleProviders, 'proxy-providers': proxyProviders } =
-    await getRuntimeConfig()
-  providerNames = new Set(
-    [...Object.keys(ruleProviders || {}), ...Object.keys(proxyProviders || {})].map(normalize)
-  )
-  unmatchedProviders = new Set(providerNames)
-  initialized = false
+function resetGroupsReady(): void {
+  // A start replacing one still pending leaves its waiters waiting for this one
+  if (groupsPending) return
+  groupsPending = true
+  groupsReady = new Promise((resolve) => {
+    markGroupsReady = (): void => {
+      groupsPending = false
+      resolve()
+    }
+  })
+}
+
+// Requests made while the core starts wait for complete groups, instead of failing (and backing
+// off) or catching providers half loaded. Bounded, so a core that never reports ready cannot
+// block them.
+export async function waitForGroupsReady(timeoutMs = 3000): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  await Promise.race([
+    groupsReady,
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, timeoutMs)
+    })
+  ])
+  clearTimeout(timer)
 }
 
 function trackCoreStart<T>(starting: Promise<T>): Promise<T> {
@@ -127,7 +147,12 @@ export async function waitForCoreStart(): Promise<void> {
 
 export function startCore(detached = false): Promise<Promise<void>[]> {
   // A detached core is left running on quit, nothing waits for it
-  return detached ? launchCore(true) : trackCoreStart(launchCore())
+  if (detached) return launchCore(true)
+  resetGroupsReady()
+  const starting = trackCoreStart(launchCore())
+  // A failed start has no groups to wait for
+  starting.catch(() => markGroupsReady())
+  return starting
 }
 
 async function launchCore(detached = false): Promise<Promise<void>[]> {
@@ -170,7 +195,12 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
       })
     }
   }
-  await resetProviderTracking()
+  const workDir = diffWorkDir ? mihomoProfileWorkDir(current) : mihomoWorkDir()
+  // The post-up command writes it relative to the core's working directory
+  const readyFile = path.join(workDir, CORE_READY_FILE)
+  if (!detached) {
+    await rm(readyFile, { force: true })
+  }
   const env = {
     DISABLE_LOOPBACK_DETECTOR: String(disableLoopbackDetector),
     DISABLE_EMBED_CA: String(disableEmbedCA),
@@ -183,11 +213,15 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
     corePath,
     [
       '-d',
-      diffWorkDir ? mihomoProfileWorkDir(current) : mihomoWorkDir(),
+      workDir,
       ctlParam,
-      mihomoIpcPath()
+      mihomoIpcPath(),
+      // A detached core is left running on quit, nobody waits for it to be ready
+      ...(detached ? [] : ['-post-up', POST_UP_COMMAND])
     ],
     {
+      // The core resolves its own paths against -d, so this only places the ready file
+      cwd: workDir,
       detached: detached,
       stdio: detached ? 'ignore' : undefined,
       env: env
@@ -240,8 +274,26 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
         reportCoreError(failure)
       }
     })
+    // Matched by whole lines: a chunk can end mid-line, and one chunk often carries several stages
+    // at once, as the rest of the config comes up within milliseconds of the controller
+    let pendingOutput = ''
+    // Kept from the first line on: the controller starts in parallel with the rest of the config,
+    // so this can come before the line that says it is listening
+    let sawTunPermissionError = false
+    let checkTun: (() => void) | null = null
     child.stdout?.on('data', async (data) => {
-      const str = data.toString()
+      const text = pendingOutput + data.toString()
+      const end = text.lastIndexOf('\n') + 1
+      pendingOutput = text.slice(end)
+      const str = text.slice(0, end)
+      if (!str) return
+      if (
+        str.includes(
+          'Start TUN listening error: configure tun interface: Connect: operation not permitted'
+        )
+      ) {
+        sawTunPermissionError = true
+      }
       if (
         (process.platform !== 'win32' && str.includes('External controller unix listen error')) ||
         (process.platform === 'win32' && str.includes('External controller pipe listen error'))
@@ -253,75 +305,59 @@ async function launchCore(detached = false): Promise<Promise<void>[]> {
         await runCore(() => stopCore(true))
       }
 
-      if (
+      const controllerUp =
         (process.platform !== 'win32' && str.includes('RESTful API unix listening at')) ||
         (process.platform === 'win32' && str.includes('RESTful API pipe listening at'))
-      ) {
+      if (controllerUp) {
         ready = true
         setCoreStatus('running')
         resolve([
-          new Promise((resolve, reject) => {
-            const handleProviderInitialization = async (logLine: string): Promise<void> => {
-              for (const match of logLine.matchAll(/Start initial provider ([^"]+)"/g)) {
-                const name = normalize(match[1])
-                if (providerNames.has(name)) {
-                  unmatchedProviders.delete(name)
-                }
-              }
+          new Promise<void>((resolve, reject) => {
+            const core = child
+            let done = false
+            let tunHandled = false
 
-              if (
-                logLine.includes(
-                  'Start TUN listening error: configure tun interface: Connect: operation not permitted'
-                )
-              ) {
-                patchControledMihomoConfig({ tun: { enable: false } })
-                mainWindow?.webContents.send('controledMihomoConfigUpdated')
-                ipcMain.emit('updateTrayMenu')
-                reject(t('tray.tunStartFailed'))
-              }
-
-              const isDefaultProvider = logLine.includes(
-                'Start initial compatible provider default'
-              )
-              const isAllProvidersMatched = providerNames.size > 0 && unmatchedProviders.size === 0
-
-              if ((providerNames.size === 0 && isDefaultProvider) || isAllProvidersMatched) {
-                const waitForMihomoReady = async (): Promise<void> => {
-                  const maxRetries = 30
-                  const retryInterval = 100
-
-                  for (let i = 0; i < maxRetries; i++) {
-                    try {
-                      await mihomoGroups()
-                      break
-                    } catch (error) {
-                      await new Promise((r) => setTimeout(r, retryInterval))
-                    }
-                  }
-                }
-
-                await waitForMihomoReady()
-                initialized = true
-                Promise.all([
-                  new Promise((r) => setTimeout(r, 100)).then(() => {
-                    mainWindow?.webContents.send('groupsUpdated')
-                    mainWindow?.webContents.send('rulesUpdated')
-                  }),
-                  new Promise((r) => setTimeout(r, 100)).then(() => applyLogLevel(logLevel))
-                ]).then(() => resolve())
-              }
+            const finish = async (): Promise<void> => {
+              if (done) return
+              done = true
+              markGroupsReady()
+              mainWindow?.webContents.send('groupsUpdated')
+              mainWindow?.webContents.send('rulesUpdated')
+              await new Promise((r) => setTimeout(r, 100))
+              await applyLogLevel(logLevel).catch(() => {})
+              resolve()
             }
-            child.stdout?.on('data', (data) => {
-              if (!initialized) {
-                handleProviderInitialization(data.toString())
+
+            checkTun = (): void => {
+              if (!sawTunPermissionError || tunHandled) return
+              tunHandled = true
+              patchControledMihomoConfig({ tun: { enable: false } })
+              mainWindow?.webContents.send('controledMihomoConfigUpdated')
+              ipcMain.emit('updateTrayMenu')
+              reject(t('tray.tunStartFailed'))
+            }
+
+            const since = Date.now()
+            const poll = setInterval(() => {
+              const exited = core.exitCode !== null || core.signalCode !== null
+              // Providers fetched for the first time can take this long; past it the groups are
+              // shown as they are
+              const tooLong = Date.now() - since > 60_000
+              if (exited || tooLong || existsSync(readyFile)) {
+                clearInterval(poll)
+                rm(readyFile, { force: true }).catch(() => {})
+                if (!exited) finish()
               }
-            })
+            }, 20)
           })
         ])
+      }
+      // Also runs for the chunk that brought the controller up, and for what came before it
+      checkTun?.()
+      if (controllerUp) {
         await startMihomoTraffic()
         await startMihomoConnections()
         startMihomoLogs(logLevel)
-        await startMihomoMemory()
         retry = 10
       }
     })
@@ -342,7 +378,6 @@ export async function stopCore(force = false): Promise<void> {
   stopMihomoTraffic()
   stopMihomoConnections()
   stopMihomoLogs()
-  stopMihomoMemory()
 
   if (child && !child.killed) {
     await stopChildProcess(child)

@@ -1,10 +1,10 @@
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { Suspense, useEffect, useRef, useState } from 'react'
 import { NavigateFunction, useLocation, useNavigate, useRoutes } from 'react-router-dom'
 import './i18n'
 import { useTranslation } from 'react-i18next'
-import routes from '@renderer/routes'
+import routes, { preloadPages } from '@renderer/routes'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
   applyTheme,
@@ -51,7 +51,9 @@ const App: React.FC = () => {
     autoCheckUpdate ? ['checkUpdate'] : undefined,
     autoCheckUpdate ? checkUpdate : (): undefined => {},
     {
-      refreshInterval: 1000 * 60 * 10
+      refreshInterval: 1000 * 60 * 10,
+      // A network request; the interval above is often enough, every window focus is not
+      revalidateOnFocus: false
     }
   )
 
@@ -70,6 +72,8 @@ const App: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => preloadPages(), [])
+
   useEffect(() => {
     const tourShown = window.localStorage.getItem('tourShown')
     if (!tourShown) {
@@ -83,14 +87,20 @@ const App: React.FC = () => {
     }
   }, [])
 
-  useEffect(() => {
-    setNativeTheme(appTheme)
-    setTheme(appTheme)
-  }, [appTheme, systemTheme])
+  // Before the config arrives these would apply the defaults: a saved theme flipped to the system
+  // one and back, and the theme CSS was inserted twice on every start
+  const configLoaded = appConfig !== undefined
 
   useEffect(() => {
+    if (!configLoaded) return
+    setNativeTheme(appTheme)
+    setTheme(appTheme)
+  }, [configLoaded, appTheme, systemTheme])
+
+  useEffect(() => {
+    if (!configLoaded) return
     applyTheme(customTheme || 'default.css')
-  }, [customTheme])
+  }, [configLoaded, customTheme])
 
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [showProfileInstallConfirm, setShowProfileInstallConfirm] = useState(false)
@@ -258,7 +268,7 @@ const App: React.FC = () => {
       <AppSidebar />
       {latest?.version && <UpdateBanner latest={latest} />}
       <div className="relative z-10 main grow h-full overflow-y-auto">
-        {page}
+        <Suspense fallback={null}>{page}</Suspense>
       </div>
     </SidebarProvider>
   )

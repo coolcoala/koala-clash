@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { onIpc } from '@renderer/utils/ipc'
 
 export interface UpdaterStatus {
   downloading: boolean
@@ -23,7 +24,7 @@ export const useUpdaterStore = create<UpdaterStore>((set) => ({
 }))
 
 let attached = false
-let ipcListener: ((event: unknown, payload: UpdaterStatus) => void) | null = null
+let detachIpc: (() => void) | null = null
 
 export const attachUpdaterStore = (): (() => void) => {
   if (attached) {
@@ -33,21 +34,18 @@ export const attachUpdaterStore = (): (() => void) => {
   }
   attached = true
 
-  ipcListener = (_event, payload): void => {
+  detachIpc = onIpc<[UpdaterStatus]>('update-status', (payload) => {
     useUpdaterStore.setState({
       downloading: payload.downloading,
       progress: payload.progress,
       error: payload.error
     })
-  }
-  window.electron.ipcRenderer.on('update-status', ipcListener)
+  })
 
   return (): void => {
     if (!attached) return
     attached = false
-    if (ipcListener) {
-      window.electron.ipcRenderer.removeListener('update-status', ipcListener)
-      ipcListener = null
-    }
+    detachIpc?.()
+    detachIpc = null
   }
 }

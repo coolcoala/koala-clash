@@ -4,6 +4,8 @@ import windowStateKeeper from 'electron-window-state'
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerMonitor, shell } from 'electron'
 import { addProfileItem, getAppConfig, patchControledMihomoConfig } from './config'
 import { quitWithoutCore, startCore, stopCore } from './core/manager'
+import { setMihomoConnectionsWanted } from './core/mihomoApi'
+import { debounce } from './utils/debounce'
 import { reportCoreError } from './core/status'
 import { triggerSysProxy } from './sys/sysproxy'
 import icon from '../../resources/icon.png?asset'
@@ -16,7 +18,8 @@ import { execSync, spawn } from 'child_process'
 import { createElevateTaskSync } from './sys/misc'
 import { initProfileUpdater } from './core/profileUpdater'
 import { existsSync, writeFileSync } from 'fs'
-import { exePath, taskDir } from './utils/dirs'
+import { appendFile } from 'fs/promises'
+import { exePath, logPath, taskDir } from './utils/dirs'
 import { showFloatingWindow } from './resolve/floatingWindow'
 import { getAppConfigSync } from './config/app'
 import { declineElevation, ELEVATION_DECLINED_ARG } from './utils/elevation'
@@ -43,6 +46,11 @@ export function showError(title: string, message: string): void {
     dialog.showErrorBox(title, message)
   }
 }
+// A reloaded window looks like the app loading again, so the log is the only trace of why
+function logWindowEvent(message: string): void {
+  appendFile(logPath(), `[Window]: ${new Date().toISOString()} ${message}\n`).catch(() => {})
+}
+
 let pendingDeepLink: string | null = null
 let isCreatingWindow = false
 let windowShown = false
@@ -210,8 +218,16 @@ function showWindow(): number {
   return 500
 }
 
+// A quit asked for again while the dialog is still open waits for the same answer, instead of
+// adding one more listener per attempt
+let quitConfirmPending: Promise<boolean> | null = null
+
 function showQuitConfirmDialog(): Promise<boolean> {
-  return new Promise((resolve) => {
+  if (quitConfirmPending) {
+    showWindow()
+    return quitConfirmPending
+  }
+  quitConfirmPending = new Promise<boolean>((resolve) => {
     if (!mainWindow) {
       resolve(true)
       return
@@ -220,13 +236,14 @@ function showQuitConfirmDialog(): Promise<boolean> {
     const delay = showWindow()
     setTimeout(() => {
       mainWindow?.webContents.send('show-quit-confirm')
-      const handleQuitConfirm = (_event: Electron.IpcMainEvent, confirmed: boolean): void => {
-        ipcMain.off('quit-confirm-result', handleQuitConfirm)
+      ipcMain.once('quit-confirm-result', (_event: Electron.IpcMainEvent, confirmed: boolean) => {
         resolve(confirmed)
-      }
-      ipcMain.once('quit-confirm-result', handleQuitConfirm)
+      })
     }, delay)
+  }).finally(() => {
+    quitConfirmPending = null
   })
+  return quitConfirmPending
 }
 
 app.on('window-all-closed', () => {
@@ -544,6 +561,7 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
 
     mainWindow.webContents.on('render-process-gone', (_event, details) => {
       if (details.reason === 'clean-exit') return
+      logWindowEvent(`renderer gone (${details.reason}, exit code ${details.exitCode}), reloading`)
       if (!mainWindow || mainWindow.isDestroyed()) return
       try {
         mainWindow.webContents.reload()
@@ -553,6 +571,7 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
     })
 
     mainWindow.webContents.on('unresponsive', () => {
+      logWindowEvent('renderer unresponsive, crashing and reloading it')
       if (!mainWindow || mainWindow.isDestroyed()) return
       try {
         mainWindow.webContents.forcefullyCrashRenderer()
@@ -590,8 +609,14 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
       }
     })
 
+    // saveState writes the file synchronously, and move fires continuously while dragging
+    const saveWindowState = debounce((): void => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindowState.saveState(mainWindow)
+    }, 500)
+
     mainWindow.on('close', async (event) => {
       event.preventDefault()
+      saveWindowState.flush()
       mainWindow?.hide()
       if (windowShown) {
         await scheduleLightweightMode()
@@ -600,20 +625,18 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
 
     mainWindow.on('closed', () => {
       mainWindow = null
+      // A destroyed page never gets to unsubscribe, and a new window starts on the home page
+      setMihomoConnectionsWanted(false).catch(() => {})
     })
 
-    mainWindow.on('resized', () => {
-      if (mainWindow) mainWindowState.saveState(mainWindow)
-    })
+    mainWindow.on('resized', saveWindowState)
 
     mainWindow.on('unmaximize', () => {
-      if (mainWindow) mainWindowState.saveState(mainWindow)
+      saveWindowState()
       mainWindow?.webContents.send('window-unmaximized')
     })
 
-    mainWindow.on('move', () => {
-      if (mainWindow) mainWindowState.saveState(mainWindow)
-    })
+    mainWindow.on('move', saveWindowState)
 
     mainWindow.on('session-end', async () => {
       triggerSysProxy(false, false)

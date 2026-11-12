@@ -1,6 +1,6 @@
 import BasePage from '@renderer/components/base/base-page'
 import { mihomoCloseAllConnections, mihomoCloseConnection } from '@renderer/utils/ipc'
-import { useConnectionsStore } from '@renderer/store/connections-store'
+import { useConnectionsStore, useConnectionsStream } from '@renderer/store/connections-store'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Badge } from '@renderer/components/ui/badge'
 import { Button } from '@renderer/components/ui/button'
@@ -86,6 +86,7 @@ const Connections: React.FC = () => {
     displayIcon = true,
     displayAppName = true
   } = appConfig || {}
+  useConnectionsStream()
   const info = useConnectionsStore((s) => s.info)
   const activeConnections = useConnectionsStore((s) => s.active)
   const closedConnections = useConnectionsStore((s) => s.closed)

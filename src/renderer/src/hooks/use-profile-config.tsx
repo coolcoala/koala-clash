@@ -7,7 +7,8 @@ import {
   addProfileItem as add,
   removeProfileItem as remove,
   updateProfileItem as update,
-  changeCurrentProfile as change
+  changeCurrentProfile as change,
+  onIpc
 } from '@renderer/utils/ipc'
 
 interface ProfileConfigContextType {
@@ -101,19 +102,16 @@ export const ProfileConfigProvider: React.FC<{ children: ReactNode }> = ({ child
   }
 
   useEffect(() => {
-    const handleProfileConfigUpdated = (): void => {
+    const detachProfileConfig = onIpc('profileConfigUpdated', () => {
       mutateProfileConfig()
-    }
-    const handleShowHwidLimitError = (_event: unknown, supportUrl = ''): void => {
+    })
+    const detachHwidLimit = onIpc<[string?]>('show-hwid-limit-error', (supportUrl = '') => {
       setHwidLimitErrorFromMessage(supportUrl)
-    }
-
-    window.electron.ipcRenderer.on('profileConfigUpdated', handleProfileConfigUpdated)
-    window.electron.ipcRenderer.on('show-hwid-limit-error', handleShowHwidLimitError)
+    })
 
     return (): void => {
-      window.electron.ipcRenderer.removeListener('profileConfigUpdated', handleProfileConfigUpdated)
-      window.electron.ipcRenderer.removeListener('show-hwid-limit-error', handleShowHwidLimitError)
+      detachProfileConfig()
+      detachHwidLimit()
     }
   }, [mutateProfileConfig, setHwidLimitErrorFromMessage])
 

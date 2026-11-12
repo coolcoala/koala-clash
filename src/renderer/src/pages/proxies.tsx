@@ -40,6 +40,25 @@ function getProviderName(proxy: ControllerProxiesDetail | ControllerGroupDetail)
   return 'provider-name' in proxy ? proxy['provider-name'] : undefined
 }
 
+// Adds fresh delay results to the cached groups the way the core records them. Unchanged groups
+// and proxies keep their objects, so only what was tested re-renders.
+function withDelays(
+  groups: ControllerMixedGroup[],
+  delays: Map<string, number>,
+  time: string
+): ControllerMixedGroup[] {
+  return groups.map((group) => {
+    let changed = false
+    const all = group.all.map((proxy) => {
+      const delay = delays.get(proxy.name)
+      if (delay === undefined) return proxy
+      changed = true
+      return { ...proxy, history: [...proxy.history, { time, delay }] }
+    })
+    return changed ? { ...group, all } : group
+  })
+}
+
 const Proxies: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
@@ -186,17 +205,33 @@ const Proxies: React.FC = () => {
     []
   )
 
-  const mutateThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const throttledMutate = useCallback(() => {
-    if (mutateThrottleRef.current) return
-    mutateThrottleRef.current = setTimeout(() => {
-      mutate()
-      mutateThrottleRef.current = null
-    }, 500)
+  // Results of a group test go into the cached groups at most twice a second. Fetching every
+  // group from the core after each result kept a large test busy with refetches and re-renders.
+  const pendingDelaysRef = useRef(new Map<string, number>())
+  const delayFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flushDelays = useCallback(() => {
+    if (delayFlushRef.current) {
+      clearTimeout(delayFlushRef.current)
+      delayFlushRef.current = null
+    }
+    const delays = pendingDelaysRef.current
+    if (delays.size === 0) return
+    pendingDelaysRef.current = new Map()
+    const time = new Date().toISOString()
+    mutate((current) => current && withDelays(current, delays, time), { revalidate: false })
   }, [mutate])
+  const recordDelay = useCallback(
+    (name: string, delay: number) => {
+      pendingDelaysRef.current.set(name, delay)
+      if (!delayFlushRef.current) {
+        delayFlushRef.current = setTimeout(flushDelays, 500)
+      }
+    },
+    [flushDelays]
+  )
   useEffect(() => {
     return () => {
-      if (mutateThrottleRef.current) clearTimeout(mutateThrottleRef.current)
+      if (delayFlushRef.current) clearTimeout(delayFlushRef.current)
     }
   }, [])
 
@@ -221,12 +256,17 @@ const Proxies: React.FC = () => {
       for (const proxy of allProxies[index]) {
         const promise = Promise.resolve().then(async () => {
           try {
-            await mihomoProxyDelay(proxy.name, groups[index].testUrl, getProviderName(proxy))
+            const { delay } = await mihomoProxyDelay(
+              proxy.name,
+              groups[index].testUrl,
+              getProviderName(proxy)
+            )
+            if (typeof delay === 'number') recordDelay(proxy.name, delay)
           } catch {
-            // ignore
+            // The core records a failed test as 0, which shows as a timeout
+            recordDelay(proxy.name, 0)
           } finally {
             completedProxiesRef.current.add(proxy.name)
-            throttledMutate()
           }
         })
         result.push(promise)
@@ -239,6 +279,8 @@ const Proxies: React.FC = () => {
         }
       }
       await Promise.all(result)
+      flushDelays()
+      // One fetch at the end picks up what only the core knows, such as a url-test group's choice
       mutate()
       setDelaying((prev) => {
         const newDelaying = [...prev]
@@ -246,7 +288,7 @@ const Proxies: React.FC = () => {
         return newDelaying
       })
     },
-    [allProxies, groups, delayTestConcurrency, mutate, throttledMutate]
+    [allProxies, groups, delayTestConcurrency, mutate, recordDelay, flushDelays]
   )
 
   const calcCols = useCallback((): number => {

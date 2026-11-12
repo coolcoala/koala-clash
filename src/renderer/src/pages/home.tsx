@@ -79,6 +79,26 @@ const ConnectedTimer = memo(({ active }: { active: boolean }) => {
 })
 ConnectedTimer.displayName = 'ConnectedTimer'
 
+// Traffic ticks every second; subscribing here keeps them from re-rendering the whole page
+const TrafficTotals = memo(() => {
+  const upTotal = useTrafficStore((s) => s.traffic.upTotal)
+  const downTotal = useTrafficStore((s) => s.traffic.downTotal)
+  return (
+    <>
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <ArrowUp className="size-3.5 text-stroke-power-on" />
+        <span>{calcTraffic(upTotal)}</span>
+      </div>
+      <div className="h-3 w-px bg-stroke" />
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <ArrowDown className="size-3.5 text-stroke-power-on" />
+        <span>{calcTraffic(downTotal)}</span>
+      </div>
+    </>
+  )
+})
+TrafficTotals.displayName = 'TrafficTotals'
+
 const Home: React.FC = () => {
   const { t } = useTranslation()
   const { appConfig, patchAppConfig } = useAppConfig()
@@ -113,8 +133,6 @@ const Home: React.FC = () => {
     setEditingItem(newProfile)
     setShowEditModal(true)
   }
-
-  const trafficInfo = useTrafficStore((s) => s.traffic)
 
   const [loading, setLoading] = useState(false)
   const [loadingDirection, setLoadingDirection] = useState<'connecting' | 'disconnecting'>(
@@ -448,15 +466,7 @@ const Home: React.FC = () => {
                 showConnectedTimer ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
               }`}
             >
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <ArrowUp className="size-3.5 text-stroke-power-on" />
-                <span>{calcTraffic(trafficInfo.upTotal)}</span>
-              </div>
-              <div className="h-3 w-px bg-stroke" />
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <ArrowDown className="size-3.5 text-stroke-power-on" />
-                <span>{calcTraffic(trafficInfo.downTotal)}</span>
-              </div>
+              <TrafficTotals />
             </div>
           </div>
 

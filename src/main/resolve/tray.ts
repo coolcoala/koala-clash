@@ -404,11 +404,6 @@ export async function createTray(): Promise<void> {
     if (!useDockIcon && app.dock) {
       app.dock.hide()
     }
-    ipcMain.on('trayIconUpdate', async (_, png: string) => {
-      const image = nativeImage.createFromDataURL(png).resize({ height: 16 })
-      image.setTemplateImage(true)
-      tray?.setImage(image)
-    })
     tray?.addListener('right-click', async () => {
       await triggerMainWindow()
     })
@@ -428,10 +423,23 @@ export async function createTray(): Promise<void> {
     tray?.addListener('click', async () => {
       await triggerMainWindow()
     })
-    ipcMain.on('updateTrayMenu', async () => {
-      await updateTrayMenu()
-    })
   }
+}
+
+// Registered once here rather than in createTray: hiding and showing the tray icon destroys the
+// tray and creates it again, and each pass used to add one more listener
+if (process.platform === 'darwin') {
+  ipcMain.on('trayIconUpdate', (_, png: string) => {
+    const image = nativeImage.createFromDataURL(png).resize({ height: 16 })
+    image.setTemplateImage(true)
+    tray?.setImage(image)
+  })
+}
+if (process.platform === 'linux') {
+  ipcMain.on('updateTrayMenu', async () => {
+    if (!tray) return
+    await updateTrayMenu()
+  })
 }
 
 async function updateTrayMenu(): Promise<void> {

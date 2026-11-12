@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { create } from 'zustand'
+import { onIpc, setMihomoConnectionsWanted } from '@renderer/utils/ipc'
 
 export interface ConnectionsInfo {
   uploadTotal: number
@@ -25,6 +27,8 @@ const initialInfo: ConnectionsInfo = {
 }
 
 let previousActiveMap = new Map<string, ControllerConnectionDetail>()
+// Set while the connections page is shown: the core streams the list only then
+let streaming = false
 
 export const useConnectionsStore = create<ConnectionsStore>((set) => ({
   active: [],
@@ -38,6 +42,8 @@ export const useConnectionsStore = create<ConnectionsStore>((set) => ({
 }))
 
 const handleIpcPayload = (payload: ControllerConnections): void => {
+  // A message sent just before the stream stopped
+  if (!streaming) return
   const { uploadTotal, downloadTotal, memory } = payload
   const state = useConnectionsStore.getState()
   const prevInfo = state.info
@@ -93,8 +99,32 @@ const handleIpcPayload = (payload: ControllerConnections): void => {
   })
 }
 
+const setStreaming = (next: boolean): void => {
+  if (next && !streaming) {
+    // Totals from before the gap would turn into one huge speed sample
+    previousActiveMap = new Map()
+  }
+  streaming = next
+  setMihomoConnectionsWanted(next).catch(() => {})
+}
+
+// Streams connections while the calling page is mounted and the window is visible. The closed
+// list is kept between visits, but only grows while the page is watched.
+export const useConnectionsStream = (): void => {
+  useEffect(() => {
+    // Always sent on mount: a reloaded page must replace whatever the previous one asked for
+    const sync = (): void => setStreaming(document.visibilityState === 'visible')
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return (): void => {
+      document.removeEventListener('visibilitychange', sync)
+      setStreaming(false)
+    }
+  }, [])
+}
+
 let attached = false
-let ipcListener: ((event: unknown, payload: ControllerConnections) => void) | null = null
+let detachIpc: (() => void) | null = null
 
 export const attachConnectionsStore = (): (() => void) => {
   if (attached) {
@@ -104,18 +134,13 @@ export const attachConnectionsStore = (): (() => void) => {
   }
   attached = true
 
-  ipcListener = (_event, payload): void => {
-    handleIpcPayload(payload)
-  }
-  window.electron.ipcRenderer.on('mihomoConnections', ipcListener)
+  detachIpc = onIpc<[ControllerConnections]>('mihomoConnections', handleIpcPayload)
 
   return (): void => {
     if (!attached) return
     attached = false
-    if (ipcListener) {
-      window.electron.ipcRenderer.removeListener('mihomoConnections', ipcListener)
-      ipcListener = null
-    }
+    detachIpc?.()
+    detachIpc = null
     previousActiveMap = new Map()
     useConnectionsStore.setState({
       active: [],
