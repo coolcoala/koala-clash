@@ -101,13 +101,17 @@ const elevateTaskXml = `<?xml version="1.0" encoding="UTF-16"?>
 </Task>
 `
 
-export function createElevateTaskSync(): void {
-  const taskFilePath = path.join(taskDir(), `koala-clash-run.xml`)
-  writeFileSync(taskFilePath, Buffer.from(`\ufeff${elevateTaskXml}`, 'utf-16le'))
+// Both scheduled tasks run this copy, so an app update reaches the launcher only through it
+export function syncTaskLauncherSync(): void {
   copyFileSync(
     path.join(resourcesFilesDir(), 'koala-clash-run.exe'),
     path.join(taskDir(), 'koala-clash-run.exe')
   )
+}
+
+export function createElevateTaskSync(): void {
+  const taskFilePath = path.join(taskDir(), `koala-clash-run.xml`)
+  writeFileSync(taskFilePath, Buffer.from(`\ufeff${elevateTaskXml}`, 'utf-16le'))
   execSync(
     `%SystemRoot%\\System32\\schtasks.exe /create /tn "koala-clash-run" /xml "${taskFilePath}" /f`
   )

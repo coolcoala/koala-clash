@@ -15,7 +15,7 @@ import { init } from './utils/init'
 import path, { join } from 'path'
 import { initShortcut } from './resolve/shortcut'
 import { execSync, spawn } from 'child_process'
-import { createElevateTaskSync } from './sys/misc'
+import { createElevateTaskSync, syncTaskLauncherSync } from './sys/misc'
 import { initProfileUpdater } from './core/profileUpdater'
 import { existsSync, writeFileSync } from 'fs'
 import { appendFile } from 'fs/promises'
@@ -91,6 +91,16 @@ const syncConfig = getAppConfigSync()
 // Set when the previous instance relaunched us after the user dismissed the UAC prompt:
 // the refusal is not in the config yet, so honour it from the command line for this run.
 const elevationDeclinedByArg = process.argv.includes(ELEVATION_DECLINED_ARG)
+
+// The logon task runs the launcher in every permission mode, not only when the elevation task
+// is set up below
+if (process.platform === 'win32' && !is.dev) {
+  try {
+    syncTaskLauncherSync()
+  } catch {
+    // The launcher that started us may not have exited yet; the next start copies it
+  }
+}
 
 if (
   process.platform === 'win32' &&
